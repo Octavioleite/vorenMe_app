@@ -1,0 +1,570 @@
+@import 'tailwindcss';
+
+/* ── Design tokens ─────────────────────────────────────────────────────────
+   Palette: monochrome neutrals + one accent (from the creator config).
+   --accent / --accent-fg are injected at build time (vite.config.ts).
+   Shape system: surfaces 20px · text controls 12px · icon-only controls full circle · tags pill. */
+:root {
+  --radius: 20px;
+  --radius-ctl: 12px;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  color-scheme: dark;
+}
+
+:root,
+[data-theme='dark'] {
+  --bg: #0d0d0e;
+  --surface: #161618;
+  --surface-2: #1f1f22;
+  --ink: #f3f3f1;
+  --muted: #9a9aa0;
+  --line: rgb(255 255 255 / 0.07);
+  --line-strong: rgb(255 255 255 / 0.16);
+  --tile-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
+  --card-shadow: 0 40px 80px -40px rgb(0 0 0 / 0.9), 0 16px 32px -16px rgb(0 0 0 / 0.6);
+}
+
+[data-theme='light'] {
+  --bg: #ededeb;
+  --surface: #f9f9f8;
+  --surface-2: #e3e3e1;
+  --ink: #121214;
+  --muted: #5d5d64;
+  --line: rgb(18 18 20 / 0.08);
+  --line-strong: rgb(18 18 20 / 0.18);
+  --tile-shadow: 0 1px 2px rgb(18 18 20 / 0.04), 0 12px 32px -20px rgb(18 18 20 / 0.2);
+  --card-shadow: 0 40px 80px -40px rgb(18 18 20 / 0.55), 0 16px 32px -16px rgb(18 18 20 / 0.3);
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --ease-out-expo: var(--ease);
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────── */
+html {
+  background: var(--bg);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: clip;
+  transition:
+    background-color 0.4s var(--ease),
+    color 0.4s var(--ease);
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.on-accent :focus-visible,
+.on-photo :focus-visible {
+  outline-color: currentColor;
+}
+
+@layer components {
+  /* Bento surface */
+  .tile {
+    position: relative;
+    min-width: 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--tile-shadow);
+    transition:
+      border-color 0.3s var(--ease),
+      background-color 0.3s var(--ease),
+      transform 0.4s var(--ease);
+  }
+  a.tile:hover {
+    border-color: var(--line-strong);
+    transform: translateY(-3px);
+  }
+  a.tile:active {
+    transform: scale(0.985);
+    transition-duration: 0.1s;
+  }
+
+  /* Image zoom inside a hovered link */
+  .zoom img {
+    transition:
+      transform 0.9s var(--ease),
+      opacity 0.6s var(--ease);
+  }
+  a:hover .zoom img,
+  a.zoom:hover img {
+    transform: scale(1.045);
+  }
+
+  /* Diagonal arrow nudge */
+  .nudge {
+    transition: transform 0.35s var(--ease);
+  }
+  a:hover .nudge,
+  a:focus-visible .nudge {
+    transform: translate(2px, -2px);
+  }
+
+  /* Press feedback for buttons */
+  .press {
+    transition:
+      transform 0.2s var(--ease),
+      background-color 0.25s var(--ease),
+      border-color 0.25s var(--ease),
+      color 0.25s var(--ease),
+      opacity 0.25s var(--ease);
+  }
+  .press:active {
+    transform: scale(0.97);
+    transition-duration: 0.08s;
+  }
+
+  /* ── The identity card (hero object) ─────────────────────────────── */
+  .id-card {
+    container-type: inline-size;
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    border-radius: var(--radius);
+    background: #18181a;
+    box-shadow: var(--card-shadow);
+    transform: perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+    transition: transform 0.7s var(--ease);
+  }
+  .id-card[data-tilting] {
+    transition-duration: 0.15s;
+  }
+  /* inner hairline, like the edge of a printed card */
+  .id-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.1);
+    pointer-events: none;
+  }
+  /* light sheen that follows the pointer while tilting */
+  .id-sheen {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(520px circle at var(--mx, 50%) var(--my, 0%), rgb(255 255 255 / 0.13), transparent 45%);
+    opacity: 0;
+    transition: opacity 0.5s var(--ease);
+    pointer-events: none;
+  }
+  .id-card[data-tilting] .id-sheen {
+    opacity: 1;
+  }
+  .id-name {
+    font-size: clamp(2.75rem, 19cqi, 6.5rem);
+    line-height: 0.84;
+    letter-spacing: -0.055em;
+    font-weight: 650;
+  }
+
+  /* ── Per-tile identity: one metaphor + one motivated motion per objective ── */
+
+  /* Social (follow): platform wash rising from the corner + oversized watermark glyph.
+     --brand is decorative only, never used for text. */
+  .wash {
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .wash::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: radial-gradient(130% 130% at 100% 100%, color-mix(in oklab, var(--brand) 18%, transparent), transparent 62%);
+    opacity: 0;
+    transition: opacity 0.5s var(--ease);
+  }
+  .watermark {
+    position: absolute;
+    right: -26px;
+    bottom: -30px;
+    z-index: -1;
+    color: var(--ink);
+    opacity: 0.05;
+    transition:
+      transform 0.8s var(--ease),
+      opacity 0.5s var(--ease),
+      color 0.5s var(--ease);
+  }
+  .wash:hover::before,
+  .wash:focus-visible::before {
+    opacity: 1;
+  }
+  .wash:hover .watermark,
+  .wash:focus-visible .watermark {
+    color: var(--brand);
+    opacity: 0.18;
+    transform: rotate(-8deg) scale(1.08);
+  }
+
+  /* Featured (watch): scrubber fills like a playhead, play button rings */
+  .scrub {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 3px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 1.2s var(--ease);
+  }
+  a:hover .scrub,
+  a:focus-visible .scrub {
+    transform: scaleX(1);
+  }
+  .play-ring::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: 0 0 0 2px var(--accent);
+    opacity: 0;
+  }
+  a:hover .play-ring::before {
+    animation: ring 1.5s var(--ease) infinite;
+  }
+
+  /* Partnership (convert): one light sweep across the primary CTA */
+  .shine {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .shine::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, transparent 30%, color-mix(in oklab, var(--accent) 28%, transparent) 50%, transparent 70%);
+    transform: translateX(-110%);
+    pointer-events: none;
+  }
+  .shine:hover::after {
+    transform: translateX(110%);
+    transition: transform 0.9s var(--ease);
+  }
+
+  /* Coupons (save money): the code sits in a dashed "cut here" box; copying flashes it in the accent */
+  .coupon-code {
+    border: 1.5px dashed var(--line-strong);
+    transition:
+      background-color 0.3s var(--ease),
+      border-color 0.3s var(--ease),
+      color 0.3s var(--ease);
+  }
+  .coupon-code[data-copied] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-fg);
+  }
+
+  /* Now (status): dot-grid notebook page fading downwards, no motion */
+  .dots {
+    isolation: isolate;
+  }
+  .dots::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background-image: radial-gradient(var(--line-strong) 1px, transparent 1.3px);
+    background-size: 16px 16px;
+    mask-image: linear-gradient(to bottom, black, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* QR (take it with you): a pass with side notches aligned to the dashed tear line.
+     --notch-y = p-6 (24) + QR box (112) + separator margin (20). Change it if the QR size changes. */
+  .ticket {
+    --notch-y: 156px;
+    mask:
+      radial-gradient(circle 11px at 0 var(--notch-y), transparent 97%, black) left / 51% 100% no-repeat,
+      radial-gradient(circle 11px at 100% var(--notch-y), transparent 97%, black) right / 51% 100% no-repeat;
+  }
+  .scan {
+    position: absolute;
+    inset-inline: 6px;
+    top: 6px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--accent);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .ticket:hover .scan {
+    animation: scan 1.6s var(--ease) both;
+  }
+}
+
+@keyframes ring {
+  from {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+}
+@keyframes scan {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  12%,
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(98px);
+  }
+}
+
+/* Image loading shimmer */
+.skeleton {
+  background: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 0.05) 50%, transparent 70%) var(--surface-2);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Availability pulse: real status, used once */
+.pulse::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: inherit;
+  animation: pulse 2.2s var(--ease) infinite;
+}
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  80%,
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+/* ── Motion ───────────────────────────────────────────────────────────
+   deal   : the card lands on the table (storytelling: "here is my card")
+   rise   : hero copy follows in sequence
+   reveal : tiles enter as they scroll into view (IntersectionObserver)
+   All use fill-mode "backwards" so hover/tilt transforms work afterwards. */
+.deal {
+  animation: deal 1s var(--ease) backwards;
+  animation-delay: 80ms;
+}
+@keyframes deal {
+  from {
+    opacity: 0;
+    transform: translateY(28px) rotate(-2.5deg) scale(0.96);
+  }
+}
+
+.rise {
+  animation: rise 0.8s var(--ease) backwards;
+  animation-delay: calc(var(--i, 0) * 80ms + 260ms);
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+[data-reveal] {
+  transition:
+    opacity 0.7s var(--ease),
+    transform 0.8s var(--ease);
+  transition-delay: calc(var(--i, 0) * 70ms);
+}
+.reveal-ready [data-reveal]:not([data-shown]) {
+  opacity: 0;
+  transform: translateY(18px);
+}
+
+/* Mobile dock */
+.dock {
+  transition:
+    transform 0.45s var(--ease),
+    opacity 0.3s var(--ease),
+    visibility 0s;
+}
+.dock[data-show='false'] {
+  transform: translateY(calc(100% + 24px));
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    transform 0.35s var(--ease),
+    opacity 0.25s var(--ease),
+    visibility 0s 0.35s;
+}
+
+/* QR dialog */
+dialog.qr-dialog {
+  margin: auto;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  max-width: calc(100vw - 32px);
+  /* O UA põe overflow:auto; a animação "deal" (translate/rotate) passava da borda e piscava um scroll. */
+  overflow: visible;
+}
+dialog.qr-dialog::backdrop {
+  background: rgb(8 8 9 / 0.7);
+  backdrop-filter: blur(6px);
+}
+dialog.qr-dialog[open] > * {
+  animation: deal 0.6s var(--ease) backwards;
+}
+
+/* Login: o nome do modelo ativo enche até a próxima troca do carrossel */
+.progress {
+  animation: progress linear both;
+}
+@keyframes progress {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* ── View transitions (painel) ──────────────────────────────────────
+   Troca Entrar/Criar conta: o pill ativo desliza e o título se transforma; o resto faz cross-fade.
+   Login <-> painel (data-vt="page"): a tela antiga recua e a nova sobe. */
+::view-transition-group(*) {
+  animation-duration: 0.45s;
+  animation-timing-function: var(--ease);
+}
+::view-transition-group(auth-tab) {
+  animation-duration: 0.35s;
+}
+[data-vt='page']::view-transition-old(root) {
+  animation: vt-out 0.35s var(--ease) both;
+}
+[data-vt='page']::view-transition-new(root) {
+  animation: vt-in 0.6s var(--ease) 0.08s both;
+}
+@keyframes vt-out {
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+    filter: blur(4px);
+  }
+}
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+  .pulse::after,
+  .scan,
+  .play-ring::before,
+  .shine::after {
+    display: none;
+  }
+  .wash:hover .watermark {
+    transform: none;
+  }
+  a.tile:hover,
+  a:hover .zoom img,
+  a.zoom:hover img,
+  a:hover .nudge {
+    transform: none;
+  }
+}
+
+/* Prévia do painel: cada texto sobre a foto pode ser arrastado e redimensionado (Hero.tsx). */
+.drag-text {
+  position: relative;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  border-radius: 6px;
+  outline: 1.5px dashed transparent;
+  outline-offset: 2px;
+  transition: outline-color 0.2s;
+}
+.id-card:hover .drag-text,
+.drag-text:focus-visible {
+  outline-color: rgb(255 255 255 / 0.45);
+}
+.drag-text:hover,
+.drag-text[data-dragging] {
+  cursor: grabbing;
+  outline-color: rgb(255 255 255 / 0.95);
+  z-index: 2;
+}
+.resize-handle {
+  position: absolute;
+  right: -7px;
+  bottom: -7px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 6px rgb(0 0 0 / 0.45);
+  cursor: nwse-resize;
+  touch-action: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.drag-text:hover > .resize-handle,
+.drag-text:focus-visible > .resize-handle,
+.drag-text[data-dragging] > .resize-handle {
+  opacity: 1;
+}
+@media (hover: none) {
+  .id-card .drag-text { outline-color: rgb(255 255 255 / 0.35); }
+  .resize-handle { opacity: 1; width: 18px; height: 18px; right: -9px; bottom: -9px; }
+}
