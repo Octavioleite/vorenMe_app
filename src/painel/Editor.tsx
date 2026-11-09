@@ -2,7 +2,7 @@ import {
   ArrowCounterClockwise, ArrowLeft, ArrowSquareOut, ChatCircleText, Check, CloudArrowUp, WarningCircle, Code, Eye, Globe, IdentificationCard, Image as ImageIcon, InstagramLogo, PinterestLogo, SpotifyLogo, TiktokLogo, User, X, XLogo, YoutubeLogo, LinkSimple, ListBullets, Megaphone, Palette, Plus, ShareNetwork, Sparkle, Ticket, Star, Trash,
 } from '@phosphor-icons/react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { TEXT_IDS, TEXT_SIZE, type CreatorConfig, type TextId, type TextLayout, type Platform, type SocialLink } from '../config/types'
+import { STYLES, TEXT_IDS, TEXT_SIZE, type CreatorConfig, type Style, type TextId, type TextLayout, type Platform, type SocialLink } from '../config/types'
 import { api, ApiError, type Card } from './api'
 import { DevicePreview } from './DevicePreview'
 import { Errors, Field, ImagePicker, ask, Section, Tags, Thumb, errorText, iconBtn, input, secondary } from './ui'
@@ -31,6 +31,18 @@ const goTo = (id: string) => {
 const count = (n: number | undefined, one: string, many: string) => (n ? `${n} ${n === 1 ? one : many}` : 'Opcional')
 const TEXT_LABELS: [TextId, string][] = [['first', 'Nome'], ['last', 'Sobrenome'], ['niche', 'Especialidade'], ['username', 'Usuário'], ['location', 'Cidade']]
 const KINDS = [{ id: 'video', label: 'Vídeo' }, { id: 'post', label: 'Post' }, { id: 'project', label: 'Projeto' }] as const
+/** Nome e nicho de cada estilo; o nome aparece na fonte do próprio estilo (index.css, [data-style]). */
+const STYLE_NAMES: Record<Style, [string, string]> = {
+  criador: ['Criador', 'Influência, conteúdo'],
+  forte: ['Forte', 'Automotivo, esporte'],
+  tinta: ['Tinta', 'Barbearia, tatuagem'],
+  atelie: ['Ateliê', 'Salão, moda, loja'],
+  sereno: ['Sereno', 'Terapia, estética'],
+  glam: ['Glam', 'Unhas, cílios'],
+  clinica: ['Clínica', 'Saúde, odontologia'],
+  leve: ['Leve', 'Pet, comida, infantil'],
+  simples: ['Simples', 'Só o essencial'],
+}
 const SWATCHES = ['#6D3BF5', '#E8552B', '#2A7A8C', '#3B82C4', '#7A8F6B', '#B5838D', '#121214']
 
 const AUTOSAVE_MS = 900
@@ -55,6 +67,8 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [preview, setPreview] = useState(false)
+  const [pulse, setPulse] = useState(0)
+  const [active, setActive] = useState<string>(NAV[0][0])
   const frame = useRef<HTMLIFrameElement>(null)
 
   const dirty = slug !== saved.slug || JSON.stringify(config) !== saved.json
@@ -116,7 +130,22 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
   // Pré-visualização ao vivo: manda o cartão para o iframe a cada alteração, sem salvar nem recarregar.
   const sendPreview = () =>
     frame.current?.contentWindow?.postMessage({ type: PREVIEW_MSG, config }, location.origin)
-  useEffect(sendPreview, [config]) // eslint-disable-line react-hooks/exhaustive-deps
+  const first = useRef(true)
+  useEffect(() => {
+    sendPreview()
+    if (first.current) first.current = false
+    else setPulse((n) => n + 1)
+  }, [config]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Atalho da seção visível fica ativo (IntersectionObserver, sem ouvir o scroll).
+  useEffect(() => {
+    const io = new IntersectionObserver(
+      (entries) => entries.forEach((e) => e.isIntersecting && setActive(e.target.id)),
+      { rootMargin: '-140px 0px -60% 0px' },
+    )
+    NAV.forEach(([id]) => { const el = document.getElementById(id); if (el) io.observe(el) })
+    return () => io.disconnect()
+  }, [])
   useEffect(() => {
     const onReady = (e: MessageEvent) => {
       if (e.origin !== location.origin || e.source !== frame.current?.contentWindow) return
@@ -185,8 +214,8 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
         </div>
         <nav aria-label="Seções" className="-mx-1 mt-3 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none]">
           {NAV.map(([id, label]) => (
-            <button key={id} type="button" onClick={() => goTo(id)}
-              className="press shrink-0 rounded-full border border-line px-3 py-1.5 text-[13px] font-medium text-muted hover:border-line-strong hover:text-ink">
+            <button key={id} type="button" onClick={() => goTo(id)} aria-current={active === id ? 'true' : undefined}
+              className={`press shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors ${active === id ? 'bg-ink text-bg' : 'bg-[#f2f2f4] text-muted hover:text-ink'}`}>
               {label}
             </button>
           ))}
@@ -257,7 +286,7 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
                 </div>
               </div>
               <Field label="Endereço do cartão">
-                <div className="flex items-center rounded-[12px] border border-line bg-bg focus-within:border-accent">
+                <div className="flex items-center rounded-[12px] bg-[#f2f2f4] focus-within:bg-white focus-within:ring-2 focus-within:ring-accent/40">
                   <span className="pl-3.5 text-[15px] text-muted">/</span>
                   <input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase())}
                     className="min-w-0 flex-1 bg-transparent py-2.5 pr-3.5 pl-0.5 text-[15px] text-ink outline-none" />
@@ -269,8 +298,23 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
             </div>
           </Section>
 
-          <Section icon={<Palette size={17} weight="bold" />} title="Aparência" id="aparencia" description="Cor de destaque e tema">
+          <Section icon={<Palette size={17} weight="bold" />} title="Aparência" id="aparencia" description="Estilo, cor de destaque e tema">
             <div className="grid gap-5 sm:grid-cols-2">
+              <fieldset className="grid gap-2 sm:col-span-2">
+                <legend className="mb-2 text-[13px] font-medium">Estilo</legend>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {STYLES.map((s) => {
+                    const on = (c.style ?? 'criador') === s
+                    return (
+                      <label key={s} className={`press cursor-pointer rounded-[12px] border px-3 py-2.5 ${on ? 'border-accent bg-accent/6 ring-1 ring-accent' : 'border-line hover:border-line-strong'}`}>
+                        <input type="radio" name="style" className="sr-only" checked={on} onChange={() => set((x) => { x.style = s })} />
+                        <span data-style={s} className="display block text-[20px] leading-tight font-semibold tracking-[-0.03em]">{STYLE_NAMES[s][0]}</span>
+                        <span className="mt-0.5 block text-[12px] text-muted">{STYLE_NAMES[s][1]}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </fieldset>
               <div className="grid gap-2">
                 <span className="text-[13px] font-medium">Cor de destaque</span>
                 <div className="flex flex-wrap items-center gap-2">
@@ -510,13 +554,13 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
         </div>
 
         {/* Um único preview: coluna lateral no desktop, tela cheia no celular quando aberto. */}
-        <aside className={preview ? 'fixed inset-0 z-30 overflow-auto bg-bg p-4 pt-16 lg:static lg:z-auto lg:overflow-visible lg:bg-transparent lg:p-0' : 'hidden lg:block'}>
+        <aside className={preview ? 'fixed inset-0 z-30 overflow-auto bg-[#f5f5f7] p-4 pt-16 lg:static lg:z-auto lg:overflow-visible lg:bg-transparent lg:p-0' : 'hidden lg:block'}>
           {preview && (
             <button type="button" onClick={() => setPreview(false)} className={`${iconBtn} fixed top-4 right-4 bg-surface lg:hidden`} aria-label="Fechar prévia">
               <X size={17} />
             </button>
           )}
-          <DevicePreview frame={frame} src={`/${saved.slug}?preview`} />
+          <DevicePreview frame={frame} src={`/${saved.slug}?preview`} pulse={pulse} />
         </aside>
         {!preview && (
           <button type="button" onClick={() => setPreview(true)}

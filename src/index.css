@@ -1,4 +1,12 @@
 @import 'tailwindcss';
+/* Fontes de destaque dos estilos ([data-style] lá embaixo). O navegador só baixa a que a página usar. */
+@import '@fontsource-variable/oswald';
+@import '@fontsource/dm-serif-display';
+@import '@fontsource-variable/cormorant-garamond/wght-italic.css';
+@import '@fontsource-variable/playfair-display';
+@import '@fontsource-variable/playfair-display/wght-italic.css';
+@import '@fontsource-variable/syne';
+@import '@fontsource-variable/fredoka';
 
 /* ── Design tokens ─────────────────────────────────────────────────────────
    Palette: monochrome neutrals + one accent (from the creator config).
@@ -8,6 +16,7 @@
   --radius: 20px;
   --radius-ctl: 12px;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --font-display: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
   color-scheme: dark;
 }
 
@@ -148,7 +157,7 @@ body {
     position: relative;
     overflow: hidden;
     isolation: isolate;
-    border-radius: var(--radius);
+    border-radius: var(--card-radius, var(--radius));
     background: #18181a;
     box-shadow: var(--card-shadow);
     transform: perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
@@ -179,10 +188,13 @@ body {
     opacity: 1;
   }
   .id-name {
-    font-size: clamp(2.75rem, 19cqi, 6.5rem);
-    line-height: 0.84;
-    letter-spacing: -0.055em;
-    font-weight: 650;
+    font-family: var(--font-display);
+    font-size: clamp(2.75rem, var(--display-size, 19cqi), 6.5rem);
+    line-height: var(--display-leading, 0.84);
+    letter-spacing: var(--display-tracking, -0.055em);
+    font-weight: var(--display-weight, 650);
+    text-transform: var(--display-case, none);
+    font-style: var(--display-style, normal);
   }
 
   /* ── Per-tile identity: one metaphor + one motivated motion per objective ── */
@@ -521,6 +533,502 @@ dialog.qr-dialog[open] > * {
   a.zoom:hover img,
   a:hover .nudge {
     transform: none;
+  }
+}
+
+/* ── Estilos do cartão ([data-style] no <html>, vindo de config.style) ─────────────
+   Cada estilo é a personalidade de um nicho: fonte de destaque, cantos, moldura da foto,
+   textura do bloco de contato e tom do fundo. Fora de @layer para vencer as utilities.
+   'criador' é o visual base e não tem regras aqui. */
+:where([data-style]:not([data-style='criador'])) .display,
+.display:where([data-style]:not([data-style='criador'])) {
+  font-family: var(--font-display);
+  font-weight: var(--display-weight, 650);
+  letter-spacing: var(--display-tracking, -0.045em);
+  text-transform: var(--display-case, none);
+  font-style: var(--display-style, normal);
+}
+[data-style] .tag {
+  border-radius: var(--tag-radius, 999px);
+  text-transform: var(--tag-case, none);
+  letter-spacing: var(--tag-tracking, 0);
+  font-size: var(--tag-size, 13px);
+}
+
+/* Fundo levemente tingido pela cor do cartão: dois cartões no mesmo estilo não ficam com o mesmo cinza. */
+[data-theme='light']:where([data-style]:not([data-style='criador'])) {
+  --bg: color-mix(in oklab, var(--accent) var(--tint, 6%), #efefed);
+  --surface: color-mix(in oklab, var(--accent) 2.5%, #fafaf9);
+  --surface-2: color-mix(in oklab, var(--accent) var(--tint, 6%), #e4e4e2);
+}
+[data-theme='dark']:where([data-style]:not([data-style='criador'])) {
+  --bg: color-mix(in oklab, var(--accent) 4%, #0c0c0d);
+  --surface: color-mix(in oklab, var(--accent) 5%, #151517);
+  --surface-2: color-mix(in oklab, var(--accent) 7%, #1e1e21);
+}
+
+/* simples: link-in-bio de uma coluna (SimpleCard.tsx). Só ajusta cantos e um tom leve no fundo. */
+[data-style='simples'] {
+  --radius-ctl: 16px;
+  --tint: 5%;
+}
+
+/* Limpeza: a marca d'água das redes é do bento original (criador). */
+:where([data-style]:not([data-style='criador'])) .watermark {
+  display: none;
+}
+
+/* Bloco de agendamento. Cheio na cor (padrão): criador, clinica, leve.
+   Discreto (superfície + botão na cor): forte, tinta, atelie. Tingido: sereno. Gradiente: glam. */
+:is([data-style='forte'], [data-style='tinta'], [data-style='atelie'], [data-style='sereno']) .pship {
+  background-color: var(--surface);
+  color: var(--ink);
+}
+:is([data-style='forte'], [data-style='tinta'], [data-style='atelie'], [data-style='sereno']) .pship .shine {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+[data-style='forte'] .pship {
+  box-shadow: inset 4px 0 0 var(--accent), var(--tile-shadow);
+}
+[data-style='tinta'] .pship {
+  box-shadow: inset 0 0 0 1.5px var(--line-strong);
+}
+[data-style='atelie'] .pship {
+  box-shadow: inset 0 3px 0 var(--accent), var(--tile-shadow);
+}
+[data-style='sereno'] .pship {
+  background-color: color-mix(in oklab, var(--accent) 14%, var(--surface));
+}
+[data-style='glam'] .pship {
+  background-image: linear-gradient(135deg, color-mix(in oklab, var(--accent) 88%, black), var(--accent) 45%, color-mix(in oklab, var(--accent) 78%, white));
+}
+
+/* tinta: foto em preto e branco; a cor do cartão fica só nos botões. */
+[data-style='tinta'] .id-card img {
+  filter: grayscale(1) contrast(1.05);
+}
+
+/* sereno: duas luzes bem suaves da cor do cartão no fundo da página. */
+[data-style='sereno'] body {
+  background:
+    radial-gradient(60% 50% at 0% 0%, color-mix(in oklab, var(--accent) 18%, transparent), transparent 70%),
+    radial-gradient(50% 45% at 100% 100%, color-mix(in oklab, var(--accent) 14%, transparent), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+/* forte: estética automotiva, personal. Condensada em caixa alta, quinas secas, faixa diagonal. */
+[data-style='forte'] {
+  --font-display: 'Oswald Variable', 'Geist Variable', sans-serif;
+  --display-weight: 600;
+  --display-tracking: -0.01em;
+  --display-case: uppercase;
+  --display-leading: 0.9;
+  --display-size: 21cqi;
+  --radius: 4px;
+  --radius-ctl: 4px;
+  --tag-radius: 2px;
+  --tag-case: uppercase;
+  --tag-tracking: 0.06em;
+  --tag-size: 12px;
+}
+
+/* tinta: barbearia, tatuagem. Serifa de letreiro, cantos retos, moldura dupla de flash, retícula. */
+[data-style='tinta'] {
+  --font-display: 'DM Serif Display', Georgia, serif;
+  --display-weight: 400;
+  --display-tracking: -0.02em;
+  --display-leading: 0.88;
+  --display-size: 18cqi;
+  --radius: 0px;
+  --radius-ctl: 0px;
+  --tag-radius: 0px;
+  --tag-case: uppercase;
+  --tag-tracking: 0.08em;
+  --tag-size: 12px;
+}
+[data-style='tinta'] .tile {
+  border-width: 1.5px;
+  border-color: var(--line-strong);
+}
+
+/* atelie: salão, loja. Editorial: serifa com sobrenome em itálico, foto à direita, contorno solto. */
+[data-style='atelie'] {
+  --font-display: 'Playfair Display Variable', Georgia, serif;
+  --display-weight: 500;
+  --display-tracking: -0.03em;
+  --display-leading: 0.92;
+  --display-size: 17cqi;
+  --radius: 6px;
+  --radius-ctl: 999px;
+  --tag-case: uppercase;
+  --tag-tracking: 0.14em;
+  --tag-size: 11px;
+  --tint: 4%;
+  --display-style: italic;
+}
+[data-style='atelie'] .id-name {
+  font-style: normal;
+}
+[data-style='atelie'] .id-name + .id-name {
+  font-style: italic;
+}
+@media (min-width: 1024px) {
+  [data-style='atelie'] .hero-col {
+    order: 2;
+  }
+}
+
+/* sereno: psicologia, esteticista. Serifa itálica leve, foto em arco, luz suave no contato. */
+[data-style='sereno'] {
+  --font-display: 'Cormorant Garamond Variable', Georgia, serif;
+  --display-weight: 500;
+  --display-tracking: -0.02em;
+  --display-leading: 0.86;
+  --display-size: 21cqi;
+  --display-style: italic;
+  --radius: 28px;
+  --radius-ctl: 999px;
+  --card-radius: 50% 50% 28px 28px / 40% 40% 28px 28px;
+  --tint: 12%;
+}
+
+/* glam: nail, lash. Grotesca larga, tudo arredondado, brilho de esmalte na foto e no contato. */
+[data-style='glam'] {
+  --font-display: 'Syne Variable', 'Geist Variable', sans-serif;
+  --display-weight: 700;
+  --display-tracking: -0.04em;
+  --display-leading: 0.88;
+  --display-size: 17cqi;
+  --radius: 32px;
+  --radius-ctl: 999px;
+  --card-radius: 40px;
+  --tint: 10%;
+}
+[data-style='glam'] .tag,
+[data-style='leve'] .tag {
+  border-color: transparent;
+  background: color-mix(in oklab, currentColor 12%, transparent);
+}
+
+/* clinica: clínica, odontologia. Geist mais leve, foto emoldurada como crachá, papel quadriculado. */
+[data-style='clinica'] {
+  --display-weight: 500;
+  --display-tracking: -0.045em;
+  --display-leading: 0.9;
+  --display-size: 16cqi;
+  --radius: 24px;
+  --tag-radius: 8px;
+}
+[data-style='clinica'] .id-card {
+  border: 6px solid var(--surface);
+}
+
+/* leve: pet shop. Arredondada e amigável, blocos que balançam no hover. */
+[data-style='leve'] {
+  --font-display: 'Fredoka Variable', 'Geist Variable', sans-serif;
+  --display-weight: 600;
+  --display-tracking: -0.02em;
+  --display-leading: 0.9;
+  --display-size: 18cqi;
+  --radius: 28px;
+  --radius-ctl: 999px;
+  --card-radius: 36px;
+  --tint: 14%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-style='leve'] a.tile:hover {
+    transform: translateY(-3px) rotate(-1.2deg);
+  }
+}
+
+/* ── Composição por estilo ─────────────────────────────────────────────
+   Ganchos: .layout (grade principal), .hero-col (cartão + bio), .hero-copy, .id-copy,
+   .tiles (blocos), .t-social/.t-featured/.t-coupons/.t-pship/.t-now/.t-qr/.t-brands,
+   .socials-grid, .pship-contacts. 64rem = lg do Tailwind, 48rem = md. */
+
+/* Redes em linha (tinta: lista; glam: pílulas). O 1º span vira "contents" para ícone, texto e seta ficarem lado a lado. */
+:is([data-style='tinta'], [data-style='glam']) .socials-grid .tile {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.9rem;
+  min-height: 0;
+}
+:is([data-style='tinta'], [data-style='glam']) .socials-grid .tile > span:first-of-type {
+  display: contents;
+}
+:is([data-style='tinta'], [data-style='glam']) .socials-grid .tile > span:last-child {
+  order: 1;
+  flex: 1;
+  margin-top: 0;
+}
+:is([data-style='tinta'], [data-style='glam']) .socials-grid .nudge {
+  order: 2;
+}
+
+/* forte: pôster largo no topo, bio e botões lado a lado, blocos em faixas de 4 colunas. */
+@media (min-width: 64rem) {
+  [data-style='forte'] .layout {
+    display: block;
+  }
+  [data-style='forte'] .hero-col {
+    position: static;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 440px);
+    gap: 1.5rem 3rem;
+    align-items: end;
+  }
+  [data-style='forte'] .hero-col > .deal {
+    grid-column: 1 / -1;
+  }
+  [data-style='forte'] .id-card {
+    aspect-ratio: 21 / 9;
+    max-height: none;
+    min-height: 0;
+  }
+  [data-style='forte'] .hero-copy {
+    display: contents;
+  }
+  [data-style='forte'] #hero-cta {
+    margin-top: 0;
+  }
+  [data-style='forte'] .tiles {
+    margin-top: 2.5rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  [data-style='forte'] .t-social {
+    grid-column: 1 / -1;
+    order: 1;
+  }
+  [data-style='forte'] .socials-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+  [data-style='forte'] :is(.t-featured, .t-coupons) {
+    grid-column: span 2;
+    order: 2;
+  }
+  [data-style='forte'] .tiles:not(:has(.t-featured)) .t-coupons {
+    grid-column: 1 / -1;
+  }
+  [data-style='forte'] .t-pship {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+  [data-style='forte'] .t-pship > .relative {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 440px);
+    column-gap: 3rem;
+  }
+  [data-style='forte'] .pship-contacts {
+    grid-column: 2;
+    grid-row: 1 / span 4;
+    align-self: end;
+    margin-top: 0;
+  }
+  [data-style='forte'] .t-now {
+    grid-column: span 3;
+    order: 4;
+  }
+  [data-style='forte'] .t-qr {
+    order: 4;
+  }
+  [data-style='forte'] .t-brands {
+    grid-column: 1 / -1;
+    order: 5;
+  }
+}
+
+/* tinta: coluna única central como uma folha de flash, foto quadrada, redes em lista. */
+[data-style='tinta'] .layout {
+  display: block;
+  max-width: 600px;
+  margin-inline: auto;
+}
+[data-style='tinta'] .hero-col {
+  position: static;
+  display: block;
+}
+[data-style='tinta'] .hero-copy {
+  margin-top: 1.5rem;
+}
+[data-style='tinta'] .id-card {
+  aspect-ratio: 1;
+  max-height: none;
+  min-height: 0;
+}
+[data-style='tinta'] .tiles {
+  margin-top: 2.5rem;
+}
+[data-style='tinta'] .socials-grid {
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+
+/* atelie: revista. Bio como citação, contato sem fundo de cor (fio na cor do cartão), redes como índice. */
+[data-style='atelie'] .hero-copy > p:first-child {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: clamp(1.3rem, 2.2vw, 1.6rem);
+  line-height: 1.3;
+}
+[data-style='atelie'] .socials-grid .tile {
+  background: transparent;
+  border-width: 1px 0 0;
+  border-color: var(--ink);
+  border-radius: 0;
+  box-shadow: none;
+  min-height: 96px;
+}
+
+/* sereno: tudo centralizado, foto em arco no meio, blocos numa coluna mais estreita. */
+[data-style='sereno'] .layout {
+  display: block;
+}
+[data-style='sereno'] .hero-col {
+  position: static;
+  display: block;
+  max-width: 400px;
+  margin-inline: auto;
+  text-align: center;
+}
+[data-style='sereno'] .hero-copy {
+  margin-top: 1.5rem;
+}
+[data-style='sereno'] .hero-copy > p:first-child {
+  margin-inline: auto;
+}
+[data-style='sereno'] .id-card {
+  max-height: none;
+  min-height: 0;
+}
+[data-style='sereno'] .id-copy {
+  text-align: center;
+}
+[data-style='sereno'] .id-copy > div {
+  justify-content: center;
+  gap: 1.25rem;
+}
+[data-style='sereno'] .tiles {
+  max-width: 880px;
+  margin: 3.5rem auto 0;
+}
+
+/* glam: agendamento antes de tudo, redes em pílulas, cartão e blocos meio a meio. */
+[data-style='glam'] .t-pship {
+  order: -1;
+}
+[data-style='glam'] .socials-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+[data-style='glam'] .socials-grid .tile {
+  padding: 0.6rem 1.1rem 0.6rem 0.8rem;
+  border-radius: 999px;
+}
+[data-style='glam'] .socials-grid .tile > span:last-child > span + span {
+  display: none;
+}
+@media (min-width: 64rem) {
+  [data-style='glam'] .hero-col,
+  [data-style='glam'] .tiles {
+    grid-column: span 6;
+  }
+}
+
+/* clinica: ficha. Foto e apresentação lado a lado num painel, blocos em 3 colunas. */
+[data-style='clinica'] .layout {
+  display: block;
+}
+[data-style='clinica'] .hero-col {
+  position: static;
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--tile-shadow);
+}
+[data-style='clinica'] .id-card {
+  aspect-ratio: 1;
+  max-height: none;
+  min-height: 0;
+  box-shadow: none;
+  border-color: var(--surface-2);
+}
+[data-style='clinica'] .tiles {
+  margin-top: 1.5rem;
+}
+@media (min-width: 48rem) {
+  [data-style='clinica'] .hero-col {
+    display: grid;
+    grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+    gap: 2.5rem;
+    align-items: center;
+    padding: 1.25rem;
+  }
+  [data-style='clinica'] .hero-copy {
+    margin-top: 0;
+  }
+  [data-style='clinica'] .hero-copy > p:first-child {
+    font-size: 1.35rem;
+    max-width: 40ch;
+  }
+}
+@media (min-width: 64rem) {
+  [data-style='clinica'] .tiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  [data-style='clinica'] .t-featured {
+    grid-column: 1 / -1;
+    order: 0;
+  }
+  [data-style='clinica'] .t-pship {
+    grid-column: span 2;
+    order: 1;
+  }
+  [data-style='clinica'] .t-social {
+    grid-column: span 1;
+    order: 2;
+  }
+  [data-style='clinica'] .socials-grid {
+    grid-template-columns: 1fr;
+  }
+  [data-style='clinica'] :is(.t-coupons, .t-now, .t-qr) {
+    grid-column: span 1;
+    order: 3;
+  }
+  [data-style='clinica'] .tiles:not(:has(.t-coupons)) .t-now {
+    grid-column: span 2;
+  }
+  [data-style='clinica'] .t-brands {
+    grid-column: 1 / -1;
+    order: 4;
+  }
+}
+
+/* leve: blocos levemente tortos como fotos coladas, redes tingidas, cartão mais estreito. */
+[data-style='leve'] .tiles > :nth-child(odd of :not(.t-social)),
+[data-style='leve'] .socials-grid > :nth-child(odd) {
+  rotate: -0.5deg;
+}
+[data-style='leve'] .tiles > :nth-child(even of :not(.t-social)),
+[data-style='leve'] .socials-grid > :nth-child(even) {
+  rotate: 0.5deg;
+}
+[data-style='leve'] .socials-grid .tile {
+  background: color-mix(in oklab, var(--accent) 12%, var(--surface));
+  border-color: transparent;
+}
+@media (min-width: 64rem) {
+  [data-style='leve'] .hero-col {
+    grid-column: span 4;
+  }
+  [data-style='leve'] .tiles {
+    grid-column: span 8;
+  }
+  [data-style='leve'] .socials-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   }
 }
 

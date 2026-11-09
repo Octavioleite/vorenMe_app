@@ -12,16 +12,8 @@ export function PartnershipTile({ className = '' }: { className?: string }) {
     <section
       aria-labelledby="partnership-title"
       data-reveal
-      className={`tile on-accent relative overflow-hidden !border-transparent bg-accent p-6 text-accent-fg md:p-8 ${className}`}
+      className={`tile pship on-accent relative overflow-hidden !border-transparent bg-accent p-6 text-accent-fg md:p-8 ${className}`}
     >
-      {/* typographic texture instead of a gradient */}
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute -top-12 -right-4 text-[240px] leading-none font-bold tracking-[-0.06em] opacity-[0.08] select-none md:-top-16 md:text-[320px]"
-      >
-        &amp;
-      </span>
-
       <div className="relative">
         {availability && (
           <p className="flex items-center gap-2.5 text-[13px] font-semibold">
@@ -31,7 +23,7 @@ export function PartnershipTile({ className = '' }: { className?: string }) {
         )}
         <h2
           id="partnership-title"
-          className="mt-5 max-w-[13ch] text-[38px] leading-[0.95] font-semibold tracking-[-0.045em] text-balance md:text-[52px]"
+          className="display mt-5 max-w-[13ch] text-[38px] leading-[0.95] font-semibold tracking-[-0.045em] text-balance md:text-[52px]"
         >
           {partnership.title}
         </h2>
@@ -39,14 +31,14 @@ export function PartnershipTile({ className = '' }: { className?: string }) {
         {partnership.formats && partnership.formats.length > 0 && (
           <ul className="mt-5 flex flex-wrap gap-1.5" aria-label="Formatos">
             {partnership.formats.map((f) => (
-              <li key={f} className="rounded-full border border-current/25 px-3 py-1 text-[13px] font-medium">
+              <li key={f} className="tag rounded-full border border-current/25 px-3 py-1 text-[13px] font-medium">
                 {f}
               </li>
             ))}
           </ul>
         )}
 
-        <div className="mt-8 grid max-w-[520px] gap-2">
+        <div className="pship-contacts mt-8 grid max-w-[520px] gap-2">
           {whatsappHref && whatsapp && (
             <ExternalLink
               href={whatsappHref}

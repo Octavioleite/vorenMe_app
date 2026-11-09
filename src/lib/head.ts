@@ -32,6 +32,7 @@ export function applyHead(c: CreatorConfig, keepTheme = false) {
   if (!keepTheme && ok(forced)) theme = forced
 
   d.dataset.theme = theme
+  d.dataset.style = c.style ?? 'criador'
   d.lang = c.seo.locale.replace('_', '-')
   d.style.setProperty('--accent', c.accent)
   d.style.setProperty('--accent-fg', accentForeground(c.accent))

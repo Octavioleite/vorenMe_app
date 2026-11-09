@@ -4,15 +4,15 @@ import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import { ApiError, uploadImage } from './api'
 
-/* Forma: superfícies 20px · controles de texto 12px · botões só-ícone em círculo (mesmo sistema do cartão). */
+/* Forma (mesma linguagem da página inicial): superfícies 20-24px · campos 12px cinza-claro sem borda · botões em pílula · só-ícone em círculo. */
 export const input =
-  'w-full rounded-[12px] border border-line bg-bg px-3.5 py-2.5 text-[15px] text-ink placeholder:text-muted/70 outline-none transition-colors hover:border-line-strong focus:border-accent disabled:opacity-50'
+  'w-full rounded-[12px] border border-transparent bg-[#f2f2f4] px-3.5 py-2.5 text-[15px] text-ink placeholder:text-[#8e8e93] outline-none transition-[background-color,box-shadow] focus:bg-white focus:ring-2 focus:ring-accent/40 disabled:opacity-50'
 const btn =
-  'press inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[12px] px-4 py-2.5 text-sm font-semibold disabled:pointer-events-none disabled:opacity-40'
+  'press inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold disabled:pointer-events-none disabled:opacity-40'
 export const primary = `${btn} bg-accent text-accent-fg hover:brightness-110`
-export const secondary = `${btn} border border-line bg-surface text-ink hover:border-line-strong hover:bg-surface-2`
+export const secondary = `${btn} bg-[#f2f2f4] text-ink hover:bg-[#e8e8ec]`
 export const iconBtn =
-  'press grid size-10 shrink-0 place-items-center rounded-full border border-line text-muted hover:border-line-strong hover:bg-surface-2 hover:text-ink'
+  'press grid size-10 shrink-0 place-items-center rounded-full bg-[#f2f2f4] text-muted hover:bg-[#e8e8ec] hover:text-ink'
 
 export const thumb = (src: string, w = 640) =>
   src.startsWith('https://images.unsplash.com/') ? `${src}${src.includes('?') ? '&' : '?'}w=${w}&q=75&auto=format&fit=crop` : src

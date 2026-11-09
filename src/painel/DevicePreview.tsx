@@ -12,7 +12,7 @@ type Device = keyof typeof DEVICES
 
 const KEY = 'vorenme-preview-device'
 
-export function DevicePreview({ frame, src }: { frame: RefObject<HTMLIFrameElement>; src: string }) {
+export function DevicePreview({ frame, src, pulse }: { frame: RefObject<HTMLIFrameElement>; src: string; pulse: number }) {
   const [device, setDevice] = useState<Device>(() => {
     try {
       const d = localStorage.getItem(KEY)
@@ -23,11 +23,20 @@ export function DevicePreview({ frame, src }: { frame: RefObject<HTMLIFrameEleme
     return 'celular'
   })
   const box = useRef<HTMLDivElement>(null)
+  const device$ = useRef<HTMLDivElement>(null)
+  // Pisca a moldura a cada alteração enviada para a prévia (reinicia a animação).
+  useEffect(() => {
+    const el = device$.current
+    if (!pulse || !el) return
+    delete el.dataset.pulse
+    void el.offsetWidth
+    el.dataset.pulse = ''
+  }, [pulse])
   const [space, setSpace] = useState({ w: 360, h: 700 })
 
   // Espaço disponível: largura da coluna e altura da janela (o preview fica fixo ao rolar).
   useEffect(() => {
-    const measure = () => setSpace({ w: box.current?.clientWidth ?? 360, h: innerHeight - 170 })
+    const measure = () => setSpace({ w: box.current?.clientWidth ?? 360, h: innerHeight - 250 })
     measure()
     const ro = new ResizeObserver(measure)
     if (box.current) ro.observe(box.current)
@@ -53,14 +62,14 @@ export function DevicePreview({ frame, src }: { frame: RefObject<HTMLIFrameEleme
   }
 
   return (
-    <div className="sticky top-24" data-device={device}>
-      <div role="radiogroup" aria-label="Tamanho da tela" className="mx-auto mb-4 flex w-fit gap-1 rounded-full border border-line bg-surface p-1">
+    <div className="sticky top-24 lg:rounded-[32px] lg:bg-[#f5f5f7] lg:p-8" data-device={device}>
+      <div role="radiogroup" aria-label="Tamanho da tela" className="mx-auto mb-6 flex w-fit gap-1 rounded-full bg-[#f2f2f4] p-1">
         {(Object.keys(DEVICES) as Device[]).map((key) => {
           const { label, icon: Icon } = DEVICES[key]
           const on = key === device
           return (
             <button key={key} type="button" role="radio" aria-checked={on} onClick={() => pick(key)}
-              className={`press flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-medium ${on ? 'bg-accent text-accent-fg' : 'text-muted hover:text-ink'}`}>
+              className={`press flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-medium ${on ? 'bg-white text-ink shadow-[0_1px_3px_rgb(17_17_19/0.12)]' : 'text-muted hover:text-ink'}`}>
               <Icon size={16} weight={on ? 'fill' : 'regular'} aria-hidden="true" />
               {label}
             </button>
@@ -71,7 +80,7 @@ export function DevicePreview({ frame, src }: { frame: RefObject<HTMLIFrameEleme
       <div ref={box} className="grid justify-items-center">
         {/* Caixa no tamanho já reduzido, para o layout em volta não reservar o tamanho real */}
         <div style={{ width: outerW * scale, height: outerH * scale }}>
-          <div className="origin-top-left overflow-hidden bg-surface-2 shadow-2xl transition-[width,height] duration-300"
+          <div ref={device$} className="preview-device origin-top-left overflow-hidden bg-[#2b2b2f]"
             style={{ width: outerW, height: outerH, padding: d.bezel, borderRadius: d.radius, transform: `scale(${scale})` }}>
             <iframe ref={frame} title={`Pré-visualização do cartão: ${d.label}`} src={src}
               className="block bg-bg" style={{ width: d.w, height: d.h, borderRadius: d.radius - d.bezel }} />
@@ -79,8 +88,8 @@ export function DevicePreview({ frame, src }: { frame: RefObject<HTMLIFrameEleme
         </div>
       </div>
 
-      <p className="mt-3 text-center text-[13px] text-muted">
-        Ao vivo · {d.w} × {d.h}
+      <p className="mt-4 flex items-center justify-center gap-2 text-[13px] text-muted">
+        <span aria-hidden="true" className="live-dot size-2 rounded-full bg-accent" /> Prévia ao vivo
       </p>
     </div>
   )

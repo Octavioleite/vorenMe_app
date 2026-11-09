@@ -1,15 +1,18 @@
-import { ArrowRight, Eye, EyeSlash } from '@phosphor-icons/react'
+import { ArrowRight, Check, Eye, EyeSlash } from '@phosphor-icons/react'
 import { useEffect, useState, type CSSProperties, type FormEvent } from 'react'
 import { api, type Session, type Template } from './api'
-import { Errors, Field, errorText, input, primary, thumb, transition } from './ui'
+import { Errors, errorText, thumb, transition } from './ui'
 
 const MODES = { login: 'Entrar', register: 'Criar conta' } as const
 type Mode = keyof typeof MODES
 const step = (i: number) => ({ '--i': i }) as CSSProperties
 
 const AUTOPLAY = 3200
+// Mesma linguagem da página inicial: campos cinza-claro sem borda, botões em pílula.
+const field = 'h-12 w-full rounded-[14px] bg-[#f2f2f4] px-4 text-[16px] text-ink outline-none ring-accent/40 transition-shadow placeholder:text-[#8e8e93] focus:bg-white focus:ring-2'
+const PERKS = ['3 dias grátis, depois R$ 9,99/mês', 'Até 3 cartões e links ilimitados', 'Cancele quando quiser']
 
-/** Cartão-modelo. O ativo inclina e ganha brilho seguindo o ponteiro (CSS vars, sem re-render) e,
+/** Cartão-modelo. O ativo inclina seguindo o ponteiro (CSS vars, sem re-render) e,
  *  se a pessoa digitou o nome no cadastro, mostra o nome dela no lugar do exemplo. */
 function MiniCard({ t, offset, name }: { t: Template; offset: number; name?: string }) {
   const c = t.config
@@ -19,47 +22,38 @@ function MiniCard({ t, offset, name }: { t: Template; offset: number; name?: str
     if (d) return
     const r = e.currentTarget.getBoundingClientRect()
     const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height
-    const s = e.currentTarget.style
-    s.setProperty('--rx', `${(0.5 - y) * 14}deg`)
-    s.setProperty('--ry', `${(x - 0.5) * 18}deg`)
-    s.setProperty('--mx', `${x * 100}%`)
-    s.setProperty('--my', `${y * 100}%`)
+    e.currentTarget.style.setProperty('--rx', `${(0.5 - y) * 12}deg`)
+    e.currentTarget.style.setProperty('--ry', `${(x - 0.5) * 16}deg`)
   }
   const reset = (e: React.PointerEvent<HTMLLIElement>) => {
     for (const k of ['--rx', '--ry']) e.currentTarget.style.setProperty(k, '0deg')
   }
   return (
     <li onPointerMove={tilt} onPointerLeave={reset}
-      className="group/card absolute inset-0 m-auto aspect-[3/4] w-[min(300px,52%)] overflow-hidden rounded-[24px] bg-surface-2 shadow-[0_40px_80px_-30px_rgb(0_0_0/0.9)] transition-[transform,opacity,filter] duration-[900ms] ease-out-expo"
+      className="absolute inset-0 m-auto aspect-[3/4] w-[min(280px,50%)] overflow-hidden rounded-[22px] bg-white shadow-[0_30px_60px_-28px_rgb(17_17_19/0.45)] transition-[transform,opacity] duration-[900ms] ease-out-expo"
       style={{
-        transform: `translateX(${offset * 60}%) translateZ(${-d * 160}px) rotateX(var(--rx, 0deg)) rotateY(calc(${-offset * 28}deg + var(--ry, 0deg)))`,
-        opacity: d >= 2 ? 0 : 1,
-        filter: d ? 'brightness(0.32) saturate(0.6)' : 'none',
+        transform: `translateX(${offset * 58}%) translateZ(${-d * 140}px) rotateX(var(--rx, 0deg)) rotateY(calc(${-offset * 24}deg + var(--ry, 0deg)))`,
+        opacity: d >= 2 ? 0 : d ? 0.55 : 1,
         zIndex: 10 - d,
       }}>
       <img src={thumb(c.photo.src, 700)} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover"
         style={{ objectPosition: c.photo.focal ?? '50% 30%' }} />
       <div className="absolute inset-0 bg-linear-to-t from-black/85 via-black/5 to-transparent" />
       <div className="absolute inset-x-0 bottom-0 p-6 text-[#FAFAF9]">
-        <p key={name ? 'you' : 'demo'} className="rise text-[34px] font-semibold leading-[0.9] tracking-[-0.04em] break-words">
+        <p key={name ? 'you' : 'demo'} className="rise text-[30px] font-semibold leading-[0.92] tracking-[-0.04em] break-words">
           {first}<br />{rest.join(' ')}
         </p>
-        <p className="mt-3 truncate text-[13px] text-white/70">{c.niche}</p>
+        <p className="mt-2 truncate text-[13px] text-white/70">{c.niche}</p>
         <span className="mt-4 flex h-9 items-center justify-center rounded-full text-[13px] font-semibold" style={{ background: c.accent, color: '#FAFAF9' }}>
-          Falar no WhatsApp
+          Salvar contato
         </span>
       </div>
-      {/* brilho que segue o ponteiro, só no cartão ativo */}
-      {!d && <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover/card:opacity-100"
-        style={{ background: 'radial-gradient(420px circle at var(--mx, 50%) var(--my, 0%), rgb(255 255 255 / 0.16), transparent 45%)' }} />}
-      <div className="pointer-events-none absolute inset-0 rounded-[24px] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.1)]" />
     </li>
   )
 }
 
-/** Vitrine dos modelos reais (GET /templates é público) em coverflow 3D. O fundo da coluna é a foto do modelo
- *  ativo desfocada; o nome do modelo ativo enche até a próxima troca. Pausa no hover e enquanto a pessoa digita
- *  o nome (o cartão ativo vira o dela). Só busca no desktop, onde a coluna aparece. */
+/** Vitrine dos modelos reais (GET /templates é público) em coverflow. Pausa no hover e enquanto a pessoa
+ *  digita o nome (o cartão ativo vira o dela). Só busca no desktop, onde a coluna aparece. */
 function Showcase({ name }: { name: string }) {
   const [templates, setTemplates] = useState<Template[] | null>(null)
   const [active, setActive] = useState(0)
@@ -75,46 +69,28 @@ function Showcase({ name }: { name: string }) {
     return () => clearInterval(id)
   }, [n, paused, active])
 
-  if (templates === null) return <div className="skeleton m-auto aspect-[3/4] w-[min(300px,52%)] rounded-[24px]" />
+  if (templates === null) return <div className="m-auto aspect-[3/4] w-[min(280px,50%)] animate-pulse rounded-[22px] bg-[#e9e9ec]" />
   if (!n) return null
   // distância circular até o ativo, em [-n/2, n/2]: o carrossel dá a volta sem pular
   const offsetOf = (i: number) => ((i - active + n + Math.floor(n / 2)) % n) - Math.floor(n / 2)
   return (
-    <>
-      {/* fundo ambiente: a foto do modelo ativo, desfocada, troca em cross-fade */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
+    <div className="rise grid min-h-0 grid-rows-[1fr_auto]" style={step(3)} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+      <ul aria-hidden="true" className="relative min-h-[400px] [perspective:1400px] [transform-style:preserve-3d]">
+        {templates.map((t, i) => <MiniCard key={t.id} t={t} offset={offsetOf(i)} name={i === active ? name : undefined} />)}
+      </ul>
+      <p className="mt-6 text-center text-[15px] font-semibold" aria-live="polite">Modelo {templates[active]?.name}</p>
+      <div className="mt-3 flex justify-center gap-1.5">
         {templates.map((t, i) => (
-          <img key={t.id} src={thumb(t.config.photo.src, 400)} alt="" decoding="async"
-            className="absolute inset-0 h-full w-full scale-125 object-cover blur-3xl transition-opacity duration-[1400ms]"
-            style={{ opacity: i === active ? 0.85 : 0 }} />
+          <button key={t.id} type="button" onClick={() => setActive(i)} aria-label={`Ver modelo ${t.name}`} aria-pressed={i === active}
+            className={`h-1.5 rounded-full transition-all duration-500 ${i === active ? 'w-6 bg-ink' : 'w-1.5 bg-ink/20 hover:bg-ink/40'}`} />
         ))}
-        <div className="absolute inset-0 bg-linear-to-b from-bg/75 via-bg/10 to-bg/70" />
       </div>
-
-      <div className="rise relative grid min-h-0 grid-rows-[1fr_auto]" style={step(4)}
-        onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
-        <ul aria-hidden="true" className="relative min-h-[420px] [perspective:1400px] [transform-style:preserve-3d]">
-          {templates.map((t, i) => <MiniCard key={t.id} t={t} offset={offsetOf(i)} name={i === active ? name : undefined} />)}
-        </ul>
-        <div className="relative mt-8 flex flex-wrap items-center justify-center gap-2">
-          {templates.map((t, i) => (
-            <button key={t.id} type="button" onClick={() => setActive(i)} aria-label={`Ver modelo ${t.name}`} aria-pressed={i === active}
-              className={`press relative overflow-hidden rounded-full px-3.5 py-1.5 text-[13px] font-medium ${i === active ? 'bg-white/10 text-ink' : 'text-muted hover:text-ink'}`}>
-              {i === active && (
-                <span key={active} aria-hidden="true" className="progress absolute inset-0 origin-left bg-white/15"
-                  style={{ animationDuration: `${AUTOPLAY}ms`, animationPlayState: paused ? 'paused' : 'running' }} />
-              )}
-              <span className="relative">{t.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    </>
+    </div>
   )
 }
 
 export function Auth({ onDone }: { onDone: (s: Session) => void }) {
-  // Quem chega pelo selo de um cartão (?cadastro=1) ainda não tem conta: abre direto em Criar conta.
+  // Quem chega pelo botão de teste grátis (?cadastro=1) ainda não tem conta: abre direto em Criar conta.
   const [mode, setMode] = useState<Mode>(() => (new URLSearchParams(location.search).has('cadastro') ? 'register' : 'login'))
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -136,68 +112,85 @@ export function Auth({ onDone }: { onDone: (s: Session) => void }) {
     }
   }
 
+  const label = (text: string, hint?: string, control?: React.ReactNode) => (
+    <label className="grid gap-2">
+      <span className="text-[14px] font-medium text-ink">{text}</span>
+      {control}
+      {hint && <span className="text-[13px] text-muted">{hint}</span>}
+    </label>
+  )
+
   return (
-    <div className="grid min-h-dvh lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-      <main className="flex flex-col px-5 py-6 sm:px-10 lg:px-16">
-        <div className="mx-auto my-auto w-full max-w-[380px] py-12">
-          <div className="rise mb-10 grid justify-items-center gap-3">
-            <img src="/logo-mark.png" alt="" width={103} height={56} className="h-14 w-auto drop-shadow-[0_8px_24px_rgb(109_59_245/0.35)]" />
-            <p className="text-[22px] font-semibold tracking-[-0.03em]">Voren<span className="text-accent">Me</span></p>
-          </div>
-          <div role="group" aria-label="Acesso" className="rise grid grid-cols-2 rounded-[12px] border border-line bg-surface p-1">
+    <div className="grid min-h-dvh bg-white lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+      <main className="flex flex-col px-5 py-5 sm:px-10 lg:px-16">
+        <header className="flex items-center">
+          <a href="/" className="flex items-center gap-2.5 font-semibold tracking-[-0.02em] text-ink">
+            <img src="/favicon.png" alt="" width={30} height={30} className="rounded-full" />
+            VorenMe
+          </a>
+        </header>
+
+        <div className="mx-auto my-auto w-full max-w-[400px] py-12">
+          <div role="group" aria-label="Acesso" className="rise inline-grid grid-cols-2 rounded-full bg-[#f2f2f4] p-1">
             {(Object.keys(MODES) as Mode[]).map((m) => (
               <button key={m} type="button" aria-pressed={mode === m}
                 onClick={() => mode !== m && transition(() => { setMode(m); setError('') })}
                 style={mode === m ? { viewTransitionName: 'auth-tab' } : undefined}
-                className="press h-9 rounded-[9px] text-sm font-medium text-muted hover:text-ink aria-pressed:bg-surface-2 aria-pressed:text-ink aria-pressed:shadow-[inset_0_1px_0_rgb(255_255_255/0.06)]">
+                className="press h-9 rounded-full px-5 text-[14px] font-semibold text-muted hover:text-ink aria-pressed:bg-white aria-pressed:text-ink aria-pressed:shadow-[0_1px_3px_rgb(17_17_19/0.12)]">
                 {MODES[m]}
               </button>
             ))}
           </div>
 
-          <h1 style={{ ...step(1), viewTransitionName: 'auth-title' }} className="rise mt-10 text-3xl font-semibold tracking-tight">
-            {isLogin ? 'Bem-vindo de volta' : 'Crie sua conta'}
+          <h1 style={{ ...step(1), viewTransitionName: 'auth-title' }} className="rise mt-8 text-[40px] leading-[1.02] font-semibold tracking-[-0.045em] text-ink">
+            {isLogin ? 'Bem-vindo de volta.' : 'Comece seus 3 dias grátis.'}
           </h1>
-          <p className="rise mt-2 text-muted" style={step(2)}>
-            {isLogin ? 'Gerencie seus cartões de visita digitais.' : 'Seu cartão no ar em poucos minutos.'}
+          <p className="rise mt-3 text-[17px] text-muted" style={step(2)}>
+            {isLogin ? 'Entre para gerenciar seus cartões.' : 'Seu cartão no ar em poucos minutos.'}
           </p>
 
           <form onSubmit={submit} aria-busy={busy} className="rise mt-8 grid gap-5" style={step(3)}>
-            {!isLogin && (
-              <Field label="Nome">
-                <input name="name" className={input} autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
-              </Field>
-            )}
-            <Field label="E-mail">
-              <input name="email" type="email" required className={input} autoComplete="email" inputMode="email" />
-            </Field>
-            <Field label="Senha" hint={isLogin ? undefined : 'No mínimo 8 caracteres.'}>
+            {!isLogin && label('Nome', undefined,
+              <input name="name" className={field} autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />)}
+            {label('E-mail', undefined,
+              <input name="email" type="email" required className={field} autoComplete="email" inputMode="email" />)}
+            {label('Senha', isLogin ? undefined : 'No mínimo 8 caracteres.',
               <span className="relative">
                 <input name="password" type={showPass ? 'text' : 'password'} required minLength={isLogin ? undefined : 8}
-                  className={`${input} pr-11`} autoComplete={isLogin ? 'current-password' : 'new-password'} />
+                  className={`${field} pr-12`} autoComplete={isLogin ? 'current-password' : 'new-password'} />
                 <button type="button" onClick={() => setShowPass(!showPass)}
                   aria-label={showPass ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={showPass}
-                  className="absolute inset-y-0 right-0 grid w-11 place-items-center rounded-r-[12px] text-muted hover:text-ink">
+                  className="absolute inset-y-0 right-0 grid w-12 place-items-center rounded-r-[14px] text-muted hover:text-ink">
                   {showPass ? <EyeSlash size={18} /> : <Eye size={18} />}
                 </button>
-              </span>
-            </Field>
+              </span>)}
             <Errors text={error} />
-            <button disabled={busy} className={`${primary} group mt-1 h-11`}>
-              {busy ? 'Aguarde...' : MODES[mode]}
-              {!busy && <ArrowRight size={16} weight="bold" aria-hidden="true" className="transition-transform duration-300 group-hover:translate-x-0.5" />}
+            <button disabled={busy}
+              className="press group mt-1 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-accent text-[16px] font-semibold text-white hover:brightness-110 disabled:opacity-50">
+              {busy ? 'Aguarde...' : isLogin ? 'Entrar' : 'Testar 3 dias grátis'}
+              {!busy && <ArrowRight size={17} weight="bold" aria-hidden="true" className="transition-transform duration-300 group-hover:translate-x-1" />}
             </button>
           </form>
+
+          {!isLogin && (
+            <ul className="rise mt-8 grid gap-2.5" style={step(4)}>
+              {PERKS.map((p) => (
+                <li key={p} className="flex items-center gap-2.5 text-[14px] text-muted">
+                  <Check size={15} weight="bold" className="shrink-0 text-accent" aria-hidden="true" />{p}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </main>
 
-      <aside className="relative isolate m-3 hidden grid-rows-[auto_1fr] overflow-hidden rounded-[24px] border border-line bg-bg p-10 lg:grid xl:p-14">
-        <div>
-          <h2 key={preview ? 'you' : 'pitch'} className="rise max-w-lg text-[40px] font-semibold leading-[1.02] tracking-[-0.035em] xl:text-5xl">
-            {preview ? <>Assim fica<br /><span className="text-muted">o seu cartão.</span></> : <>Escolha um modelo.<br /><span className="text-muted">Publique hoje.</span></>}
+      <aside className="m-3 hidden grid-rows-[auto_1fr] overflow-hidden rounded-[32px] bg-[#f5f5f7] p-10 lg:grid xl:p-14">
+        <div className="text-center">
+          <h2 key={preview ? 'you' : 'pitch'} className="rise mx-auto max-w-md text-[40px] leading-[1.02] font-semibold tracking-[-0.045em] text-ink xl:text-[48px]">
+            {preview ? <>Assim fica<br /><span className="text-accent">o seu cartão.</span></> : <>Seu mundo.<br /><span className="text-accent">Um link.</span></>}
           </h2>
-          <p className="rise mt-4 max-w-sm text-[15px] text-muted" style={step(1)}>
-            {preview ? 'Troque o modelo embaixo. Depois é só completar com seus dados.' : 'Clínicas, consultórios, lojas e criadores começam com o cartão pronto.'}
+          <p className="rise mx-auto mt-4 max-w-sm text-[16px] text-muted" style={step(1)}>
+            {preview ? 'Depois é só escolher o modelo e completar com seus dados.' : 'Escolha um modelo, troque foto e textos e compartilhe hoje.'}
           </p>
         </div>
         <Showcase name={preview} />

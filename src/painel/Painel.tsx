@@ -6,7 +6,7 @@ import { Auth } from './Auth'
 // Só quem já entrou paga por Cards/Editor: o login carrega sozinho.
 const Cards = lazy(() => import('./Cards').then((m) => ({ default: m.Cards })))
 const Editor = lazy(() => import('./Editor').then((m) => ({ default: m.Editor })))
-import { Errors, Logo, errorText, iconBtn, transition } from './ui'
+import { Errors, errorText, iconBtn, transition } from './ui'
 
 /** Rotas: /painel (lista) · /painel/:id/editar (editor). Recarregar a página mantém onde a pessoa estava. */
 const idFromUrl = () => location.pathname.match(/^\/painel\/([^/]+)\/editar\/?$/)?.[1] ?? null
@@ -55,9 +55,17 @@ export function Painel() {
     <div className="mx-auto max-w-[1280px] has-[[data-device=computador]]:max-w-[1760px] px-4 pb-16 sm:px-6 lg:px-10">
       {!editingId && (
         <header className="flex h-[72px] items-center justify-between gap-3">
-          <Logo />
-          <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-muted sm:inline">{user.name || user.email}</span>
+          <a href="/" className="flex items-center gap-2.5 font-semibold tracking-[-0.02em]">
+            <img src="/favicon.png" alt="" width={30} height={30} className="rounded-full" />
+            VorenMe
+          </a>
+          <div className="flex items-center gap-2">
+            <span className="hidden items-center gap-2.5 rounded-full bg-[#f5f5f7] py-1 pr-4 pl-1 text-[14px] sm:inline-flex">
+              <span aria-hidden="true" className="grid size-8 place-items-center rounded-full bg-accent text-[13px] font-semibold text-accent-fg">
+                {(user.name || user.email).trim()[0]?.toUpperCase()}
+              </span>
+              <span className="max-w-[200px] truncate font-medium">{user.name || user.email}</span>
+            </span>
             <button type="button" className={iconBtn} onClick={logout} aria-label="Sair" title="Sair">
               <SignOut size={17} />
             </button>
@@ -80,7 +88,7 @@ export function Painel() {
             )}
           </div>
         ) : (
-          <Cards onEdit={open} onAuthLost={logout} />
+          <Cards name={user.name} onEdit={open} onAuthLost={logout} />
         )}
         </Suspense>
       </div>

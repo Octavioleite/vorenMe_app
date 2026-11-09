@@ -1,0 +1,57 @@
+/* ── Painel: lista de cartões ─────────────────────────────────────────
+   card-tile : foto por padrão; no hover a página real aparece por cima e a barra de ações entra (mostra o resultado e o que dá para fazer)
+   copied    : balão "Link copiado" (feedback)
+   add-tile  : o + gira ao passar o mouse (convite a criar)
+   empty-fan : modelos se abrem em leque no estado vazio */
+@layer components {
+  .card-img { transition: transform 1s var(--ease); }
+  .card-photo { transition: opacity 0.5s var(--ease); }
+  .live-frame { opacity: 0; transition: opacity 0.5s var(--ease); }
+  .card-tile[data-ready]:hover .live-frame, .card-tile[data-ready]:focus-within .live-frame { opacity: 1; }
+  .card-tile[data-ready]:hover .card-photo, .card-tile[data-ready]:focus-within .card-photo { opacity: 0; }
+  .card-tile:not([data-ready]):hover .card-img { transform: scale(1.04); }
+  .card-actions { transition: transform 0.5s var(--ease), opacity 0.35s var(--ease); }
+  @media (hover: hover) {
+    .card-actions { opacity: 0; transform: translateY(calc(100% + 16px)); }
+    .card-tile:hover .card-actions, .card-tile:focus-within .card-actions { opacity: 1; transform: none; }
+  }
+  /* Toque: sem hover, fica a foto com as ações sempre visíveis e o nome acima delas */
+  @media (hover: none) {
+    .card-photo > span:last-child { padding-bottom: 76px; }
+  }
+  .card-tile { box-shadow: 0 1px 0 rgb(17 17 19 / 0.02); transition: box-shadow 0.5s var(--ease), transform 0.5s var(--ease); }
+  .card-tile:hover { box-shadow: 0 30px 60px -32px rgb(17 17 19 / 0.45); transform: translateY(-4px); }
+
+  .copied { transform: translateX(-50%); animation: copied 1.6s var(--ease) both; pointer-events: none; }
+  @keyframes copied {
+    0% { opacity: 0; transform: translate(-50%, 6px) scale(0.9); }
+    15%, 80% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -4px); }
+  }
+
+  .add-plus { transition: transform 0.5s var(--ease), background-color 0.3s var(--ease), color 0.3s var(--ease); }
+  .add-tile:hover .add-plus { transform: rotate(90deg) scale(1.08); }
+
+  .empty-fan img { transform: translate(-50%, -50%) translateX(calc(var(--d) * 70%)) rotate(calc(var(--d) * 8deg)); transition: transform 0.7s var(--ease); }
+  .empty-fan:hover img { transform: translate(-50%, -52%) translateX(calc(var(--d) * 86%)) rotate(calc(var(--d) * 12deg)); }
+  @media (prefers-reduced-motion: no-preference) {
+    .empty-fan img { animation: fan-in 0.9s var(--ease) backwards; animation-delay: calc((var(--d) + 1) * 90ms + 300ms); }
+  }
+  @keyframes fan-in { from { opacity: 0; transform: translate(-50%, -40%) rotate(0deg); } }
+
+  /* ── Editor ──
+     preview-pulse : a moldura pisca roxo a cada alteração (mostra que a prévia acompanhou)
+     nav ativo     : o atalho da seção visível fica preenchido (onde a pessoa está) */
+  .preview-device { box-shadow: 0 0 0 1px rgb(17 17 19 / 0.06), 0 30px 60px -28px rgb(17 17 19 / 0.45), 0 60px 120px -60px rgb(17 17 19 / 0.35); }
+  @media (prefers-reduced-motion: no-preference) {
+    .preview-device[data-pulse] { animation: preview-pulse 0.7s var(--ease); }
+  }
+  @keyframes preview-pulse {
+    30% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 45%, transparent), 0 30px 60px -28px rgb(17 17 19 / 0.45); }
+  }
+  .live-dot { position: relative; }
+  @media (prefers-reduced-motion: no-preference) {
+    .live-dot::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: inherit; animation: live 2s ease-out infinite; }
+  }
+  @keyframes live { to { transform: scale(2.6); opacity: 0; } }
+}

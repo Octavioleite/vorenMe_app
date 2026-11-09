@@ -1,9 +1,10 @@
-import { ArrowSquareOut, Check, LinkSimple, PencilSimple, Plus, Trash, X } from '@phosphor-icons/react'
+import { ArrowLeft, ArrowSquareOut, Globe, Check, LinkSimple, MagnifyingGlass, PencilSimple, Plus, Trash, X } from '@phosphor-icons/react'
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import { api, ApiError, type Card, type Template } from './api'
 import { Errors, Field, ask, errorText, iconBtn, primary, secondary, thumb } from './ui'
 
-function CopyLink({ slug }: { slug: string }) {
+/** Copiar o link: o ícone vira check e um balão confirma (feedback da ação). */
+function CopyLink({ slug, className }: { slug: string; className: string }) {
   const [done, setDone] = useState(false)
   const copy = async () => {
     await navigator.clipboard.writeText(`${location.origin}/${slug}`)
@@ -11,37 +12,83 @@ function CopyLink({ slug }: { slug: string }) {
     setTimeout(() => setDone(false), 1600)
   }
   return (
-    <button type="button" onClick={copy} className={iconBtn} aria-label={done ? 'Link copiado' : 'Copiar link'} title={done ? 'Link copiado' : 'Copiar link'}>
+    <button type="button" onClick={copy} className={`${className} relative`} aria-label={done ? 'Link copiado' : 'Copiar link'} title={done ? 'Link copiado' : 'Copiar link'}>
       {done ? <Check size={17} weight="bold" className="text-accent" /> : <LinkSimple size={17} />}
+      {done && <span role="status" className="copied absolute -top-10 left-1/2 rounded-full bg-ink px-3 py-1.5 text-[12px] font-semibold whitespace-nowrap text-bg">Link copiado</span>}
     </button>
   )
 }
 
+const tileBtn = 'press grid size-10 shrink-0 place-items-center rounded-full text-ink/70 hover:bg-black/5 hover:text-ink'
+
+/** Foto por padrão; no hover, o cartão publicado de verdade (iframe na largura de um celular, reduzido para caber).
+ *  O iframe só é criado no primeiro hover/foco, e só aparece depois de carregar (sem tela em branco). */
+const PHONE_W = 390
 function CardTile({ card, i, onEdit, onDelete }: { card: Card; i: number; onEdit: () => void; onDelete: () => void }) {
   const c = card.config
+  const box = useRef<HTMLDivElement>(null)
+  const [scale, setScale] = useState(0)
+  const [armed, setArmed] = useState(false)
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    const ro = new ResizeObserver(([e]) => setScale(e.contentRect.width / PHONE_W))
+    if (box.current) ro.observe(box.current)
+    return () => ro.disconnect()
+  }, [])
+  const arm = () => matchMedia('(hover: hover)').matches && setArmed(true)
+
   return (
-    <li className="tile rise overflow-hidden" style={{ '--i': i } as CSSProperties}>
-      <button type="button" onClick={onEdit} className="zoom relative block aspect-[16/10] w-full overflow-hidden bg-surface-2" aria-label={`Editar ${c.name.first} ${c.name.last}`}>
-        <img src={thumb(c.photo.src)} alt="" loading="lazy" className="h-full w-full object-cover" style={{ objectPosition: c.photo.focal ?? '50% 30%' }} />
-        <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1" style={{ background: c.accent }} />
-      </button>
-      <div className="p-4">
-        <p className="truncate font-semibold">{c.name.first} {c.name.last}</p>
-        <p className="truncate text-sm text-muted">{c.niche}</p>
-        <div className="mt-4 flex items-center gap-2">
-          <button type="button" onClick={onEdit} className={`${primary} flex-1 py-2`}>
+    <li className="rise" style={{ '--i': i } as CSSProperties}>
+      <div ref={box} onPointerEnter={arm} onFocus={arm} data-ready={ready || undefined}
+        className="card-tile relative aspect-[4/5] overflow-hidden rounded-[24px] bg-[#f2f2f4] ring-1 ring-black/5">
+        <button type="button" onClick={onEdit} className="absolute inset-0 block text-left" aria-label={`Editar ${c.name.first} ${c.name.last}`}>
+          <span className="card-photo absolute inset-0">
+            <img src={thumb(c.photo.src, 700)} alt="" loading="lazy" className="card-img h-full w-full object-cover" style={{ objectPosition: c.photo.focal ?? '50% 30%' }} />
+            <span aria-hidden="true" className="absolute inset-0 bg-linear-to-t from-black/80 via-black/10 to-transparent" />
+            <span className="absolute inset-x-0 bottom-0 p-5 text-white">
+              <span className="block truncate text-[13px] text-white/75">{c.niche}</span>
+              <span className="mt-1 block text-[26px] leading-[0.95] font-semibold tracking-[-0.035em]">{c.name.first}<br />{c.name.last}</span>
+            </span>
+          </span>
+          {armed && scale > 0 && (
+            <iframe src={`/${card.slug}`} title={`Cartão ${c.name.first} ${c.name.last}`} tabIndex={-1} aria-hidden="true" scrolling="no"
+              onLoad={() => setTimeout(() => setReady(true), 400)}
+              className="live-frame pointer-events-none absolute top-0 left-0 origin-top-left border-0"
+              style={{ width: PHONE_W, height: PHONE_W * 1.25, transform: `scale(${scale})` }} />
+          )}
+        </button>
+        <div className="card-actions absolute inset-x-3 bottom-3 flex items-center gap-1 rounded-full bg-white/90 p-1.5 shadow-[0_12px_30px_-12px_rgb(17_17_19/0.5)] backdrop-blur-md">
+          <button type="button" onClick={onEdit} className="press inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-full bg-accent text-[14px] font-semibold text-accent-fg hover:brightness-110">
             <PencilSimple size={16} weight="bold" aria-hidden="true" /> Editar
           </button>
-          <a href={`/${card.slug}`} target="_blank" rel="noreferrer" className={iconBtn} aria-label="Abrir cartão" title="Abrir cartão">
+          <a href={`/${card.slug}`} target="_blank" rel="noreferrer" className={tileBtn} aria-label="Abrir cartão" title="Abrir cartão">
             <ArrowSquareOut size={17} />
           </a>
-          <CopyLink slug={card.slug} />
-          <button type="button" onClick={onDelete} className={`${iconBtn} hover:border-red-500/40 hover:text-red-500`} aria-label="Excluir cartão" title="Excluir cartão">
+          <CopyLink slug={card.slug} className={tileBtn} />
+          <button type="button" onClick={onDelete} className={`${tileBtn} hover:bg-red-500/10 hover:text-red-500`} aria-label="Excluir cartão" title="Excluir cartão">
             <Trash size={17} />
           </button>
         </div>
-        <p className="mt-3 truncate text-[13px] text-muted">{location.host}/<span className="text-ink">{card.slug}</span></p>
       </div>
+      <div className="mt-3 flex items-center gap-2.5 px-1">
+        <span aria-hidden="true" className="size-3 shrink-0 rounded-full ring-2 ring-white" style={{ background: c.accent, boxShadow: '0 0 0 1px rgb(17 17 19 / 0.1)' }} />
+        <p className="min-w-0 flex-1 truncate text-[15px] font-semibold">{c.name.first} {c.name.last}</p>
+        <p className="shrink-0 truncate text-[13px] text-muted">/{card.slug}</p>
+      </div>
+    </li>
+  )
+}
+
+/** Última célula da grade: criar outro cartão. */
+function AddTile({ i, onClick }: { i: number; onClick: () => void }) {
+  return (
+    <li className="rise" style={{ '--i': i } as CSSProperties}>
+      <button type="button" onClick={onClick} className="add-tile group grid aspect-[4/5] w-full place-content-center justify-items-center gap-4 rounded-[24px] border-2 border-dashed border-[#d9d9de] text-muted transition-colors hover:border-accent hover:bg-accent/4 hover:text-accent">
+        <span className="add-plus grid size-14 place-items-center rounded-full bg-[#f2f2f4] group-hover:bg-accent group-hover:text-accent-fg">
+          <Plus size={24} weight="bold" aria-hidden="true" />
+        </span>
+        <span className="text-[15px] font-semibold">Novo cartão</span>
+      </button>
     </li>
   )
 }
@@ -56,7 +103,15 @@ function NewCardDialog({ templates, dialog, onCreated, fail }: {
   const [slug, setSlug] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const selected = template || templates[0]?.id
+  const [cat, setCat] = useState('Todos')
+  const [query, setQuery] = useState('')
+  const selected = template
+  const chosen = templates.find((t) => t.id === template)
+  // Passo 2: ao escolher o modelo, sugere o endereço a partir do @ do modelo (a pessoa ajusta).
+  const pick = (t: Template) => { setTemplate(t.id); setSlug(t.config.username.toLowerCase().replace(/[^a-z0-9._-]/g, '').slice(0, 31)); setError('') }
+  const cats = ['Todos', ...new Set(templates.map((t) => t.category))]
+  const q = query.trim().toLowerCase()
+  const shown = templates.filter((t) => (cat === 'Todos' || t.category === cat) && (!q || `${t.name} ${t.category} ${t.config.niche}`.toLowerCase().includes(q)))
 
   const create = async (e: FormEvent) => {
     e.preventDefault()
@@ -71,68 +126,122 @@ function NewCardDialog({ templates, dialog, onCreated, fail }: {
   }
 
   return (
-    <dialog ref={dialog} className="qr-dialog w-[720px]" aria-labelledby="new-card-title"
+    <dialog ref={dialog} className="qr-dialog w-[860px]" aria-labelledby="new-card-title"
       onClick={(e) => e.target === e.currentTarget && dialog.current?.close()}>
-      <form onSubmit={create} className="tile max-h-[calc(100dvh-32px)] overflow-y-auto p-5 sm:p-7">
-        <div className="flex items-start justify-between gap-4">
+      <form onSubmit={create} className="tile flex max-h-[calc(100dvh-32px)] flex-col overflow-hidden">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-line p-4 sm:px-7 sm:py-5">
           <div>
             <h2 id="new-card-title" className="text-xl font-semibold tracking-tight">Novo cartão</h2>
-            <p className="mt-1 text-sm text-muted">Escolha um modelo. Você pode mudar tudo depois.</p>
+            <p className="mt-1 text-sm text-muted">{chosen ? 'Agora escolha o endereço do seu cartão.' : 'Primeiro escolha um modelo. Você pode mudar tudo depois.'}</p>
           </div>
           <button type="button" onClick={() => dialog.current?.close()} className={iconBtn} aria-label="Fechar">
             <X size={17} />
           </button>
         </div>
 
-        <fieldset className="mt-6">
-          <legend className="sr-only">Modelo</legend>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {templates.map((t) => {
-              const on = selected === t.id
-              return (
-                <label key={t.id}
-                  className={`press group relative cursor-pointer overflow-hidden rounded-[14px] border-2 bg-surface-2 text-ink ${on ? 'border-accent' : 'border-transparent hover:border-line-strong'}`}>
-                  <input type="radio" name="template" value={t.id} checked={on} onChange={() => setTemplate(t.id)} className="sr-only" />
-                  <img src={thumb(t.config.photo.src, 400)} alt="" loading="lazy" className="aspect-[4/3] w-full object-cover"
-                    style={{ objectPosition: t.config.photo.focal ?? '50% 30%' }} />
-                  <span className="block px-3 py-2.5">
-                    <span className="block text-sm font-semibold">{t.name}</span>
-                    <span className="block text-[12px] text-muted">{t.category}</span>
-                  </span>
-                  {on && (
-                    <span className="absolute top-2 right-2 grid size-6 place-items-center rounded-full bg-accent text-accent-fg">
-                      <Check size={14} weight="bold" aria-hidden="true" />
-                    </span>
-                  )}
-                </label>
-              )
-            })}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:px-7 sm:py-6">
+        {!chosen && <>
+        {/* Filtros: categoria (chips) e busca por nome/nicho */}
+        <div className="grid gap-3">
+          <label className="flex items-center gap-2 rounded-full bg-[#f2f2f4] px-4 focus-within:bg-white focus-within:ring-2 focus-within:ring-accent/40">
+            <MagnifyingGlass size={17} className="text-muted" aria-hidden="true" />
+            <span className="sr-only">Buscar modelo</span>
+            <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar: barbearia, unhas, dentista..."
+              className="min-w-0 flex-1 bg-transparent py-2.5 text-[15px] text-ink outline-none placeholder:text-muted/70" />
+          </label>
+          <div role="group" aria-label="Categorias" className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+            {cats.map((c) => (
+              <button key={c} type="button" onClick={() => setCat(c)} aria-pressed={cat === c}
+                className={`press shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-medium ${cat === c ? 'border-ink bg-ink text-bg' : 'border-transparent bg-[#f2f2f4] text-muted hover:text-ink'}`}>
+                {c}
+              </button>
+            ))}
           </div>
+        </div>
+
+        <fieldset className="mt-4">
+          <legend className="sr-only">Modelo</legend>
+          {shown.length === 0 ? (
+            <p className="rounded-[14px] border border-dashed border-line py-10 text-center text-sm text-muted">
+              Nenhum modelo encontrado. <button type="button" onClick={() => { setQuery(''); setCat('Todos') }} className="font-semibold text-ink underline">Ver todos</button>
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {shown.map((t) => {
+                const on = selected === t.id
+                return (
+                  <label key={t.id}
+                    className={`press group relative block aspect-[3/4] cursor-pointer overflow-hidden rounded-[16px] bg-surface-2 ring-offset-2 ring-offset-surface ${on ? 'ring-2 ring-accent' : 'hover:ring-1 hover:ring-line-strong'}`}>
+                    <input type="radio" name="template" value={t.id} checked={on} onChange={() => pick(t)} className="sr-only" />
+                    <img src={thumb(t.config.photo.src, 400)} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      style={{ objectPosition: t.config.photo.focal ?? '50% 30%' }} />
+                    <span aria-hidden="true" className="absolute inset-0 bg-linear-to-t from-black/85 via-black/10 to-transparent" />
+                    <span className="absolute inset-x-0 bottom-0 p-3 text-[#FAFAF9]">
+                      <span className="block text-[19px] leading-[0.95] font-semibold tracking-[-0.03em]">{t.name}</span>
+                      <span className="mt-1.5 flex items-center gap-1.5 text-[12px] text-white/75">
+                        <span aria-hidden="true" className="size-2 rounded-full" style={{ background: t.config.accent }} />
+                        {t.category}
+                      </span>
+                    </span>
+                    {on && (
+                      <span className="absolute top-2 right-2 grid size-6 place-items-center rounded-full bg-accent text-accent-fg">
+                        <Check size={14} weight="bold" aria-hidden="true" />
+                      </span>
+                    )}
+                  </label>
+                )
+              })}
+            </div>
+          )}
         </fieldset>
+        </>}
+
+        {chosen && <>
+        {/* Passo 2: modelo escolhido + endereço */}
+        <div className="flex items-center gap-3 sm:gap-4 rounded-[16px] bg-[#f5f5f7] p-3">
+          <img src={thumb(chosen.config.photo.src, 200)} alt="" className="aspect-[3/4] w-16 shrink-0 rounded-[10px] object-cover"
+            style={{ objectPosition: chosen.config.photo.focal ?? '50% 30%' }} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-lg leading-tight font-semibold">{chosen.name}</p>
+            <p className="text-[13px] text-muted">{chosen.category}</p>
+          </div>
+          <button type="button" onClick={() => setTemplate('')} className={`${secondary} shrink-0`}>
+            <ArrowLeft size={16} weight="bold" aria-hidden="true" /> <span className="max-sm:sr-only">Trocar modelo</span>
+          </button>
+        </div>
 
         <div className="mt-6">
           <Field label="Endereço do cartão" hint="Letras minúsculas, números, ponto, hífen ou _. Mínimo 3 caracteres.">
-            <div className="flex items-center rounded-[12px] border border-line bg-bg focus-within:border-accent">
-              <span className="pl-3.5 text-[15px] text-muted">{location.host}/</span>
-              <input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase())} required
-                pattern="[a-z0-9][a-z0-9._\-]{2,30}" placeholder="seunome"
-                className="min-w-0 flex-1 bg-transparent py-2.5 pr-3.5 text-[15px] text-ink outline-none placeholder:text-muted/70" />
+            <div className="flex items-center gap-2 rounded-[12px] bg-[#f2f2f4] px-3.5 focus-within:bg-white focus-within:ring-2 focus-within:ring-accent/40">
+              <span aria-hidden="true" className="text-[17px] text-muted">/</span>
+              <input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase())} required autoFocus
+                pattern="[a-z0-9][a-z0-9._\-]{2,30}" placeholder="seunome" autoCapitalize="none" autoCorrect="off" spellCheck={false}
+                className="min-w-0 flex-1 bg-transparent py-3 text-[16px] font-medium text-ink outline-none placeholder:text-muted/70" />
             </div>
           </Field>
+          <div className="mt-3 flex items-start gap-3 rounded-[12px] bg-surface-2 px-3.5 py-3">
+            <Globe size={18} className="mt-0.5 shrink-0 text-accent" aria-hidden="true" />
+            <p className="min-w-0 text-[14px] leading-snug">
+              <span className="block text-[12px] text-muted">Seu link vai ficar assim</span>
+              <span className="break-all text-muted">{location.host}/</span><span className="break-all font-semibold text-ink">{slug || 'seunome'}</span>
+            </p>
+          </div>
         </div>
 
         <div className="mt-5"><Errors text={error} /></div>
+        </>}
+        </div>
 
-        <div className="mt-6 flex justify-end gap-2">
+        <div className="grid shrink-0 grid-cols-2 gap-2 border-t border-line p-4 sm:flex sm:justify-end sm:px-7">
           <button type="button" onClick={() => dialog.current?.close()} className={secondary}>Cancelar</button>
-          <button disabled={busy} className={primary}>{busy ? 'Criando...' : 'Criar cartão'}</button>
+          <button disabled={busy || !chosen} className={`${primary} disabled:opacity-50`}>{busy ? 'Criando...' : 'Criar cartão'}</button>
         </div>
       </form>
     </dialog>
   )
 }
 
-export function Cards({ onEdit, onAuthLost }: { onEdit: (c: Card) => void; onAuthLost: () => void }) {
+export function Cards({ name, onEdit, onAuthLost }: { name?: string | null; onEdit: (c: Card) => void; onAuthLost: () => void }) {
   const [cards, setCards] = useState<Card[] | null>(null)
   const [templates, setTemplates] = useState<Template[]>([])
   const [error, setError] = useState('')
@@ -164,17 +273,18 @@ export function Cards({ onEdit, onAuthLost }: { onEdit: (c: Card) => void; onAut
 
   const openNew = () => dialog.current?.showModal()
 
+  const first = (name || '').trim().split(/\s+/)[0]
   return (
     <>
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="rise flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Seus cartões</h1>
-          <p className="mt-1 text-muted">
-            {cards === null ? 'Carregando...' : cards.length === 1 ? '1 cartão publicado' : `${cards.length} cartões publicados`}
+          <h1 className="text-[40px] leading-[1.02] font-semibold tracking-[-0.045em] md:text-[52px]">{first ? `Olá, ${first}.` : 'Seus cartões'}</h1>
+          <p className="mt-2 text-[17px] text-muted">
+            {cards === null ? 'Carregando seus cartões...' : cards.length === 0 ? 'Vamos colocar seu primeiro cartão no ar.' : cards.length === 1 ? '1 cartão no ar.' : `${cards.length} cartões no ar.`}
           </p>
         </div>
         {!!cards?.length && (
-          <button type="button" onClick={openNew} className={primary}>
+          <button type="button" onClick={openNew} className={`${primary} h-11`}>
             <Plus size={16} weight="bold" aria-hidden="true" /> Novo cartão
           </button>
         )}
@@ -183,42 +293,37 @@ export function Cards({ onEdit, onAuthLost }: { onEdit: (c: Card) => void; onAut
       <div className="mt-6"><Errors text={error} /></div>
 
       {cards === null ? (
-        <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-hidden="true">
+        <ul className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" aria-hidden="true">
           {[0, 1, 2].map((i) => (
-            <li key={i} className="tile overflow-hidden">
-              <div className="skeleton aspect-[16/10]" />
-              <div className="space-y-2 p-4">
-                <div className="skeleton h-4 w-2/3 rounded-full" />
-                <div className="skeleton h-3 w-1/2 rounded-full" />
-                <div className="skeleton mt-4 h-10 rounded-[12px]" />
-              </div>
+            <li key={i}>
+              <div className="skeleton aspect-[4/5] rounded-[24px]" />
+              <div className="skeleton mt-3 h-3.5 w-1/2 rounded-full" />
             </li>
           ))}
         </ul>
       ) : cards.length === 0 ? (
-        <div className="tile rise mt-8 grid items-center gap-8 overflow-hidden p-6 sm:p-10 md:grid-cols-[1fr_auto]">
+        <div className="rise mt-8 grid items-center gap-10 overflow-hidden rounded-[32px] bg-[#f5f5f7] p-8 sm:p-12 md:grid-cols-[1fr_auto]" style={{ '--i': 1 } as CSSProperties}>
           <div className="max-w-md">
-            <h2 className="text-2xl font-semibold tracking-tight">Crie seu primeiro cartão</h2>
-            <p className="mt-2 text-muted">
-              Comece por um modelo pronto para o seu ramo: clínicas, consultórios, lojas ou criadores de conteúdo.
-            </p>
-            <button type="button" onClick={openNew} className={`${primary} mt-6`}>
+            <h2 className="text-[32px] leading-[1.05] font-semibold tracking-[-0.04em]">Crie seu primeiro cartão.</h2>
+            <p className="mt-3 text-[17px] text-muted">Escolha um modelo pronto para o seu ramo, troque foto e textos e compartilhe o link.</p>
+            <button type="button" onClick={openNew} className={`${primary} mt-7 h-12 px-6 text-[15px]`}>
               <Plus size={16} weight="bold" aria-hidden="true" /> Novo cartão
             </button>
           </div>
-          <div className="hidden gap-3 md:flex" aria-hidden="true">
+          <div className="empty-fan relative hidden h-[260px] w-[300px] md:block" aria-hidden="true">
             {templates.slice(0, 3).map((t, i) => (
               <img key={t.id} src={thumb(t.config.photo.src, 300)} alt=""
-                className="h-44 w-28 rounded-[14px] object-cover shadow-lg"
-                style={{ objectPosition: t.config.photo.focal ?? '50% 30%', transform: `rotate(${(i - 1) * 4}deg) translateY(${i === 1 ? -8 : 0}px)` }} />
+                className="absolute top-1/2 left-1/2 h-[220px] w-[150px] rounded-[18px] object-cover shadow-[0_24px_48px_-24px_rgb(17_17_19/0.5)]"
+                style={{ objectPosition: t.config.photo.focal ?? '50% 30%', '--d': i - 1, zIndex: i === 1 ? 2 : 1 } as CSSProperties} />
             ))}
           </div>
         </div>
       ) : (
-        <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {cards.map((c, i) => (
             <CardTile key={c.id} card={c} i={i} onEdit={() => onEdit(c)} onDelete={() => remove(c)} />
           ))}
+          <AddTile i={cards.length} onClick={openNew} />
         </ul>
       )}
 

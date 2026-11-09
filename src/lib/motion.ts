@@ -41,7 +41,8 @@ export function useTilt<T extends HTMLElement>(max = 7) {
 
 /** Marks [data-reveal] elements as shown when they scroll into view.
  *  The `reveal-ready` class is set before first paint by the head script (vite.config.ts). */
-export function useReveal() {
+/** `dep`: re-scan when content that renders later (e.g. after a fetch) changes. */
+export function useReveal(dep?: unknown) {
   useEffect(() => {
     if (!document.documentElement.classList.contains('reveal-ready')) return
     const io = new IntersectionObserver(
@@ -53,7 +54,7 @@ export function useReveal() {
         }),
       { rootMargin: '0px 0px -6% 0px', threshold: 0.1 },
     )
-    document.querySelectorAll('[data-reveal]').forEach((el) => io.observe(el))
+    document.querySelectorAll('[data-reveal]:not([data-shown])').forEach((el) => io.observe(el))
     return () => io.disconnect()
-  }, [])
+  }, [dep])
 }

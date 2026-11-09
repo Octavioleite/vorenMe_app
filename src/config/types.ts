@@ -9,6 +9,10 @@ export type Platform = 'instagram' | 'tiktok' | 'youtube' | 'pinterest' | 'spoti
 
 export type Theme = 'dark' | 'light'
 
+/** Personalidade visual do cartão: fonte de destaque, formas, moldura da foto e textura (index.css, [data-style]). */
+export const STYLES = ['criador', 'forte', 'tinta', 'atelie', 'sereno', 'glam', 'clinica', 'leve', 'simples'] as const
+export type Style = (typeof STYLES)[number]
+
 export interface Photo {
   /** Absolute URL or a path in /public (e.g. "/luana.jpg"). Unsplash URLs get automatic srcset. */
   src: string
@@ -59,6 +63,8 @@ export interface CreatorConfig {
   /** Brand accent as hex (#RRGGBB). Text on the accent picks dark or white automatically. */
   accent: string
   theme: Theme
+  /** Sem valor = 'criador'. */
+  style?: Style
 
   availability?: { open: boolean; label: string }
 

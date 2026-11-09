@@ -11,7 +11,7 @@ export function SocialTiles({ className = '' }: { className?: string }) {
       <h2 id="socials-title" className="sr-only">
         {labels.socials}
       </h2>
-      <ul className="grid grid-cols-2 gap-3">
+      <ul className="socials-grid grid grid-cols-2 gap-3">
         {socials.map((s, idx) => {
           const { name, Icon, brand } = platformMeta[s.platform]
           const label = s.label ?? name

@@ -10,7 +10,13 @@
     "typecheck": "node node_modules/typescript/bin/tsc --noEmit"
   },
   "dependencies": {
+    "@fontsource-variable/cormorant-garamond": "^5.3.0",
+    "@fontsource-variable/fredoka": "^5.3.0",
     "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource-variable/oswald": "^5.3.0",
+    "@fontsource-variable/playfair-display": "^5.3.0",
+    "@fontsource-variable/syne": "^5.3.0",
+    "@fontsource/dm-serif-display": "^5.3.0",
     "@phosphor-icons/react": "^2.1.10",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

@@ -145,7 +145,7 @@ function IdentityCard() {
         <div aria-hidden="true" className="absolute inset-0 bg-linear-to-t from-black/85 via-black/15 via-55% to-transparent" />
         {/* Nome completo para leitores de tela; as peças visíveis são decorativas e podem estar em qualquer lugar. */}
         <h1 id="creator-name" className="sr-only">{name.first} {name.last}</h1>
-        <div className="absolute inset-x-0 bottom-0 p-5 text-[#FAFAF9] sm:p-6">
+        <div className="id-copy absolute inset-x-0 bottom-0 p-5 text-[#FAFAF9] sm:p-6">
           {piece('first')}
           {piece('last')}
           {piece('niche', 'mt-3')}
@@ -179,7 +179,7 @@ export function Hero({ className = '' }: { className?: string }) {
   return (
     <header aria-labelledby="creator-name" className={`md:grid md:grid-cols-2 md:items-end md:gap-8 lg:block ${className}`}>
       <IdentityCard />
-      <div className="mt-6 md:mt-0 lg:mt-6">
+      <div className="hero-copy mt-6 md:mt-0 lg:mt-6">
         <p className="rise max-w-[38ch] text-[17px] leading-[1.5] text-ink/85 md:text-lg" style={i(2)}>
           {bio}
         </p>
