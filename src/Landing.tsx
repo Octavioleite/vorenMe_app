@@ -1,9 +1,10 @@
-import { ArrowRight, Check, DeviceMobile, List, PaintBrush, Plus, ShareNetwork, UserPlus, WhatsappLogo, X } from '@phosphor-icons/react'
-import { StrictMode, useEffect, useState, type CSSProperties } from 'react'
+import { ArrowRight, CaretLeft, CaretRight, Check, DeviceMobile, List, PaintBrush, Plus, ShareNetwork, UserPlus, WhatsappLogo, X } from '@phosphor-icons/react'
+import { StrictMode, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QrCode } from './components/QrCode'
 import type { CreatorConfig } from './config/types'
 import { responsive } from './lib/img'
+import { trackSite } from './lib/track'
 import { useReveal } from './lib/motion'
 import './landing.css'
 
@@ -13,7 +14,7 @@ type Device = 'desktop' | 'tablet' | 'phone'
 
 const API = `${import.meta.env.VITE_API_URL ?? ''}/api/v1`
 const LOGIN = '/painel'
-const SIGNUP = '/painel?cadastro=1&utm_source=home'
+const SIGNUP = '/painel?cadastro=1'
 const CTA = 'Testar 3 dias grátis'
 const WRAP = 'mx-auto w-full max-w-[1180px] px-4 sm:px-6 lg:px-10'
 const H2 = 'text-[34px] leading-[1.05] font-semibold tracking-[-0.045em] text-balance md:text-[56px]'
@@ -120,6 +121,70 @@ function Devices({ templates }: { templates: Template[] }) {
   )
 }
 
+/** Coverflow da vitrine: --p = 1 no card do centro, 0 a ~1,3 card de distância (CSS escala/desfoca com isso).
+ *  Mede no evento de scroll do próprio carrossel (rAF, sem estado do React). Avança sozinho a cada 3,2s,
+ *  pausa com mouse/toque/foco e nunca anda sozinho com movimento reduzido. */
+function useCoverflow(count: number) {
+  const ref = useRef<HTMLDivElement>(null)
+  const step = (dir: number) => {
+    const box = ref.current
+    const item = box?.querySelector<HTMLElement>('.cover-item')
+    if (!box || !item) return
+    const w = item.offsetWidth + parseFloat(getComputedStyle(box).columnGap || '0')
+    const end = box.scrollLeft + dir * w > box.scrollWidth - box.clientWidth + 4
+    box.scrollTo({ left: end ? 0 : dir < 0 && box.scrollLeft < 4 ? box.scrollWidth : box.scrollLeft + dir * w, behavior: 'smooth' })
+  }
+  useEffect(() => {
+    const box = ref.current
+    if (!box) return
+    let raf = 0
+    const paint = () => {
+      raf = 0
+      const { left, width } = box.getBoundingClientRect()
+      const mid = left + width / 2
+      for (const el of box.querySelectorAll<HTMLElement>('.cover-item')) {
+        const r = el.getBoundingClientRect()
+        const s = Math.max(-1, Math.min(1, (r.left + r.width / 2 - mid) / (r.width * 1.3))) // -1 esquerda, 1 direita
+        const p = 1 - Math.abs(s)
+        el.style.setProperty('--p', (p * p * (3 - 2 * p)).toFixed(3))
+        el.style.setProperty('--s', s.toFixed(3))
+      }
+      // Card em foco: acende a pílula dele.
+      const all = [...box.querySelectorAll<HTMLElement>('.cover-item')]
+      const on = all.reduce((best, el, i) => (Math.abs(parseFloat(el.style.getPropertyValue('--s'))) < Math.abs(parseFloat(all[best].style.getPropertyValue('--s'))) ? i : best), 0)
+      const dots = box.parentElement?.querySelectorAll<HTMLElement>('.cover-dot') ?? []
+      dots.forEach((d, i) => d.toggleAttribute('data-on', i === on))
+    }
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(paint) }
+    box.addEventListener('scroll', onScroll, { passive: true })
+    addEventListener('resize', onScroll)
+    // Começa no meio da lista, para já ter vizinhos dos dois lados.
+    const items = box.querySelectorAll<HTMLElement>('.cover-item')
+    const start = items[Math.floor(items.length / 2)]
+    if (start) box.scrollLeft = start.offsetLeft - (box.clientWidth - start.offsetWidth) / 2
+    paint()
+
+    let paused = false
+    const pause = () => { paused = true }
+    const resume = () => { paused = false }
+    box.addEventListener('pointerenter', pause); box.addEventListener('pointerleave', resume)
+    box.addEventListener('touchstart', pause, { passive: true }); box.addEventListener('touchend', resume); box.addEventListener('focusin', pause); box.addEventListener('focusout', resume)
+    const timer = reduced() ? 0 : window.setInterval(() => { if (!paused && !document.hidden) step(1) }, 3200)
+    return () => {
+      clearInterval(timer); cancelAnimationFrame(raf)
+      box.removeEventListener('scroll', onScroll); removeEventListener('resize', onScroll)
+      box.removeEventListener('pointerenter', pause); box.removeEventListener('pointerleave', resume)
+      box.removeEventListener('touchstart', pause); box.removeEventListener('touchend', resume); box.removeEventListener('focusin', pause); box.removeEventListener('focusout', resume)
+    }
+  }, [count]) // o carrossel só existe depois que os modelos chegam da API
+  const go = (i: number) => {
+    const box = ref.current
+    const el = box?.querySelectorAll<HTMLElement>('.cover-item')[i]
+    if (box && el) box.scrollTo({ left: el.offsetLeft - (box.clientWidth - el.offsetWidth) / 2, behavior: 'smooth' })
+  }
+  return { ref, step, go }
+}
+
 /* ── Peças ─────────────────────────────────────────────────────────── */
 
 function CtaButton({ big = false }: { big?: boolean }) {
@@ -138,6 +203,7 @@ function Landing() {
   useEffect(() => {
     fetch(`${API}/templates`).then((r) => (r.ok ? r.json() : null)).then((j) => j && setTemplates(j.data ?? j), () => {})
   }, [])
+  const { ref: focusRef, step, go } = useCoverflow(templates.length)
   useReveal(templates.length)
   const pick = (n: number) => templates[n % Math.max(templates.length, 1)]
 
@@ -308,23 +374,28 @@ function Landing() {
             <div className={WRAP}>
               <h2 className={H2} data-reveal>Um modelo para cada negócio.</h2>
             </div>
-            {/* Esteira infinita: a lista vai duas vezes e anda -50%; pausa no hover. Sem movimento = lista rolável. */}
-            <div className="marquee mt-12" data-reveal>
-              <ul className="marquee-track flex w-max gap-5 pb-2" style={{ '--n': templates.length } as CSSProperties}>
-                {[...templates, ...templates].map((t, n) => {
-                  const dup = n >= templates.length
-                  return (
-                    <li key={`${t.id}-${n}`} aria-hidden={dup || undefined} className={`w-[210px] shrink-0 md:w-[250px] ${dup ? 'marquee-dup' : ''}`}>
-                      <div className="model block">
-                        <div className="aspect-[3/4] overflow-hidden rounded-[22px] bg-white">
-                          <img src={responsive(t.config.photo.src, [500]).src} alt={dup ? '' : `Modelo ${t.name}`} loading="lazy" className="h-full w-full object-cover" style={focal(t)} />
-                        </div>
-                        <span className="mt-3 block text-[15px] font-semibold">{t.name}</span>
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
+            {/* Coverflow: o modelo do meio em destaque, os vizinhos desfocados. Para em cada card (scroll-snap) e avança sozinho. */}
+            <div className="relative mt-12" data-reveal>
+              <div ref={focusRef} className="cover" tabIndex={0} aria-label="Modelos" role="region">
+                {templates.map((t) => (
+                  <div key={t.id} className="cover-item model">
+                    <div className="aspect-[3/4] overflow-hidden rounded-[22px] bg-white">
+                      <img src={responsive(t.config.photo.src, [500]).src} alt={`Modelo ${t.name}`} loading="lazy" className="h-full w-full object-cover" style={focal(t)} />
+                    </div>
+                    <span className="cover-name mt-5 block text-center">
+                      <span className="block text-[17px] font-semibold tracking-[-0.02em]">{t.name}</span>
+                      <span className="block text-[14px] text-muted">{t.config.niche}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="relative mt-4 flex items-center justify-center gap-5">
+                <button type="button" aria-label="Modelo anterior" onClick={() => step(-1)} className="press grid size-11 place-items-center rounded-full bg-white text-ink shadow-sm hover:brightness-95"><CaretLeft size={18} weight="bold" /></button>
+                <div className="flex items-center gap-1.5">
+                  {templates.map((t, i) => <button key={t.id} type="button" aria-label={`Ver modelo ${t.name}`} onClick={() => go(i)} className="cover-dot" />)}
+                </div>
+                <button type="button" aria-label="Próximo modelo" onClick={() => step(1)} className="press grid size-11 place-items-center rounded-full bg-white text-ink shadow-sm hover:brightness-95"><CaretRight size={18} weight="bold" /></button>
+              </div>
             </div>
             {/* Hick: uma ação só depois da vitrine, em vez de cada card competir como CTA */}
             <div className="mt-12 text-center"><CtaButton /></div>
@@ -415,4 +486,5 @@ root.style.setProperty('--muted', '#6e6e73')
 root.style.setProperty('--accent', '#6A45F5')
 root.style.setProperty('--accent-fg', '#ffffff')
 document.title = 'VorenMe | Seu mundo. Um link.'
+trackSite()
 createRoot(document.getElementById('root')!).render(<StrictMode><Landing /></StrictMode>)

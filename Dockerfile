@@ -1,5 +1,5 @@
 # Build estático (Vite) servido por nginx, que também encaminha /api e /<slug> para a API.
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci

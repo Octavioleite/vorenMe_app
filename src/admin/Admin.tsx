@@ -4,6 +4,7 @@ import { api, ApiError, session } from '../painel/api'
 import { Auth } from '../painel/Auth'
 import { Errors, errorText, secondary, transition } from '../painel/ui'
 import { Cards } from './Cards'
+import { Site } from './Site'
 import { UserDetail, Users } from './Users'
 
 /* Formatação compartilhada com Users.tsx. */
@@ -33,12 +34,12 @@ export function Badge({ status }: { status: string }) {
   return <span className={`inline-block shrink-0 rounded-full px-2.5 py-1 text-[12px] font-semibold ${s.cls}`}>{s.label}</span>
 }
 
-/** Rotas: /admin · /admin/usuarios?q=&status=&page= · /admin/usuarios/:id · /admin/cartoes */
+/** Rotas: /admin · /admin/usuarios?q=&status=&page= · /admin/usuarios/:id · /admin/cartoes · /admin/site */
 const route = () => {
   const p = location.pathname.replace(/\/$/, '')
   const id = p.match(/^\/admin\/usuarios\/([^/]+)$/)?.[1]
   if (id) return { view: 'user' as const, id }
-  return { view: p === '/admin/usuarios' ? ('users' as const) : p === '/admin/cartoes' ? ('cards' as const) : ('home' as const), id: null }
+  return { view: p === '/admin/usuarios' ? ('users' as const) : p === '/admin/cartoes' ? ('cards' as const) : p === '/admin/site' ? ('site' as const) : ('home' as const), id: null }
 }
 export const navigate = (url: string) => {
   history.pushState(null, '', url)
@@ -86,10 +87,11 @@ export function Admin() {
           <img src="/favicon.png" alt="" width={30} height={30} className="rounded-full" />
           <span className="hidden sm:inline">VorenMe <span className="text-muted">admin</span></span>
         </span>
-        <nav aria-label="Admin" className="flex gap-1 rounded-full bg-[#f5f5f7] p-1">
+        <nav aria-label="Admin" className="flex min-w-0 gap-1 overflow-x-auto rounded-full bg-[#f5f5f7] p-1">
           {tab('/admin', 'Visão geral', r.view === 'home')}
           {tab('/admin/usuarios', 'Usuários', r.view === 'users' || r.view === 'user')}
           {tab('/admin/cartoes', 'Cartões', r.view === 'cards')}
+          {tab('/admin/site', 'Site', r.view === 'site')}
         </nav>
         <button type="button" onClick={logout} aria-label="Sair" className="press grid size-10 place-items-center rounded-full bg-[#f2f2f4] text-muted hover:text-ink">
           <SignOut size={17} aria-hidden="true" />
@@ -99,6 +101,7 @@ export function Admin() {
         {r.view === 'user' ? <UserDetail key={r.id} id={r.id!} me={user.id} fail={fail} />
           : r.view === 'users' ? <Users key={location.search} fail={fail} />
           : r.view === 'cards' ? <Cards key={location.search} fail={fail} />
+          : r.view === 'site' ? <Site fail={fail} />
           : <Overview fail={fail} />}
       </div>
     </div>
@@ -165,7 +168,7 @@ export interface Payment {
   user?: { id: string; name: string | null; email: string }
 }
 
-function Kpi({ label, value, sub, href }: { label: string; value: string; sub?: string; href?: string }) {
+export function Kpi({ label, value, sub, href }: { label: string; value: string; sub?: string; href?: string }) {
   const body = (
     <>
       <span className="text-[13px] font-medium text-muted">{label}</span>
@@ -180,7 +183,7 @@ function Kpi({ label, value, sub, href }: { label: string; value: string; sub?: 
 }
 
 /** Barras verticais simples (mesmo desenho do Stats do painel). */
-function Bars({ title, rows, total }: { title: string; rows: { key: string; label: string; value: number; tip: string }[]; total: string }) {
+export function Bars({ title, rows, total }: { title: string; rows: { key: string; label: string; value: number; tip: string }[]; total: string }) {
   const peak = Math.max(1, ...rows.map((r) => r.value))
   return (
     <section className="tile p-5 sm:p-6">
@@ -251,7 +254,7 @@ export function PaymentRows({ rows, showUser, onUndo }: { rows: Payment[]; showU
 }
 
 const monthLabel = (ym: string) => new Date(`${ym}-15T12:00:00Z`).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', '')
-const dayLabel = (d: string) => new Date(`${d}T12:00:00-03:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '')
+export const dayLabel = (d: string) => new Date(`${d}T12:00:00-03:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '')
 
 function Overview({ fail }: { fail: Fail }) {
   const [d, setD] = useState<OverviewData | null>(null)

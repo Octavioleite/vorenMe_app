@@ -5,10 +5,15 @@ import { api } from '../painel/api'
 import { Errors, Field, ask, input, primary, secondary } from '../painel/ui'
 import { ActivityList, Badge, METHOD, PaymentRows, STATUS, ago, date, fmt, navigate, ymd, type Activity, type Fail, type Payment } from './Admin'
 import { toggleCard } from './Cards'
+import type { Origin } from '../lib/track'
+
+/** "instagram · ads · black-friday": de onde a pessoa veio ao se cadastrar. */
+export const originText = (o: Origin | null) => (o ? [o.source, o.medium, o.campaign].filter(Boolean).join(' · ') : '—')
 
 interface Row {
   id: string; name: string | null; email: string; createAt: string; active: boolean; emailVerified: boolean
   paidUntil: string | null; activeUntil: string; offlineAt: string; status: string; subscribed: boolean; lastSeenAt: string | null
+  origin: Origin | null
 }
 interface Detail extends Row {
   asaasCustomerId: string | null; asaasSubscriptionId: string | null; freeMonths: number; referrals: number
@@ -63,7 +68,7 @@ export function Users({ fail }: { fail: Fail }) {
           {data.users.length === 0 ? <p className="p-3 text-sm text-muted">Ninguém encontrado.</p> : (
             <table className="w-full text-left text-[14px]">
               <thead className="text-[12px] text-muted">
-                <tr><th className="px-3 py-2 font-medium">Usuário</th><th className="px-3 py-2 font-medium">Status</th><th className="px-3 py-2 font-medium">Válido até</th><th className="px-3 py-2 font-medium">Último acesso</th><th className="px-3 py-2 font-medium">Cartões</th><th className="px-3 py-2 font-medium">Cadastro</th></tr>
+                <tr><th className="px-3 py-2 font-medium">Usuário</th><th className="px-3 py-2 font-medium">Status</th><th className="px-3 py-2 font-medium">Válido até</th><th className="px-3 py-2 font-medium">Último acesso</th><th className="px-3 py-2 font-medium">Cartões</th><th className="px-3 py-2 font-medium">Origem</th><th className="px-3 py-2 font-medium">Cadastro</th></tr>
               </thead>
               <tbody>
                 {data.users.map((u) => (
@@ -76,6 +81,7 @@ export function Users({ fail }: { fail: Fail }) {
                     <td className="px-3 py-2.5 whitespace-nowrap tabular-nums">{date(u.activeUntil)}</td>
                     <td className="px-3 py-2.5 whitespace-nowrap text-muted">{ago(u.lastSeenAt)}</td>
                     <td className="px-3 py-2.5 tabular-nums">{u.cards}</td>
+                    <td className="max-w-[200px] truncate px-3 py-2.5 text-muted" title={originText(u.origin)}>{originText(u.origin)}</td>
                     <td className="px-3 py-2.5 whitespace-nowrap tabular-nums text-muted">{date(u.createAt)}</td>
                   </tr>
                 ))}
@@ -183,6 +189,7 @@ export function UserDetail({ id, me, fail }: { id: string; me: string; fail: Fai
     ['Último acesso', u.lastSeenAt ? `${ago(u.lastSeenAt)} (${date(u.lastSeenAt)})` : 'nunca registrado'],
     ['Visitas em 30 dias', `${fmt(u.cards.reduce((a, c) => a + c.views30, 0))} em ${u.cards.length} cartão(ões)`],
     ['Cadastro', date(u.createAt)],
+    ['Origem', u.origin ? `${originText(u.origin)}${u.origin.content ? ` · anúncio ${u.origin.content}` : ''}${u.origin.ref ? ` (via ${u.origin.ref})` : ''} · entrou por ${u.origin.page}` : 'desconhecida (antes do rastreio)'],
     ['Válido até', date(u.activeUntil)],
     ['Sai do ar em', date(u.offlineAt)],
     ['E-mail confirmado', <span className="flex items-center gap-2">{u.emailVerified ? 'Sim' : 'Não'}

@@ -6,7 +6,7 @@
    scr       : os modelos reais trocam nas telas (cada negócio com a própria cara)
    vs        : os problemas do papel são riscados e os benefícios entram (comparação)
    steps     : a linha se desenha e liga os passos (sequência do processo)
-   marquee   : a vitrine de modelos passa sozinha (variedade sem exigir rolagem)
+   cover     : a vitrine de modelos em coverflow (o do meio em destaque, avança sozinho)
    cta       : seta avança no hover (feedback)
    Tudo para com prefers-reduced-motion. */
 
@@ -108,16 +108,24 @@
   @keyframes line-draw { from { transform: scaleX(0); } }
 
   /* ── Vitrine de modelos ── */
-  .marquee { overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent); mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent); }
-  .marquee-track { padding-inline: 10px; }
-  @media (prefers-reduced-motion: no-preference) {
-    .marquee-track { animation: marquee calc(var(--n) * 3.5s) linear infinite; }
-    .marquee:hover .marquee-track, .marquee:focus-within .marquee-track { animation-play-state: paused; }
-  }
-  @keyframes marquee { to { transform: translateX(-50%); } }
-  @media (prefers-reduced-motion: reduce) {
-    .marquee { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }
-    .marquee-dup { display: none; }
+  /* Coverflow (useCoverflow em Landing.tsx): --p = 1 no card do centro, 0 nas laterais.
+     Plano, sem giro: o do meio em tamanho cheio e nítido; os vizinhos menores, desfocados e apagados. */
+  .cover { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
+    padding: 32px calc(50% - 130px) 8px; outline: none; }
+  .cover::-webkit-scrollbar { display: none; }
+  .cover-item { --p: 0; flex: 0 0 260px; scroll-snap-align: center; position: relative; z-index: calc(var(--p) * 10);
+    transform: scale(calc(0.88 + 0.12 * var(--p)));
+    filter: blur(calc((1 - var(--p)) * 4px)) saturate(calc(0.5 + 0.5 * var(--p)));
+    opacity: calc(0.5 + 0.5 * var(--p)); will-change: transform, filter; }
+  .cover-item > div { box-shadow: 0 calc(28px * var(--p)) calc(56px * var(--p)) -28px rgb(18 18 20 / calc(0.28 * var(--p))); }
+  .cover-name { opacity: var(--p); transform: translateY(calc((1 - var(--p)) * 6px)); }
+  .cover:focus-visible .cover-item > div { outline: 2px solid var(--color-accent); outline-offset: 4px; }
+  .cover-dot { height: 6px; width: 6px; border-radius: 999px; background: rgb(18 18 20 / 0.18); transition: width 0.4s var(--ease), background-color 0.4s; }
+  .cover-dot:hover { background: rgb(18 18 20 / 0.4); }
+  .cover-dot[data-on] { width: 22px; background: var(--color-ink); }
+  @media (min-width: 768px) {
+    .cover { gap: 20px; padding-inline: calc(50% - 160px); }
+    .cover-item { flex-basis: 320px; }
   }
   .model img { transition: transform 0.9s var(--ease); }
   .model:hover img { transform: scale(1.05); }

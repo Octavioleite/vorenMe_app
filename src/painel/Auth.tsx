@@ -2,6 +2,7 @@ import { ArrowRight, Check, Eye, EyeSlash } from '@phosphor-icons/react'
 import { useEffect, useState, type CSSProperties, type FormEvent } from 'react'
 import { api, type Session, type Template } from './api'
 import { Errors, errorText, thumb, transition } from './ui'
+import { captureOrigin } from '../lib/track'
 
 const MODES = { login: 'Entrar', register: 'Criar conta' } as const
 type Mode = keyof typeof MODES
@@ -172,7 +173,7 @@ export function Auth({ onDone }: { onDone: (s: Session) => void }) {
     setError('')
     import('./Cards') // baixa a próxima tela enquanto a API responde
     try {
-      onDone(await api<Session>(`/auth/${mode}`, 'POST', { ...Object.fromEntries(new FormData(e.currentTarget)), ...(!isLogin && { ref: referral() }) }))
+      onDone(await api<Session>(`/auth/${mode}`, 'POST', { ...Object.fromEntries(new FormData(e.currentTarget)), ...(!isLogin && { ref: referral(), origin: captureOrigin().origin }) }))
     } catch (err) {
       setError(errorText(err))
       setBusy(false)

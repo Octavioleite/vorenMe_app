@@ -56,3 +56,45 @@ export const tagged = (url: string, s: string) => {
     return url
   }
 }
+
+export type Origin = { source: string; medium?: string; campaign?: string; content?: string; term?: string; ref?: string; page: string }
+const ORIGIN_KEY = 'vorenme-origin'
+
+/** De onde veio o lead (página inicial e cadastro). Fica no navegador: a 1ª visita grava; uma visita nova com
+ *  marcação (utm, gclid, ?ref) substitui; visita sem marcação não apaga. `isNew` = 1ª visita deste navegador. */
+export function captureOrigin(): { origin: Origin; isNew: boolean } {
+  const q = new URLSearchParams(location.search)
+  const get = (k: string) => q.get(k) || undefined
+  let ref: string | undefined
+  try { ref = new URL(document.referrer).hostname.replace(/^www\./, '') } catch { /* sem referrer */ }
+  if (ref === location.hostname) ref = undefined
+  const gclid = q.has('gclid')
+  const now: Origin = {
+    source: gclid && !q.get('utm_source') ? 'google' : detectSource(location.search, navigator.userAgent, ref ? document.referrer : ''),
+    medium: get('utm_medium') ?? (gclid ? 'cpc' : undefined),
+    campaign: get('utm_campaign'), content: get('utm_content'), term: get('utm_term'), ref,
+    page: location.pathname.startsWith('/painel') ? '/painel' : '/',
+  }
+  const marked = gclid || ['s', 'ref', 'utm_source', 'utm_medium', 'utm_campaign'].some((k) => q.has(k))
+  try {
+    const saved = localStorage.getItem(ORIGIN_KEY)
+    if (!saved || marked) localStorage.setItem(ORIGIN_KEY, JSON.stringify(now))
+    return { origin: saved && !marked ? JSON.parse(saved) : now, isNew: !saved }
+  } catch {
+    return { origin: now, isNew: true }
+  }
+}
+
+/** Estatísticas da página inicial: 1 visita ao abrir + 1 clique por botão "Testar grátis". */
+export function trackSite() {
+  const { origin, isNew } = captureOrigin()
+  const send = (body: object) => {
+    const blob = new Blob([JSON.stringify({ ...body, source: origin.source, medium: origin.medium, campaign: origin.campaign })], { type: 'text/plain' })
+    const url = `${import.meta.env.VITE_API_URL ?? ''}/api/v1/public/site/events`
+    if (!navigator.sendBeacon?.(url, blob)) fetch(url, { method: 'POST', body: blob, keepalive: true }).catch(() => {})
+  }
+  send({ kind: 'view', new: isNew })
+  document.addEventListener('click', (e) => {
+    if ((e.target as Element | null)?.closest('a[href^="/painel?cadastro"]')) send({ kind: 'cta' })
+  }, { capture: true })
+}
