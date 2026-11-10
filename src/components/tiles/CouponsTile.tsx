@@ -23,6 +23,7 @@ function CouponRow({ c }: { c: Coupon }) {
         type="button"
         disabled={!canCopy}
         onClick={() => copy(c.code)}
+        data-track="cupom"
         data-copied={copied ? '' : undefined}
         aria-label={`Copiar cupom ${c.code}`}
         className="coupon-code press col-span-2 flex items-center justify-between gap-3 rounded-[var(--radius-ctl)] px-4 py-2.5 font-mono text-[15px] font-semibold tracking-wider sm:col-span-1 sm:col-start-3"

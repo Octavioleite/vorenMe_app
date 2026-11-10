@@ -2,13 +2,14 @@ import { UserPlus, X } from '@phosphor-icons/react'
 import { useEffect, useRef } from 'react'
 import { creator } from '../config/creator'
 import { fullName, pageUrl } from '../config/derived'
+import { tagged } from '../lib/track'
 import { QrCode } from './QrCode'
 import { SaveContact } from './ui/SaveContact'
 
 /** Full-screen QR to show in person: "scan my card". Native <dialog> gives focus trapping and Esc to close. */
 export function QrDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null)
-  const url = pageUrl()
+  const url = tagged(pageUrl(), 'qr')
 
   useEffect(() => {
     const d = ref.current

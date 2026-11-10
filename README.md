@@ -33,3 +33,20 @@ npm run preview              # serve dist/
 ```
 
 `dist/` is a static site. Deploy it to Vercel, Netlify, Cloudflare Pages or any static host.
+
+## Preview do link no WhatsApp / Google (obrigatório em produção)
+
+Robôs (WhatsApp, Google, Instagram) não rodam JavaScript. A API devolve o HTML do cartão já com
+título, descrição e foto em `GET /api/v1/public/page/:slug`; a hospedagem só precisa reescrever
+`/<slug>` para lá (arquivos com ponto, `/painel/*` e `/assets/*` continuam estáticos). Exemplo na Vercel (`vercel.json`):
+
+```json
+{
+  "rewrites": [
+    { "source": "/painel/:path*", "destination": "/painel/index.html" },
+    { "source": "/:slug([a-z0-9][a-z0-9._-]{2,30})", "destination": "https://API_URL/api/v1/public/page/:slug" }
+  ]
+}
+```
+
+A API precisa de `FRONT_URL` (de onde ela busca o `index.html`). Teste em https://developers.facebook.com/tools/debug/.

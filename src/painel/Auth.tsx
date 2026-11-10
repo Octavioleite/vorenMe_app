@@ -89,7 +89,74 @@ function Showcase({ name }: { name: string }) {
   )
 }
 
+// Indicação: o selo "Feito com VorenMe" manda ?utm_source=cartao&utm_campaign=<slug> (ou ?ref=<slug>).
+// Guarda no navegador para valer mesmo se a pessoa voltar outro dia para criar a conta.
+const REF_KEY = 'vorenme-ref'
+const referral = () => {
+  const q = new URLSearchParams(location.search)
+  const fromUrl = q.get('ref') || (q.get('utm_source') === 'cartao' ? q.get('utm_campaign') : null)
+  try {
+    if (fromUrl) localStorage.setItem(REF_KEY, fromUrl)
+    return fromUrl || localStorage.getItem(REF_KEY) || undefined
+  } catch {
+    return fromUrl || undefined
+  }
+}
+
+/** Esqueci a senha (pede o e-mail) e Redefinir (link do e-mail: /painel?redefinir=<token>). */
+function Recover({ token, onDone, onBack }: { token: string | null; onDone: (s: Session) => void; onBack: () => void }) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [sent, setSent] = useState(false)
+  const submit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setBusy(true)
+    setError('')
+    const data = Object.fromEntries(new FormData(e.currentTarget))
+    try {
+      if (token) {
+        const s = await api<Session>('/auth/reset-password', 'POST', { token, password: data.password })
+        history.replaceState(null, '', '/painel')
+        onDone(s)
+      } else {
+        await api('/auth/forgot-password', 'POST', data)
+        setSent(true)
+      }
+    } catch (err) {
+      setError(errorText(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <div className="rise">
+      <h1 className="text-[40px] leading-[1.02] font-semibold tracking-[-0.045em] text-ink">{token ? 'Crie uma nova senha.' : 'Esqueceu a senha?'}</h1>
+      <p className="mt-3 text-[17px] text-muted">{token ? 'Depois disso você já entra direto.' : 'Mandamos um link para o seu e-mail. Ele vale por 1 hora.'}</p>
+      {sent ? (
+        <p className="mt-8 rounded-[14px] bg-[#f2f2f4] p-4 text-[15px]">Pronto! Se esse e-mail tiver conta no VorenMe, o link chega em instantes. Confira também o spam.</p>
+      ) : (
+        <form onSubmit={submit} aria-busy={busy} className="mt-8 grid gap-5">
+          <label className="grid gap-2">
+            <span className="text-[14px] font-medium text-ink">{token ? 'Nova senha' : 'E-mail'}</span>
+            {token
+              ? <input name="password" type="password" required minLength={8} maxLength={128} className={field} autoComplete="new-password" />
+              : <input name="email" type="email" required className={field} autoComplete="email" inputMode="email" />}
+            {token && <span className="text-[13px] text-muted">No mínimo 8 caracteres.</span>}
+          </label>
+          <Errors text={error} />
+          <button disabled={busy} className="press inline-flex h-12 items-center justify-center rounded-full bg-accent text-[16px] font-semibold text-white hover:brightness-110 disabled:opacity-50">
+            {busy ? 'Aguarde...' : token ? 'Salvar e entrar' : 'Enviar link'}
+          </button>
+        </form>
+      )}
+      <button type="button" onClick={onBack} className="mt-6 text-sm font-semibold text-accent hover:underline">Voltar para entrar</button>
+    </div>
+  )
+}
+
 export function Auth({ onDone }: { onDone: (s: Session) => void }) {
+  const resetToken = new URLSearchParams(location.search).get('redefinir')
+  const [recover, setRecover] = useState(!!resetToken)
   // Quem chega pelo botão de teste grátis (?cadastro=1) ainda não tem conta: abre direto em Criar conta.
   const [mode, setMode] = useState<Mode>(() => (new URLSearchParams(location.search).has('cadastro') ? 'register' : 'login'))
   const [error, setError] = useState('')
@@ -105,7 +172,7 @@ export function Auth({ onDone }: { onDone: (s: Session) => void }) {
     setError('')
     import('./Cards') // baixa a próxima tela enquanto a API responde
     try {
-      onDone(await api<Session>(`/auth/${mode}`, 'POST', Object.fromEntries(new FormData(e.currentTarget))))
+      onDone(await api<Session>(`/auth/${mode}`, 'POST', { ...Object.fromEntries(new FormData(e.currentTarget)), ...(!isLogin && { ref: referral() }) }))
     } catch (err) {
       setError(errorText(err))
       setBusy(false)
@@ -131,6 +198,7 @@ export function Auth({ onDone }: { onDone: (s: Session) => void }) {
         </header>
 
         <div className="mx-auto my-auto w-full max-w-[400px] py-12">
+          {recover ? <Recover token={resetToken} onDone={onDone} onBack={() => transition(() => { setRecover(false); history.replaceState(null, '', '/painel') })} /> : <>
           <div role="group" aria-label="Acesso" className="rise inline-grid grid-cols-2 rounded-full bg-[#f2f2f4] p-1">
             {(Object.keys(MODES) as Mode[]).map((m) => (
               <button key={m} type="button" aria-pressed={mode === m}
@@ -164,6 +232,11 @@ export function Auth({ onDone }: { onDone: (s: Session) => void }) {
                   {showPass ? <EyeSlash size={18} /> : <Eye size={18} />}
                 </button>
               </span>)}
+            {isLogin && (
+              <button type="button" onClick={() => transition(() => setRecover(true))} className="-mt-2 justify-self-start text-[13px] font-semibold text-accent hover:underline">
+                Esqueci minha senha
+              </button>
+            )}
             <Errors text={error} />
             <button disabled={busy}
               className="press group mt-1 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-accent text-[16px] font-semibold text-white hover:brightness-110 disabled:opacity-50">
@@ -181,6 +254,7 @@ export function Auth({ onDone }: { onDone: (s: Session) => void }) {
               ))}
             </ul>
           )}
+          </>}
         </div>
       </main>
 

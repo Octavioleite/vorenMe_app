@@ -1,22 +1,53 @@
-import { SignOut } from '@phosphor-icons/react'
+import { CaretDown, SignOut } from '@phosphor-icons/react'
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { api, ApiError, session, type Card } from './api'
+import { api, ApiError, session, supportTab, type Card } from './api'
+import { SupportBanner, SupportEnded } from './SupportBanner'
 import { Auth } from './Auth'
+import { Billing } from './Billing'
+import { Profile } from './Profile'
+import { CardPicker } from './CardPicker'
+import { VerifyBanner, VerifyLink } from './VerifyEmail'
+import { SupportButton } from './Support'
 
 // Só quem já entrou paga por Cards/Editor: o login carrega sozinho.
 const Cards = lazy(() => import('./Cards').then((m) => ({ default: m.Cards })))
 const Editor = lazy(() => import('./Editor').then((m) => ({ default: m.Editor })))
-import { Errors, errorText, iconBtn, transition } from './ui'
+const Stats = lazy(() => import('./Stats').then((m) => ({ default: m.Stats })))
+const PrintKit = lazy(() => import('./PrintKit').then((m) => ({ default: m.PrintKit })))
+import { Errors, errorText, transition } from './ui'
 
-/** Rotas: /painel (lista) · /painel/:id/editar (editor). Recarregar a página mantém onde a pessoa estava. */
+/** Rotas: /painel (cartões) · /painel/estatisticas[/:id] · /painel/imprimir[/:id] · /painel/assinatura · /painel/perfil · /painel/:id/editar.
+ *  Recarregar mantém onde a pessoa estava. */
 const idFromUrl = () => location.pathname.match(/^\/painel\/([^/]+)\/editar\/?$/)?.[1] ?? null
 const go = (id: string | null) => history.pushState(null, '', id ? `/painel/${encodeURIComponent(id)}/editar` : '/painel')
+
+const TABS = [
+  { path: '/painel', label: 'Cartões' },
+  { path: '/painel/estatisticas', label: 'Estatísticas' },
+  { path: '/painel/imprimir', label: 'Imprimir' },
+  { path: '/painel/assinatura', label: 'Assinatura' },
+  { path: '/painel/perfil', label: 'Perfil' },
+] as const
+type Tab = (typeof TABS)[number]['path']
+// Hick: só as 3 tarefas do dia a dia ficam na barra. Jakob: conta e assinatura moram no menu do avatar, como em qualquer app.
+const MAIN = TABS.slice(0, 3)
+const ACCOUNT = TABS.slice(3)
+const path = () => location.pathname.replace(/\/$/, '')
+const tabFromUrl = (): Tab => TABS.find((t) => t.path !== '/painel' && (path() === t.path || path().startsWith(`${t.path}/`)))?.path ?? '/painel'
+/** Cartão escolhido em Estatísticas/Imprimir: /painel/imprimir/<id>. */
+const subFromUrl = () => path().match(/^\/painel\/(?:estatisticas|imprimir)\/([^/]+)$/)?.[1] ?? null
 
 export function Painel() {
   const [user, setUser] = useState(() => session.get()?.user ?? null)
   const [editingId, setEditingId] = useState(idFromUrl)
   const [editing, setEditing] = useState<Card | null>(null)
   const [loadError, setLoadError] = useState('')
+  const [tab, setTab] = useState(tabFromUrl)
+  const [sub, setSub] = useState(subFromUrl)
+  const goTab = (t: Tab, id: string | null = null) => {
+    history.pushState(null, '', id ? `${t}/${encodeURIComponent(id)}` : t)
+    transition(() => { setTab(t); setSub(id) })
+  }
 
   const logout = () => {
     session.set(null)
@@ -26,11 +57,12 @@ export function Painel() {
     go(card ? String(card.id) : null)
     setEditing(card)
     setEditingId(card ? String(card.id) : null)
+    if (!card) setTab('/painel')
   }
 
   // Voltar/avançar do navegador.
   useEffect(() => {
-    const onPop = () => { setEditingId(idFromUrl()); setEditing(null) }
+    const onPop = () => { setEditingId(idFromUrl()); setEditing(null); setTab(tabFromUrl()); setSub(subFromUrl()) }
     addEventListener('popstate', onPop)
     return () => removeEventListener('popstate', onPop)
   }, [])
@@ -49,30 +81,61 @@ export function Painel() {
     )
   }, [user, editingId, editing]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!user) return <Auth onDone={(s) => transition(() => { session.set(s); setUser(s.user) }, 'page')} />
+  const setSessionUser = (u: NonNullable<typeof user>) => { session.set({ ...session.get()!, user: u }); setUser(u) }
+  const verifyLink = <VerifyLink onVerified={(u) => setSessionUser({ ...user!, ...u })} />
+
+  if (!user && supportTab()) return <SupportEnded />
+  if (!user) return <>{verifyLink}<Auth onDone={(s) => transition(() => { session.set(s); setUser(s.user) }, 'page')} /></>
 
   return (
-    <div className="mx-auto max-w-[1280px] has-[[data-device=computador]]:max-w-[1760px] px-4 pb-16 sm:px-6 lg:px-10">
+    <div className="mx-auto max-w-[1280px] has-[[data-device=computador]]:max-w-[1760px] px-4 pb-24 sm:px-6 lg:px-10">
+      <SupportBanner onEnded={() => setUser(null)} />
       {!editingId && (
         <header className="flex h-[72px] items-center justify-between gap-3">
           <a href="/" className="flex items-center gap-2.5 font-semibold tracking-[-0.02em]">
             <img src="/favicon.png" alt="" width={30} height={30} className="rounded-full" />
-            VorenMe
+            <span className="hidden sm:inline">VorenMe</span>
           </a>
+          <nav aria-label="Painel" className="print-hide -mx-1 flex min-w-0 gap-1 overflow-x-auto rounded-full bg-[#f5f5f7] p-1 [scrollbar-width:none]">
+            {MAIN.map((t) => (
+              <a key={t.path} href={t.path} aria-current={tab === t.path ? 'page' : undefined}
+                onClick={(e) => { e.preventDefault(); goTab(t.path) }}
+                className={`press shrink-0 rounded-full px-3.5 py-1.5 text-[14px] font-medium sm:px-4 ${tab === t.path ? 'bg-white text-ink shadow-sm' : 'text-muted hover:text-ink'}`}>
+                {t.label}
+              </a>
+            ))}
+          </nav>
           <div className="flex items-center gap-2">
-            <span className="hidden items-center gap-2.5 rounded-full bg-[#f5f5f7] py-1 pr-4 pl-1 text-[14px] sm:inline-flex">
-              <span aria-hidden="true" className="grid size-8 place-items-center rounded-full bg-accent text-[13px] font-semibold text-accent-fg">
-                {(user.name || user.email).trim()[0]?.toUpperCase()}
-              </span>
-              <span className="max-w-[200px] truncate font-medium">{user.name || user.email}</span>
-            </span>
-            <button type="button" className={iconBtn} onClick={logout} aria-label="Sair" title="Sair">
-              <SignOut size={17} />
-            </button>
+            <SupportButton />
+            <details className="relative">
+              <summary aria-label="Conta" className={`press flex cursor-pointer list-none items-center gap-2 rounded-full bg-[#f5f5f7] py-1 pr-1 pl-1 text-[14px] sm:pr-3 [&::-webkit-details-marker]:hidden ${ACCOUNT.some((t) => t.path === tab) ? 'ring-2 ring-accent/30' : ''}`}>
+                <span aria-hidden="true" className="grid size-8 place-items-center rounded-full bg-accent text-[13px] font-semibold text-accent-fg">
+                  {(user.name || user.email).trim()[0]?.toUpperCase()}
+                </span>
+                <span className="hidden max-w-[160px] truncate font-medium sm:inline">{user.name || user.email}</span>
+                <CaretDown size={14} weight="bold" className="hidden text-muted sm:block" aria-hidden="true" />
+              </summary>
+              <div className="absolute top-12 right-0 z-20 grid w-56 gap-1 rounded-[20px] bg-white p-2 text-[15px] shadow-[0_18px_40px_-16px_rgb(18_18_20/0.35)]"
+                onClick={(e) => (e.target as HTMLElement).closest('a,button') && e.currentTarget.parentElement?.removeAttribute('open')}>
+                <p className="truncate px-3 pt-1.5 pb-2 text-[13px] text-muted">{user.email}</p>
+                {ACCOUNT.map((t) => (
+                  <a key={t.path} href={t.path} aria-current={tab === t.path ? 'page' : undefined}
+                    onClick={(e) => { e.preventDefault(); goTab(t.path) }}
+                    className="rounded-xl px-3 py-2.5 font-medium hover:bg-[#f2f2f4] aria-[current=page]:bg-[#f2f2f4]">
+                    {t.label}
+                  </a>
+                ))}
+                <button type="button" onClick={logout} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-left font-medium text-muted hover:bg-[#f2f2f4] hover:text-ink">
+                  <SignOut size={17} aria-hidden="true" /> Sair
+                </button>
+              </div>
+            </details>
           </div>
         </header>
       )}
+      {verifyLink}
       <div className={editingId ? '' : 'pt-6'}>
+        {!editingId && <VerifyBanner user={user} />}
         <Suspense fallback={<p className="pt-4 text-sm text-muted">Carregando...</p>}>
         {editing ? (
           <Editor key={editing.id} card={editing} onBack={() => open(null)} onAuthLost={logout} />
@@ -88,7 +151,15 @@ export function Painel() {
             )}
           </div>
         ) : (
-          <Cards name={user.name} onEdit={open} onAuthLost={logout} />
+          tab === '/painel/estatisticas' ? (sub
+            ? <Stats key={sub} cardId={sub} onBack={() => goTab(tab)} onAuthLost={logout} />
+            : <CardPicker title="Estatísticas" text="Escolha o cartão para ver visitas, cliques e de onde as pessoas vieram." onPick={(id) => goTab(tab, id)} onAuthLost={logout} />)
+          : tab === '/painel/imprimir' ? (sub
+            ? <PrintKit key={sub} cardId={sub} onBack={() => goTab(tab)} onAuthLost={logout} />
+            : <CardPicker title="Kit de impressão" text="Escolha o cartão para gerar o QR code do balcão, da mesa e do cartão de visita." onPick={(id) => goTab(tab, id)} onAuthLost={logout} />)
+          : tab === '/painel/assinatura' ? <Billing />
+          : tab === '/painel/perfil' ? <Profile user={user} onChange={setSessionUser} onDeleted={logout} />
+          : <Cards name={user.name} verified={!!user.emailVerified} onEdit={open} onAuthLost={logout} />
         )}
         </Suspense>
       </div>

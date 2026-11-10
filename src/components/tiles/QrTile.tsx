@@ -1,13 +1,14 @@
 import { UserPlus } from '@phosphor-icons/react'
 import { creator } from '../../config/creator'
 import { pageUrl } from '../../config/derived'
+import { tagged } from '../../lib/track'
 import { QrCode } from '../QrCode'
 import { SaveContact } from '../ui/SaveContact'
 
 /** Desktop only: a pass the visitor "tears off" to their phone. (On mobile the QR lives in the top bar.)
  *  The tear line sits at .ticket's --notch-y (index.css): keep the QR box at 112px + mt-5. */
 export function QrTile({ className = '' }: { className?: string }) {
-  const url = pageUrl()
+  const url = tagged(pageUrl(), 'qr')
   const { labels } = creator
   return (
     <section aria-labelledby="qr-title" data-reveal className={`tile ticket flex-col p-6 ${className}`}>

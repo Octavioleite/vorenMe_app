@@ -1,5 +1,6 @@
 import { creator } from '../config/creator'
 import { fullName, pageUrl } from '../config/derived'
+import { tagged } from './track'
 
 const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/([,;])/g, '\\$1')
 
@@ -16,7 +17,7 @@ export function buildVCard() {
     c.whatsapp && `TEL;TYPE=CELL:+${c.whatsapp.number.replace(/\D/g, '')}`,
     c.email && `EMAIL;TYPE=INTERNET,WORK:${c.email.address}`,
     c.location && `ADR;TYPE=WORK:;;;${esc(c.location)};;;`,
-    `URL:${pageUrl()}`,
+    `URL:${tagged(pageUrl(), 'contato')}`,
     c.website && `URL;TYPE=HOME:${c.website.url}`,
     ...c.socials.map((s) => `X-SOCIALPROFILE;TYPE=${s.platform}:${s.url}`),
     `NOTE:${esc(c.bio)}`,

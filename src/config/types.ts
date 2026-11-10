@@ -101,6 +101,15 @@ export interface CreatorConfig {
   /** Only list brands you have actually worked with. Hidden when empty. `logo` = SVG/PNG URL. */
   brands?: { name: string; url?: string; logo?: string }[]
 
+  /** Pix: botão para copiar a chave e o "copia e cola" (BR Code), com QR. Limites do BR Code: nome 25, cidade 15. */
+  pix?: { key: string; name: string; city: string }
+
+  /** Endereço do negócio: abre no Google Maps, Waze ou Uber. */
+  address?: { text: string; hours?: { days: string; time: string }[] }
+
+  /** Link de avaliação do Google (Perfil da Empresa → Pedir avaliações). */
+  review?: { url: string }
+
   /** Main personal website: footer + saved contact. */
   website?: { label: string; url: string }
 

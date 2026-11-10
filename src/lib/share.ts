@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { creator } from '../config/creator'
 import { pageUrl } from '../config/derived'
+import { tagged } from './track'
 
 /** Native share sheet when available, otherwise copies the link. */
 export function useShare() {
   const [copied, setCopied] = useState(false)
   const share = async () => {
-    const data = { title: creator.seo.title, text: creator.bio, url: pageUrl() }
+    const data = { title: creator.seo.title, text: creator.bio, url: tagged(pageUrl(), 'compartilhado') }
     if (navigator.share && (!navigator.canShare || navigator.canShare(data))) {
       try {
         await navigator.share(data)

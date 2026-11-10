@@ -15,6 +15,7 @@ const message = (text: string) => {
 const load = slug
   ? fetch(`${API}/public/cards/${encodeURIComponent(slug)}`).then(async (res) => {
       if (res.status === 404) return null
+      if (res.status === 410) return false
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       return (await res.json()).data
     })
@@ -26,6 +27,10 @@ else load
   .then(async (card) => {
     if (card === null) {
       message('Cartão não encontrado.')
+      return
+    }
+    if (card === false) {
+      message('Este cartão está fora do ar no momento.')
       return
     }
     if (card) (globalThis as { __CARD__?: unknown }).__CARD__ = card

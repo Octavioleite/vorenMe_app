@@ -1,4 +1,4 @@
-import { ArrowRight, Check, DeviceMobile, PaintBrush, Plus, ShareNetwork, UserPlus, WhatsappLogo, X } from '@phosphor-icons/react'
+import { ArrowRight, Check, DeviceMobile, List, PaintBrush, Plus, ShareNetwork, UserPlus, WhatsappLogo, X } from '@phosphor-icons/react'
 import { StrictMode, useEffect, useState, type CSSProperties } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QrCode } from './components/QrCode'
@@ -156,8 +156,25 @@ function Landing() {
             <a href="#duvidas" className="transition-colors hover:text-ink">Dúvidas</a>
           </nav>
           <div className="flex items-center gap-1">
-            <a href={LOGIN} className="press rounded-full px-4 py-2 text-[14px] font-semibold hover:bg-[#f2f2f4]">Entrar</a>
-            <a href={SIGNUP} className="press hidden rounded-full bg-ink px-4 py-2 text-[14px] font-semibold text-bg sm:inline-flex">{CTA}</a>
+            <a href={LOGIN} className="press hidden rounded-full px-4 py-2 text-[14px] font-semibold hover:bg-[#f2f2f4] md:inline-flex">Entrar</a>
+            {/* Hick: no mobile a ação visível é o cadastro, não o login; "Entrar" vai para o menu */}
+            <a href={SIGNUP} className="press inline-flex rounded-full bg-ink px-4 py-2 text-[14px] font-semibold whitespace-nowrap text-bg">
+              <span className="sm:hidden">Testar grátis</span><span className="hidden sm:inline">{CTA}</span>
+            </a>
+            {/* Jakob: hambúrguer à direita no mobile, como em qualquer site */}
+            <details className="relative md:hidden">
+              <summary aria-label="Menu" className="press grid size-10 cursor-pointer list-none place-items-center rounded-full hover:bg-[#f2f2f4] [&::-webkit-details-marker]:hidden">
+                <List size={22} weight="bold" aria-hidden="true" />
+              </summary>
+              <nav className="absolute top-12 right-0 grid w-52 gap-1 rounded-[20px] bg-white p-2 text-[15px] font-medium shadow-[0_18px_40px_-16px_rgb(18_18_20/0.35)]"
+                onClick={(e) => (e.target as HTMLElement).closest('a') && e.currentTarget.parentElement?.removeAttribute('open')}>
+                <a href="#recursos" className="rounded-xl px-3 py-2.5 hover:bg-[#f2f2f4]">Recursos</a>
+                <a href="#modelos" className="rounded-xl px-3 py-2.5 hover:bg-[#f2f2f4]">Modelos</a>
+                <a href="#preco" className="rounded-xl px-3 py-2.5 hover:bg-[#f2f2f4]">Preço</a>
+                <a href="#duvidas" className="rounded-xl px-3 py-2.5 hover:bg-[#f2f2f4]">Dúvidas</a>
+                <a href={LOGIN} className="rounded-xl px-3 py-2.5 font-semibold hover:bg-[#f2f2f4]">Entrar</a>
+              </nav>
+            </details>
           </div>
         </div>
       </header>
@@ -298,17 +315,19 @@ function Landing() {
                   const dup = n >= templates.length
                   return (
                     <li key={`${t.id}-${n}`} aria-hidden={dup || undefined} className={`w-[210px] shrink-0 md:w-[250px] ${dup ? 'marquee-dup' : ''}`}>
-                      <a href={SIGNUP} tabIndex={dup ? -1 : undefined} className="model block">
+                      <div className="model block">
                         <div className="aspect-[3/4] overflow-hidden rounded-[22px] bg-white">
                           <img src={responsive(t.config.photo.src, [500]).src} alt={dup ? '' : `Modelo ${t.name}`} loading="lazy" className="h-full w-full object-cover" style={focal(t)} />
                         </div>
                         <span className="mt-3 block text-[15px] font-semibold">{t.name}</span>
-                      </a>
+                      </div>
                     </li>
                   )
                 })}
               </ul>
             </div>
+            {/* Hick: uma ação só depois da vitrine, em vez de cada card competir como CTA */}
+            <div className="mt-12 text-center"><CtaButton /></div>
           </section>
         )}
 
@@ -371,7 +390,14 @@ function Landing() {
 
       <footer className={`${WRAP} flex flex-wrap items-center justify-between gap-3 py-8 text-[13px] text-muted`}>
         <span>© {new Date().getFullYear()} VorenMe</span>
-        <a href={LOGIN} className="font-semibold text-ink hover:underline">Entrar</a>
+        {/* Jakob: o rodapé repete a navegação, onde o usuário procura por hábito (e é a única nav no mobile) */}
+        <nav className="flex flex-wrap items-center gap-5">
+          <a href="#recursos" className="hover:text-ink">Recursos</a>
+          <a href="#modelos" className="hover:text-ink">Modelos</a>
+          <a href="#preco" className="hover:text-ink">Preço</a>
+          <a href="#duvidas" className="hover:text-ink">Dúvidas</a>
+          <a href={LOGIN} className="font-semibold text-ink hover:underline">Entrar</a>
+        </nav>
       </footer>
     </>
   )

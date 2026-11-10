@@ -4,6 +4,8 @@ import { creator } from '../config/creator'
 import { emailHref, initials, whatsappHref } from '../config/derived'
 import { platformMeta } from './icons'
 import { Footer } from './Footer'
+import { LocalTile } from './tiles/LocalTile'
+import { PixTile } from './tiles/PixTile'
 import { TopBar } from './TopBar'
 import { ExternalLink } from './ui/ExternalLink'
 import { SaveContact } from './ui/SaveContact'
@@ -74,6 +76,11 @@ export function SimpleCard() {
             </SaveContact>
           </li>
         </ul>
+
+        <div className="mt-6 grid gap-3 text-left">
+          <LocalTile />
+          <PixTile />
+        </div>
 
         {partnership.formats && partnership.formats.length > 0 && (
           <ul className="mt-8 flex flex-wrap justify-center gap-1.5" aria-label="Serviços">

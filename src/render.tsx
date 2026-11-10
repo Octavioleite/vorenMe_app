@@ -5,6 +5,7 @@ import { creator, setCreator } from './config/creator'
 import { refreshDerived } from './config/derived'
 import type { CreatorConfig } from './config/types'
 import { applyHead } from './lib/head'
+import { startTracking } from './lib/track'
 
 applyHead(creator)
 
@@ -32,5 +33,7 @@ function Preview() {
 }
 
 const inPanel = window.parent !== window && new URLSearchParams(location.search).has('preview')
+const slug = location.pathname.split('/')[1]
+if (!inPanel && slug) startTracking(slug)
 
 createRoot(document.getElementById('root')!).render(<StrictMode>{inPanel ? <Preview /> : <App />}</StrictMode>)

@@ -4,23 +4,39 @@
    add-tile  : o + gira ao passar o mouse (convite a criar)
    empty-fan : modelos se abrem em leque no estado vazio */
 @layer components {
-  .card-img { transition: transform 1s var(--ease); }
-  .card-photo { transition: opacity 0.5s var(--ease); }
-  .live-frame { opacity: 0; transition: opacity 0.5s var(--ease); }
-  .card-tile[data-ready]:hover .live-frame, .card-tile[data-ready]:focus-within .live-frame { opacity: 1; }
-  .card-tile[data-ready]:hover .card-photo, .card-tile[data-ready]:focus-within .card-photo { opacity: 0; }
-  .card-tile:not([data-ready]):hover .card-img { transform: scale(1.04); }
-  .card-actions { transition: transform 0.5s var(--ease), opacity 0.35s var(--ease); }
+  /* Troca foto -> página: a foto aproxima e desfoca enquanto a página entra nítida (cross-fade com profundidade).
+     Entrar é mais lento e escalonado; sair é rápido, para não atrasar quem passa o mouse por vários cartões. */
+  .card-tile { --in: 0.75s; box-shadow: 0 1px 0 rgb(17 17 19 / 0.02); transition: box-shadow 0.6s var(--ease), transform 0.6s var(--ease); }
+  .card-img { transition: transform 1.2s var(--ease), filter 0.6s var(--ease); }
+  .card-photo { transition: opacity 0.35s var(--ease); }
+  .card-photo > span:last-child { transition: transform 0.45s var(--ease), opacity 0.3s var(--ease); }
+  .live-frame { opacity: 0; filter: blur(10px) saturate(1.2); transition: opacity 0.3s var(--ease), filter 0.3s var(--ease); }
+  .card-actions { transition: transform 0.35s var(--ease), opacity 0.25s var(--ease); }
+
   @media (hover: hover) {
-    .card-actions { opacity: 0; transform: translateY(calc(100% + 16px)); }
-    .card-tile:hover .card-actions, .card-tile:focus-within .card-actions { opacity: 1; transform: none; }
+    .card-actions { opacity: 0; transform: translateY(calc(100% + 16px)) scale(0.96); }
+    .card-tile:hover, .card-tile:focus-within { box-shadow: 0 34px 70px -34px rgb(40 20 110 / 0.5); transform: translateY(-6px); }
+    .card-tile:hover .card-img, .card-tile:focus-within .card-img { transform: scale(1.06); }
+    .card-tile:hover .card-photo > span:last-child, .card-tile:focus-within .card-photo > span:last-child { transform: translateY(-12px); opacity: 0; }
+
+    .card-tile[data-ready]:hover .card-photo, .card-tile[data-ready]:focus-within .card-photo { opacity: 0; transition-duration: var(--in); transition-delay: 0.08s; }
+    .card-tile[data-ready]:hover .card-img, .card-tile[data-ready]:focus-within .card-img { transform: scale(1.12); filter: blur(6px); }
+    .card-tile[data-ready]:hover .live-frame, .card-tile[data-ready]:focus-within .live-frame {
+      opacity: 1; filter: none; transition-duration: var(--in); transition-delay: 0.05s;
+    }
+    .card-tile:hover .card-actions, .card-tile:focus-within .card-actions {
+      opacity: 1; transform: none;
+      transition: transform 0.6s cubic-bezier(0.34, 1.4, 0.64, 1) 0.12s, opacity 0.35s var(--ease) 0.12s;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .card-tile, .card-tile:hover { transform: none; }
+    .live-frame { filter: none; }
   }
   /* Toque: sem hover, fica a foto com as ações sempre visíveis e o nome acima delas */
   @media (hover: none) {
     .card-photo > span:last-child { padding-bottom: 76px; }
   }
-  .card-tile { box-shadow: 0 1px 0 rgb(17 17 19 / 0.02); transition: box-shadow 0.5s var(--ease), transform 0.5s var(--ease); }
-  .card-tile:hover { box-shadow: 0 30px 60px -32px rgb(17 17 19 / 0.45); transform: translateY(-4px); }
 
   .copied { transform: translateX(-50%); animation: copied 1.6s var(--ease) both; pointer-events: none; }
   @keyframes copied {
@@ -54,4 +70,23 @@
     .live-dot::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: inherit; animation: live 2s ease-out infinite; }
   }
   @keyframes live { to { transform: scale(2.6); opacity: 0; } }
+}
+
+/* ── Novo cartão: modelo -> endereço ──
+   tpl-pick : a foto do modelo escolhido voa da grade até o resumo do passo 2 (continuidade da escolha)
+   step-in  : o campo de endereço entra logo depois, já com foco */
+::view-transition-group(tpl-pick) { animation-duration: 0.6s; animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
+::view-transition-old(tpl-pick), ::view-transition-new(tpl-pick) { height: 100%; object-fit: cover; }
+@media (prefers-reduced-motion: no-preference) {
+  .step-in { animation: step-in 0.6s var(--ease) 0.25s backwards; }
+}
+@keyframes step-in { from { opacity: 0; transform: translateY(14px); } }
+
+/* Kit de impressão: só as peças vão para o papel, na medida real. */
+@media print {
+  @page { margin: 10mm; }
+  body * { visibility: hidden; }
+  #print-area, #print-area * { visibility: visible; }
+  #print-area { position: absolute; inset: 0; }
+  .print-piece { break-inside: avoid; outline: 0.2mm dashed #bbb; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }

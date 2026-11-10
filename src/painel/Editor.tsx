@@ -1,5 +1,5 @@
 import {
-  ArrowCounterClockwise, ArrowLeft, ArrowSquareOut, ChatCircleText, Check, CloudArrowUp, WarningCircle, Code, Eye, Globe, IdentificationCard, Image as ImageIcon, InstagramLogo, PinterestLogo, SpotifyLogo, TiktokLogo, User, X, XLogo, YoutubeLogo, LinkSimple, ListBullets, Megaphone, Palette, Plus, ShareNetwork, Sparkle, Ticket, Star, Trash,
+  ArrowCounterClockwise, ArrowLeft, ArrowSquareOut, ChatCircleText, Check, CloudArrowUp, WarningCircle, Code, Eye, Globe, IdentificationCard, Image as ImageIcon, InstagramLogo, PinterestLogo, SpotifyLogo, TiktokLogo, User, X, XLogo, YoutubeLogo, LinkSimple, ListBullets, MapPin, Megaphone, CurrencyDollar, Palette, Plus, ShareNetwork, Sparkle, Ticket, Star, Trash,
 } from '@phosphor-icons/react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { STYLES, TEXT_IDS, TEXT_SIZE, type CreatorConfig, type Style, type TextId, type TextLayout, type Platform, type SocialLink } from '../config/types'
@@ -379,6 +379,59 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
               <Field label="Disponibilidade" hint="Ex: Agenda aberta. Vazio esconde.">
                 <input className={input} value={c.availability?.label ?? ''}
                   onChange={(e) => set((x) => { x.availability = e.target.value ? { open: true, label: e.target.value } : undefined })} />
+              </Field>
+            </div>
+          </Section>
+
+          <Section icon={<MapPin size={17} weight="bold" />} title="Endereço e avaliações" id="local" defaultOpen={false} description="Rota no Maps, Waze e Uber, horário e avaliação no Google" badge={c.address || c.review ? 'Ativo' : 'Opcional'}>
+            <div className="grid gap-4">
+              <Field label="Endereço" hint="Como você digitaria no Google Maps. Vazio esconde.">
+                <input className={input} value={c.address?.text ?? ''} placeholder="Rua Augusta, 1500 - Consolação, São Paulo - SP"
+                  onChange={(e) => set((x) => { x.address = e.target.value ? { ...x.address, text: e.target.value } : undefined })} />
+              </Field>
+              {c.address && (
+                <div className="grid gap-2">
+                  <span className="text-[13px] font-medium text-ink">Horário de funcionamento</span>
+                  {(c.address.hours ?? []).map((h, i) => (
+                    <div key={i} className="flex gap-2">
+                      <input aria-label="Dias" placeholder="Seg a Sex" className={input} value={h.days} onChange={(e) => set((x) => { x.address!.hours![i].days = e.target.value })} />
+                      <input aria-label="Horário" placeholder="9h às 18h" className={input} value={h.time} onChange={(e) => set((x) => { x.address!.hours![i].time = e.target.value })} />
+                      <button type="button" className={`${iconBtn} hover:text-red-500`} aria-label="Remover horário" title="Remover horário"
+                        onClick={() => set((x) => { x.address!.hours!.splice(i, 1); if (!x.address!.hours!.length) delete x.address!.hours })}>
+                        <Trash size={16} />
+                      </button>
+                    </div>
+                  ))}
+                  {(c.address.hours?.length ?? 0) < 7 && (
+                    <button type="button" className={`${secondary} justify-self-start`} onClick={() => set((x) => { (x.address!.hours ??= []).push({ days: '', time: '' }) })}>
+                      <Plus size={15} weight="bold" aria-hidden="true" /> Adicionar horário
+                    </button>
+                  )}
+                </div>
+              )}
+              <Field label="Link de avaliação do Google" hint="No Google: Perfil da Empresa → Pedir avaliações → copiar link. Vazio esconde.">
+                <input type="url" className={input} value={c.review?.url ?? ''} placeholder="https://g.page/r/..."
+                  onChange={(e) => set((x) => { x.review = e.target.value ? { url: e.target.value } : undefined })} />
+              </Field>
+            </div>
+          </Section>
+
+          <Section icon={<CurrencyDollar size={17} weight="bold" />} title="Pix" id="pix" defaultOpen={false} description="O cliente copia sua chave ou o Pix copia e cola" badge={c.pix ? 'Ativo' : 'Opcional'}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <Field label="Chave Pix" hint="CPF, CNPJ, e-mail, celular (+55...) ou chave aleatória. Vazio esconde.">
+                  <input className={input} value={c.pix?.key ?? ''} maxLength={77}
+                    onChange={(e) => set((x) => {
+                      const key = e.target.value
+                      x.pix = key ? { name: `${x.name.first} ${x.name.last}`.trim().slice(0, 25), city: (x.location ?? '').slice(0, 15), ...x.pix, key } : undefined
+                    })} />
+                </Field>
+              </div>
+              <Field label="Nome do recebedor" hint="Como aparece no banco. Até 25 letras.">
+                <input className={input} value={c.pix?.name ?? ''} maxLength={25} disabled={!c.pix} onChange={(e) => set((x) => { x.pix!.name = e.target.value })} />
+              </Field>
+              <Field label="Cidade" hint="Até 15 letras.">
+                <input className={input} value={c.pix?.city ?? ''} maxLength={15} disabled={!c.pix} onChange={(e) => set((x) => { x.pix!.city = e.target.value })} />
               </Field>
             </div>
           </Section>

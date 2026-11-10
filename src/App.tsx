@@ -5,6 +5,8 @@ import { BrandsTile } from './components/tiles/BrandsTile'
 import { CouponsTile } from './components/tiles/CouponsTile'
 import { FeaturedTile } from './components/tiles/FeaturedTile'
 import { NowTile } from './components/tiles/NowTile'
+import { LocalTile } from './components/tiles/LocalTile'
+import { PixTile } from './components/tiles/PixTile'
 import { PartnershipTile } from './components/tiles/PartnershipTile'
 import { QrTile } from './components/tiles/QrTile'
 import { SocialTiles } from './components/tiles/SocialTiles'
@@ -35,6 +37,8 @@ export default function App() {
           <main className="tiles mt-10 grid grid-cols-2 gap-3 md:mt-12 lg:col-span-7 lg:mt-0">
             <SocialTiles className="t-social order-1 col-span-2 lg:order-2" />
             <FeaturedTile className="t-featured order-2 col-span-2 lg:order-1" />
+            <LocalTile className="t-local order-3 col-span-2" />
+            <PixTile className="t-pix order-3 col-span-2" />
             <CouponsTile className="t-coupons order-3 col-span-2" />
             <PartnershipTile className="t-pship order-3 col-span-2" />
             <NowTile className={`t-now order-4 col-span-2 ${hasNow ? 'lg:col-span-1' : ''}`} />

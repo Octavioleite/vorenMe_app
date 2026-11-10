@@ -1,0 +1,34 @@
+# Front + proxy para a API em ${API_URL} (definido no stack). O Traefik fica na frente com o HTTPS.
+server {
+  listen 80;
+  root /usr/share/nginx/html;
+  client_max_body_size 3m; # fotos do painel (a API aceita até 2mb)
+
+  location /api/ {
+    proxy_pass ${API_URL};
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+  }
+
+  location /assets/ {
+    add_header Cache-Control "public, max-age=31536000, immutable";
+    try_files $uri =404;
+  }
+
+  # Apps de página única: qualquer rota interna devolve o HTML do app.
+  location ^~ /painel { try_files $uri /painel/index.html; }
+  location ^~ /admin  { try_files $uri /admin/index.html; }
+
+  # /<slug>: arquivo estático se existir (favicon.png...), senão o HTML do cartão vindo da API,
+  # já com título/foto para o preview no WhatsApp e Google.
+  location ~ "^/[a-z0-9][a-z0-9._-]{2,30}/?$" { try_files $uri @card; }
+  location @card {
+    rewrite ^/([^/]+)/?$ /api/v1/public/page/$1 break;
+    proxy_pass ${API_URL};
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  }
+
+  location / { try_files $uri $uri/ /index.html; }
+}

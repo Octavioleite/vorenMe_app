@@ -3,9 +3,9 @@ import type { CreatorConfig } from '../config/types'
 const BASE = `${import.meta.env.VITE_API_URL ?? ''}/api/v1`
 const KEY = 'vorenme-session'
 
-export interface User { id: string; name: string | null; email: string }
-export interface Session { user: User; accessToken: string; refreshToken: string }
-export interface Card { id: string; slug: string; template: string; config: CreatorConfig; updateAt: string }
+export interface User { id: string; name: string | null; email: string; createAt?: string; emailVerified?: boolean }
+export interface Session { user: User; accessToken: string; refreshToken: string; support?: { by: string; expiresAt: string } }
+export interface Card { id: string; slug: string; template: string; config: CreatorConfig; updateAt: string; disabled?: boolean }
 export interface Template { id: string; name: string; category: string; config: CreatorConfig }
 
 export class ApiError extends Error {
@@ -14,15 +14,30 @@ export class ApiError extends Error {
   }
 }
 
+/* Acesso do suporte: o admin abre /painel#suporte=<sessão> numa aba nova. A sessão fica só no
+   sessionStorage daquela aba (a conta do admin no localStorage não é tocada). "null" = acesso encerrado. */
+const SUPPORT = 'vorenme-support'
+try {
+  const m = location.hash.match(/^#suporte=(.+)$/)
+  if (m) {
+    sessionStorage.setItem(SUPPORT, decodeURIComponent(m[1]))
+    history.replaceState(null, '', location.pathname + location.search)
+  }
+} catch { /* sem sessionStorage: segue normal */ }
+export const supportTab = () => {
+  try { return sessionStorage.getItem(SUPPORT) !== null } catch { return false }
+}
+
 export const session = {
   get(): Session | null {
     try {
-      return JSON.parse(localStorage.getItem(KEY) ?? 'null')
+      return JSON.parse((supportTab() ? sessionStorage.getItem(SUPPORT) : localStorage.getItem(KEY)) ?? 'null')
     } catch {
       return null
     }
   },
   set(s: Session | null) {
+    if (supportTab()) return sessionStorage.setItem(SUPPORT, JSON.stringify(s))
     if (s) localStorage.setItem(KEY, JSON.stringify(s))
     else localStorage.removeItem(KEY)
   },

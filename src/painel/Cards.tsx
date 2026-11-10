@@ -1,7 +1,10 @@
-import { ArrowLeft, ArrowSquareOut, Globe, Check, LinkSimple, MagnifyingGlass, PencilSimple, Plus, Trash, X } from '@phosphor-icons/react'
+import { ArrowLeft, ArrowSquareOut, Globe, Check, Info, LinkSimple, MagnifyingGlass, PencilSimple, Plus, Trash, X } from '@phosphor-icons/react'
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import { api, ApiError, type Card, type Template } from './api'
-import { Errors, Field, ask, errorText, iconBtn, primary, secondary, thumb } from './ui'
+import { Errors, Field, ask, errorText, iconBtn, primary, secondary, thumb, transition } from './ui'
+import { SUPPORT_EMAIL, SUPPORT_PHONE } from './Support'
+
+const MAX_CARDS = 3 // espelha vorenMe_api/src/utils/plan.js
 
 /** Copiar o link: o ícone vira check e um balão confirma (feedback da ação). */
 function CopyLink({ slug, className }: { slug: string; className: string }) {
@@ -75,6 +78,7 @@ function CardTile({ card, i, onEdit, onDelete }: { card: Card; i: number; onEdit
         <p className="min-w-0 flex-1 truncate text-[15px] font-semibold">{c.name.first} {c.name.last}</p>
         <p className="shrink-0 truncate text-[13px] text-muted">/{card.slug}</p>
       </div>
+      {card.disabled && <p role="status" className="mt-2 px-1 text-[13px] font-medium text-red-600">Fora do ar pela nossa equipe. Fale com o suporte.</p>}
     </li>
   )
 }
@@ -108,7 +112,13 @@ function NewCardDialog({ templates, dialog, onCreated, fail }: {
   const selected = template
   const chosen = templates.find((t) => t.id === template)
   // Passo 2: ao escolher o modelo, sugere o endereço a partir do @ do modelo (a pessoa ajusta).
-  const pick = (t: Template) => { setTemplate(t.id); setSlug(t.config.username.toLowerCase().replace(/[^a-z0-9._-]/g, '').slice(0, 31)); setError('') }
+  // A foto do modelo escolhido "voa" da grade para o passo 2 (View Transitions, nativo); o resto entra em sequência.
+  const [last, setLast] = useState('')
+  const pick = (t: Template) => transition(() => {
+    setTemplate(t.id); setLast(t.id); setError('')
+    setSlug(t.config.username.toLowerCase().replace(/[^a-z0-9._-]/g, '').slice(0, 31))
+  })
+  const back = () => transition(() => setTemplate(''))
   const cats = ['Todos', ...new Set(templates.map((t) => t.category))]
   const q = query.trim().toLowerCase()
   const shown = templates.filter((t) => (cat === 'Todos' || t.category === cat) && (!q || `${t.name} ${t.category} ${t.config.niche}`.toLowerCase().includes(q)))
@@ -174,7 +184,7 @@ function NewCardDialog({ templates, dialog, onCreated, fail }: {
                     className={`press group relative block aspect-[3/4] cursor-pointer overflow-hidden rounded-[16px] bg-surface-2 ring-offset-2 ring-offset-surface ${on ? 'ring-2 ring-accent' : 'hover:ring-1 hover:ring-line-strong'}`}>
                     <input type="radio" name="template" value={t.id} checked={on} onChange={() => pick(t)} className="sr-only" />
                     <img src={thumb(t.config.photo.src, 400)} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                      style={{ objectPosition: t.config.photo.focal ?? '50% 30%' }} />
+                      style={{ objectPosition: t.config.photo.focal ?? '50% 30%', viewTransitionName: t.id === last ? 'tpl-pick' : undefined }} />
                     <span aria-hidden="true" className="absolute inset-0 bg-linear-to-t from-black/85 via-black/10 to-transparent" />
                     <span className="absolute inset-x-0 bottom-0 p-3 text-[#FAFAF9]">
                       <span className="block text-[19px] leading-[0.95] font-semibold tracking-[-0.03em]">{t.name}</span>
@@ -199,18 +209,18 @@ function NewCardDialog({ templates, dialog, onCreated, fail }: {
         {chosen && <>
         {/* Passo 2: modelo escolhido + endereço */}
         <div className="flex items-center gap-3 sm:gap-4 rounded-[16px] bg-[#f5f5f7] p-3">
-          <img src={thumb(chosen.config.photo.src, 200)} alt="" className="aspect-[3/4] w-16 shrink-0 rounded-[10px] object-cover"
-            style={{ objectPosition: chosen.config.photo.focal ?? '50% 30%' }} />
+          <img src={thumb(chosen.config.photo.src, 400)} alt="" className="aspect-[3/4] w-16 shrink-0 rounded-[10px] object-cover"
+            style={{ objectPosition: chosen.config.photo.focal ?? '50% 30%', viewTransitionName: 'tpl-pick' }} />
           <div className="min-w-0 flex-1">
             <p className="truncate text-lg leading-tight font-semibold">{chosen.name}</p>
             <p className="text-[13px] text-muted">{chosen.category}</p>
           </div>
-          <button type="button" onClick={() => setTemplate('')} className={`${secondary} shrink-0`}>
+          <button type="button" onClick={back} className={`${secondary} shrink-0`}>
             <ArrowLeft size={16} weight="bold" aria-hidden="true" /> <span className="max-sm:sr-only">Trocar modelo</span>
           </button>
         </div>
 
-        <div className="mt-6">
+        <div className="step-in mt-6" style={{ '--i': 1 } as CSSProperties}>
           <Field label="Endereço do cartão" hint="Letras minúsculas, números, ponto, hífen ou _. Mínimo 3 caracteres.">
             <div className="flex items-center gap-2 rounded-[12px] bg-[#f2f2f4] px-3.5 focus-within:bg-white focus-within:ring-2 focus-within:ring-accent/40">
               <span aria-hidden="true" className="text-[17px] text-muted">/</span>
@@ -241,7 +251,7 @@ function NewCardDialog({ templates, dialog, onCreated, fail }: {
   )
 }
 
-export function Cards({ name, onEdit, onAuthLost }: { name?: string | null; onEdit: (c: Card) => void; onAuthLost: () => void }) {
+export function Cards({ name, verified, onEdit, onAuthLost }: { name?: string | null; verified: boolean; onEdit: (c: Card) => void; onAuthLost: () => void }) {
   const [cards, setCards] = useState<Card[] | null>(null)
   const [templates, setTemplates] = useState<Template[]>([])
   const [error, setError] = useState('')
@@ -273,6 +283,8 @@ export function Cards({ name, onEdit, onAuthLost }: { name?: string | null; onEd
 
   const openNew = () => dialog.current?.showModal()
 
+  const full = !!cards && cards.length >= MAX_CARDS
+  const canCreate = verified && !full // a API exige as duas coisas
   const first = (name || '').trim().split(/\s+/)[0]
   return (
     <>
@@ -283,12 +295,25 @@ export function Cards({ name, onEdit, onAuthLost }: { name?: string | null; onEd
             {cards === null ? 'Carregando seus cartões...' : cards.length === 0 ? 'Vamos colocar seu primeiro cartão no ar.' : cards.length === 1 ? '1 cartão no ar.' : `${cards.length} cartões no ar.`}
           </p>
         </div>
-        {!!cards?.length && (
+        {!!cards?.length && canCreate && (
           <button type="button" onClick={openNew} className={`${primary} h-11`}>
             <Plus size={16} weight="bold" aria-hidden="true" /> Novo cartão
           </button>
         )}
       </div>
+
+      {cards && !canCreate && (
+        <div role="status" className="rise mt-6 flex items-center gap-3 rounded-[16px] bg-accent/8 px-4 py-3">
+          <Info size={20} className="shrink-0 text-accent" aria-hidden="true" />
+          <p className="text-[14px]">
+            {!verified
+              ? <><span className="font-semibold">Para criar um cartão, confirme seu e-mail.</span> Abra o link que enviamos para sua caixa de entrada. Não chegou? Fale com o suporte pelo{' '}
+                <a href={`https://wa.me/${SUPPORT_PHONE}`} target="_blank" rel="noreferrer" className="font-semibold text-accent underline">WhatsApp</a> ou{' '}
+                <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold text-accent underline">{SUPPORT_EMAIL}</a>.</>
+              : <><span className="font-semibold">Você chegou ao limite de {MAX_CARDS} cartões.</span> Exclua um para criar um novo.</>}
+          </p>
+        </div>
+      )}
 
       <div className="mt-6"><Errors text={error} /></div>
 
@@ -306,9 +331,11 @@ export function Cards({ name, onEdit, onAuthLost }: { name?: string | null; onEd
           <div className="max-w-md">
             <h2 className="text-[32px] leading-[1.05] font-semibold tracking-[-0.04em]">Crie seu primeiro cartão.</h2>
             <p className="mt-3 text-[17px] text-muted">Escolha um modelo pronto para o seu ramo, troque foto e textos e compartilhe o link.</p>
-            <button type="button" onClick={openNew} className={`${primary} mt-7 h-12 px-6 text-[15px]`}>
-              <Plus size={16} weight="bold" aria-hidden="true" /> Novo cartão
-            </button>
+            {verified && (
+              <button type="button" onClick={openNew} className={`${primary} mt-7 h-12 px-6 text-[15px]`}>
+                <Plus size={16} weight="bold" aria-hidden="true" /> Novo cartão
+              </button>
+            )}
           </div>
           <div className="empty-fan relative hidden h-[260px] w-[300px] md:block" aria-hidden="true">
             {templates.slice(0, 3).map((t, i) => (
@@ -323,7 +350,7 @@ export function Cards({ name, onEdit, onAuthLost }: { name?: string | null; onEd
           {cards.map((c, i) => (
             <CardTile key={c.id} card={c} i={i} onEdit={() => onEdit(c)} onDelete={() => remove(c)} />
           ))}
-          <AddTile i={cards.length} onClick={openNew} />
+          {canCreate && <AddTile i={cards.length} onClick={openNew} />}
         </ul>
       )}
 
