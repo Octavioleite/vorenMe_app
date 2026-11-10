@@ -91,16 +91,17 @@ export function Painel() {
     <div className="mx-auto max-w-[1280px] has-[[data-device=computador]]:max-w-[1760px] px-4 pb-24 sm:px-6 lg:px-10">
       <SupportBanner onEnded={() => setUser(null)} />
       {!editingId && (
-        <header className="flex h-[72px] items-center justify-between gap-3">
+        <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-3 sm:h-[72px] sm:flex-nowrap sm:py-0">
+          {/* Celular: logo e conta na 1ª linha, abas inteiras na 2ª. sm+: tudo numa linha. */}
           <a href="/" className="flex items-center gap-2.5 font-semibold tracking-[-0.02em]">
             <img src="/favicon.png" alt="" width={30} height={30} className="rounded-full" />
-            <span className="hidden sm:inline">VorenMe</span>
+            <span>VorenMe</span>
           </a>
-          <nav aria-label="Painel" className="print-hide -mx-1 flex min-w-0 gap-1 overflow-x-auto rounded-full bg-[#f5f5f7] p-1 [scrollbar-width:none]">
+          <nav aria-label="Painel" className="print-hide order-last grid w-full min-w-0 grid-cols-3 gap-1 rounded-full bg-[#f5f5f7] p-1 sm:order-none sm:flex sm:w-auto sm:overflow-x-auto [scrollbar-width:none]">
             {MAIN.map((t) => (
               <a key={t.path} href={t.path} aria-current={tab === t.path ? 'page' : undefined}
                 onClick={(e) => { e.preventDefault(); goTab(t.path) }}
-                className={`press shrink-0 rounded-full px-3.5 py-1.5 text-[14px] font-medium sm:px-4 ${tab === t.path ? 'bg-white text-ink shadow-sm' : 'text-muted hover:text-ink'}`}>
+                className={`press shrink-0 rounded-full px-2 py-2 text-center text-[14px] font-medium sm:px-4 sm:py-1.5 ${tab === t.path ? 'bg-white text-ink shadow-sm' : 'text-muted hover:text-ink'}`}>
                 {t.label}
               </a>
             ))}

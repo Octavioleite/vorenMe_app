@@ -1,5 +1,5 @@
 import { Headset } from '@phosphor-icons/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api, session } from './api'
 
 interface Status { active: boolean; viewer: 'owner' | 'support'; by?: string; startedAt?: string; expiresAt?: string }
@@ -10,6 +10,7 @@ const time = (iso?: string) => (iso ? new Date(iso).toLocaleTimeString('pt-BR', 
 export function SupportBanner({ onEnded }: { onEnded: () => void }) {
   const [s, setS] = useState<Status | null>(null)
   const [busy, setBusy] = useState(false)
+  const bar = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const check = () => document.visibilityState === 'visible' && api<Status>('/auth/support').then(setS, () => {})
@@ -18,6 +19,17 @@ export function SupportBanner({ onEnded }: { onEnded: () => void }) {
     addEventListener('visibilitychange', check)
     return () => { clearInterval(t); removeEventListener('visibilitychange', check) }
   }, [])
+
+  // Publica a altura da faixa (--banner-h) para botões fixos embaixo (ex.: "Ver prévia") subirem junto.
+  const active = !!s?.active
+  useEffect(() => {
+    const el = bar.current
+    const root = document.documentElement.style
+    if (!el) return
+    const ro = new ResizeObserver(() => root.setProperty('--banner-h', `${el.offsetHeight}px`))
+    ro.observe(el)
+    return () => { ro.disconnect(); root.removeProperty('--banner-h') }
+  }, [active])
 
   if (!s?.active) return null
   const mine = s.viewer === 'support'
@@ -28,9 +40,9 @@ export function SupportBanner({ onEnded }: { onEnded: () => void }) {
     if (mine) { session.set(null); onEnded() } else setS({ ...s, active: false })
   }
   return (
-    <div role="status" aria-live="polite"
-      className="print-hide fixed inset-x-0 bottom-0 z-50 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 bg-[#d92d20] px-4 py-3 text-[14px] text-white shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.4)]">
-      <span className="flex items-center gap-2 font-medium">
+    <div ref={bar} role="status" aria-live="polite"
+      className="print-hide fixed inset-x-0 bottom-0 z-50 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 bg-[#d92d20] px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-[14px] text-white shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.4)]">
+      <span className="flex min-w-0 items-center gap-2 font-medium [overflow-wrap:anywhere]">
         <Headset size={18} weight="fill" aria-hidden="true" className="animate-pulse" />
         {mine
           ? <>Modo suporte: você está na conta de <b>{session.get()?.user.email}</b>. O cliente está vendo este aviso. Expira às {time(s.expiresAt)}.</>

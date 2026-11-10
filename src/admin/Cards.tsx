@@ -50,7 +50,7 @@ export function Cards({ fail }: { fail: Fail }) {
         <h1 className="text-[40px] leading-[1.05] font-semibold tracking-[-0.045em]">Cartões</h1>
         <p className="mt-1 text-muted">Os editados por último aparecem primeiro. Confira o conteúdo e tire do ar o que não puder ficar público.</p>
       </div>
-      <form onSubmit={search} className="flex gap-2">
+      <form onSubmit={search} className="flex min-w-0 gap-2">
         <input type="search" className={`${input} max-w-md`} placeholder="Link do cartão" aria-label="Buscar cartão" value={term} onChange={(e) => setTerm(e.target.value)} />
         <button type="submit" className={secondary} aria-label="Buscar"><MagnifyingGlass size={16} aria-hidden="true" /></button>
       </form>

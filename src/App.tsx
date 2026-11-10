@@ -33,7 +33,7 @@ export default function App() {
       <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-10">
         <TopBar />
         <div className="layout lg:grid lg:grid-cols-12 lg:items-start lg:gap-10">
-          <Hero className="hero-col lg:sticky lg:top-6 lg:col-span-5" />
+          <Hero className="hero-col lg:top-6 lg:[@media(min-height:44rem)]:sticky lg:col-span-5" />
           <main className="tiles mt-10 grid grid-cols-2 gap-3 md:mt-12 lg:col-span-7 lg:mt-0">
             <SocialTiles className="t-social order-1 col-span-2 lg:order-2" />
             <FeaturedTile className="t-featured order-2 col-span-2 lg:order-1" />

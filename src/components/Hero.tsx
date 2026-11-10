@@ -132,7 +132,7 @@ function IdentityCard() {
     <div className="deal">
       <div
         ref={tilt}
-        className="id-card on-photo aspect-[4/5] max-h-[58dvh] w-full md:max-h-none lg:max-h-[calc(100dvh-17rem)] lg:min-h-[420px]"
+        className="id-card on-photo aspect-[4/5] max-h-[58dvh] w-full md:max-h-[max(320px,calc(100dvh-8rem))] lg:max-h-[calc(100dvh-17rem)] lg:min-h-[420px]"
       >
         <SmartImage
           photo={photo}
@@ -187,16 +187,16 @@ export function Hero({ className = '' }: { className?: string }) {
           {primary && (
             <ExternalLink
               href={primary.href}
-              className="press flex h-[52px] items-center justify-center gap-2 rounded-[var(--radius-ctl)] bg-accent px-4 text-[15px] font-semibold text-accent-fg hover:brightness-110"
+              className="press flex min-h-[52px] items-center justify-center gap-2 rounded-[var(--radius-ctl)] bg-accent px-3 py-2 text-center text-[15px] leading-tight sm:px-4 font-semibold text-accent-fg hover:brightness-110"
             >
-              <primary.Icon size={20} weight="bold" aria-hidden="true" />
+              <primary.Icon size={20} weight="bold" aria-hidden="true" className="shrink-0" />
               {primary.label}
             </ExternalLink>
           )}
           <SaveContact
-            className={`press flex h-[52px] items-center justify-center gap-2 rounded-[var(--radius-ctl)] border border-line-strong bg-surface px-4 text-[15px] font-semibold hover:bg-surface-2 ${primary ? '' : 'col-span-2'}`}
+            className={`press flex min-h-[52px] items-center justify-center gap-2 rounded-[var(--radius-ctl)] border border-line-strong bg-surface px-3 py-2 text-center text-[15px] leading-tight sm:px-4 font-semibold hover:bg-surface-2 ${primary ? '' : 'col-span-2'}`}
           >
-            <UserPlus size={20} weight="bold" aria-hidden="true" />
+            <UserPlus size={20} weight="bold" aria-hidden="true" className="shrink-0" />
             {labels.saveContact}
           </SaveContact>
         </div>

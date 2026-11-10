@@ -49,7 +49,7 @@ export function Users({ fail }: { fail: Fail }) {
   return (
     <div className="rise grid gap-5">
       <h1 className="text-[40px] leading-[1.05] font-semibold tracking-[-0.045em]">Usuários</h1>
-      <form onSubmit={search} className="flex gap-2">
+      <form onSubmit={search} className="flex min-w-0 gap-2">
         <input type="search" className={`${input} max-w-md`} placeholder="Nome, e-mail ou link do cartão" aria-label="Buscar usuário"
           value={term} onChange={(e) => setTerm(e.target.value)} />
         <button type="submit" className={secondary} aria-label="Buscar"><MagnifyingGlass size={16} aria-hidden="true" /></button>
@@ -206,12 +206,12 @@ export function UserDetail({ id, me, fail }: { id: string; me: string; fail: Fai
         <ArrowLeft size={15} aria-hidden="true" /> Usuários
       </a>
       <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="grid gap-1">
+        <div className="grid min-w-0 gap-1">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-[34px] leading-[1.05] font-semibold tracking-[-0.04em]">{u.name || u.email}</h1>
+            <h1 className="min-w-0 text-[28px] leading-[1.05] font-semibold tracking-[-0.04em] [overflow-wrap:anywhere] sm:text-[34px]">{u.name || u.email}</h1>
             <Badge status={u.status} />
           </div>
-          <p className="text-muted">{u.email}</p>
+          <p className="text-muted [overflow-wrap:anywhere]">{u.email}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {u.active && <button type="button" className={primary} disabled={busy} onClick={support}>Acessar como suporte</button>}

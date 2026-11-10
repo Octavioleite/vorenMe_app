@@ -157,7 +157,7 @@ function NewCardDialog({ templates, dialog, onCreated, fail }: {
             <MagnifyingGlass size={17} className="text-muted" aria-hidden="true" />
             <span className="sr-only">Buscar modelo</span>
             <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar: barbearia, unhas, dentista..."
-              className="min-w-0 flex-1 bg-transparent py-2.5 text-[15px] text-ink outline-none placeholder:text-muted/70" />
+              className="min-w-0 flex-1 bg-transparent py-2.5 text-[16px] text-ink outline-none placeholder:text-muted/70 sm:text-[15px]" />
           </label>
           <div role="group" aria-label="Categorias" className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
             {cats.map((c) => (
@@ -290,7 +290,7 @@ export function Cards({ name, verified, onEdit, onAuthLost }: { name?: string | 
     <>
       <div className="rise flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-[40px] leading-[1.02] font-semibold tracking-[-0.045em] md:text-[52px]">{first ? `Olá, ${first}.` : 'Seus cartões'}</h1>
+          <h1 className="text-[34px] leading-[1.02] font-semibold tracking-[-0.045em] sm:text-[40px] md:text-[52px]">{first ? `Olá, ${first}.` : 'Seus cartões'}</h1>
           <p className="mt-2 text-[17px] text-muted">
             {cards === null ? 'Carregando seus cartões...' : cards.length === 0 ? 'Vamos colocar seu primeiro cartão no ar.' : cards.length === 1 ? '1 cartão no ar.' : `${cards.length} cartões no ar.`}
           </p>
@@ -327,7 +327,7 @@ export function Cards({ name, verified, onEdit, onAuthLost }: { name?: string | 
           ))}
         </ul>
       ) : cards.length === 0 ? (
-        <div className="rise mt-8 grid items-center gap-10 overflow-hidden rounded-[32px] bg-[#f5f5f7] p-8 sm:p-12 md:grid-cols-[1fr_auto]" style={{ '--i': 1 } as CSSProperties}>
+        <div className="rise mt-8 grid items-center gap-10 overflow-hidden rounded-[32px] bg-[#f5f5f7] p-6 sm:p-12 md:grid-cols-[1fr_auto]" style={{ '--i': 1 } as CSSProperties}>
           <div className="max-w-md">
             <h2 className="text-[32px] leading-[1.05] font-semibold tracking-[-0.04em]">Crie seu primeiro cartão.</h2>
             <p className="mt-3 text-[17px] text-muted">Escolha um modelo pronto para o seu ramo, troque foto e textos e compartilhe o link.</p>

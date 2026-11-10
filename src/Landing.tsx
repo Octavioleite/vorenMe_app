@@ -17,7 +17,7 @@ const LOGIN = '/painel'
 const SIGNUP = '/painel?cadastro=1'
 const CTA = 'Testar 3 dias grátis'
 const WRAP = 'mx-auto w-full max-w-[1180px] px-4 sm:px-6 lg:px-10'
-const H2 = 'text-[34px] leading-[1.05] font-semibold tracking-[-0.045em] text-balance md:text-[56px]'
+const H2 = 'text-[clamp(2rem,8vw,3.5rem)] leading-[1.05] font-semibold tracking-[-0.045em] text-balance'
 
 const i = (n: number) => ({ '--i': n }) as CSSProperties
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -113,7 +113,7 @@ function Devices({ templates }: { templates: Template[] }) {
   )
 
   return (
-    <div className="devices relative mx-auto aspect-[16/9] w-full max-w-[1040px]" aria-hidden="true">
+    <div className="devices relative mx-auto aspect-[4/3] w-full max-w-[1040px] sm:aspect-[16/9]" aria-hidden="true">
       <div className="dev dev-desktop">{screen('desktop')}</div>
       <div className="dev dev-tablet">{screen('tablet')}</div>
       <div className="dev dev-phone">{screen('phone')}</div>
@@ -250,7 +250,7 @@ function Landing() {
         <section className="overflow-hidden pt-14 pb-10 text-center md:pt-20">
           <div className={WRAP}>
             <p className="rise text-[15px] font-medium text-muted">Cartão de visita digital</p>
-            <h1 className="mt-4 text-[64px] leading-[0.95] font-semibold tracking-[-0.06em] md:text-[120px]">
+            <h1 className="mt-4 text-[clamp(3.25rem,15vw,7.5rem)] leading-[0.95] font-semibold tracking-[-0.06em]">
               <span className="word"><span style={i(0)}>Seu</span></span>{' '}
               <span className="word"><span style={i(1)}>mundo.</span></span>
               <br />
@@ -271,25 +271,25 @@ function Landing() {
         </section>
 
         {/* Papel x VorenMe: os problemas do papel são riscados, os benefícios entram com check */}
-        <section className={`${WRAP} py-28 md:py-40`}>
+        <section className={`${WRAP} py-20 sm:py-28 md:py-40`}>
           <h2 className={`${H2} mx-auto max-w-[16ch] text-center`} data-reveal>O papel some. Seu link fica.</h2>
           <div className="mx-auto mt-14 grid max-w-[980px] gap-4 md:grid-cols-2">
-            <div data-reveal className="vs rounded-[28px] bg-[#f5f5f7] p-8 md:p-10">
+            <div data-reveal className="vs rounded-[28px] bg-[#f5f5f7] p-6 sm:p-8 md:p-10">
               <p className="text-[15px] font-semibold text-muted">Cartão de papel</p>
               <ul className="mt-6 grid gap-4">
                 {PAPER.map((t, n) => (
-                  <li key={t} className="flex items-center gap-3 text-[18px] text-muted" style={i(n)}>
+                  <li key={t} className="flex items-center gap-3 text-[17px] text-muted sm:text-[18px]" style={i(n)}>
                     <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#e5e5ea] text-muted"><X size={14} weight="bold" aria-hidden="true" /></span>
                     <span className="strike">{t}</span>
                   </li>
                 ))}
               </ul>
             </div>
-            <div data-reveal style={i(1)} className="vs rounded-[28px] bg-accent p-8 text-accent-fg md:p-10">
+            <div data-reveal style={i(1)} className="vs rounded-[28px] bg-accent p-6 text-accent-fg sm:p-8 md:p-10">
               <p className="text-[15px] font-semibold text-white/75">VorenMe</p>
               <ul className="mt-6 grid gap-4">
                 {VOREN.map((t, n) => (
-                  <li key={t} className="vs-ok flex items-center gap-3 text-[18px] font-medium" style={i(n)}>
+                  <li key={t} className="vs-ok flex items-center gap-3 text-[17px] font-medium sm:text-[18px]" style={i(n)}>
                     <span className="grid size-7 shrink-0 place-items-center rounded-full bg-white text-accent"><Check size={14} weight="bold" aria-hidden="true" /></span>
                     {t}
                   </li>
@@ -302,11 +302,11 @@ function Landing() {
         {/* Recursos */}
         <section id="recursos" className={`${WRAP} scroll-mt-20`}>
           <h2 className={`${H2} max-w-[14ch]`} data-reveal>Tudo o que seu negócio precisa.</h2>
-          <div className="mt-12 grid gap-4 md:grid-cols-12">
-            <article data-reveal className="feat group relative min-h-[420px] overflow-hidden rounded-[28px] bg-ink text-white md:col-span-7 md:row-span-2 md:min-h-[560px]">
+          <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-12">
+            <article data-reveal className="feat group relative min-h-[420px] overflow-hidden rounded-[28px] bg-ink text-white md:col-span-2 md:min-h-[480px] lg:col-span-7 lg:row-span-2 lg:min-h-[560px]">
               {pick(1) && <img src={responsive(pick(1).config.photo.src, [900]).src} alt="" loading="lazy" className="feat-img absolute inset-0 h-full w-full object-cover opacity-80" style={focal(pick(1))} />}
               <div className="absolute inset-0 bg-linear-to-t from-black/85 via-black/10 to-transparent" />
-              <div className="absolute inset-x-0 bottom-0 p-8 md:p-10">
+              <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8 md:p-10">
                 <div className="mb-6 flex gap-2.5">
                   {['#6A45F5', '#E8553D', '#1E9E6A', '#F2B705', '#FAFAF9'].map((c, n) => (
                     <span key={c} className="swatch size-8 rounded-full ring-2 ring-white/30" style={{ background: c, ...i(n) }} />
@@ -317,11 +317,11 @@ function Landing() {
               </div>
             </article>
 
-            <article data-reveal style={i(1)} className="feat stack3 relative min-h-[270px] overflow-hidden rounded-[28px] bg-[#f5f5f7] p-8 md:col-span-5">
+            <article data-reveal style={i(1)} className="feat stack3 relative flex min-h-[270px] flex-col overflow-hidden rounded-[28px] bg-[#f5f5f7] p-6 sm:p-8 lg:col-span-5">
               <p className="text-[64px] leading-none font-semibold tracking-[-0.06em]">3</p>
               <h3 className="mt-2 text-[20px] font-semibold tracking-[-0.02em]">cartões por conta</h3>
               <p className="mt-1 max-w-[20ch] text-muted">Um para cada negócio ou serviço.</p>
-              <div className="absolute right-8 bottom-8 h-[150px] w-[180px]">
+              <div className="relative mt-8 ml-auto h-[150px] w-[180px] shrink-0 lg:absolute lg:right-8 lg:bottom-8 lg:mt-0">
                 {[0, 1, 2].map((k) => (
                   <div key={k} className="stack3-card absolute inset-y-0 right-0 w-[106px] overflow-hidden rounded-[14px] bg-white shadow-[0_18px_36px_-18px_rgb(18_18_20/0.45)]" style={{ '--k': k } as CSSProperties}>
                     {pick(k + 2) && <img src={responsive(pick(k + 2).config.photo.src, [300]).src} alt="" loading="lazy" className="h-full w-full object-cover" style={focal(pick(k + 2))} />}
@@ -330,7 +330,7 @@ function Landing() {
               </div>
             </article>
 
-            <article data-reveal style={i(2)} className="feat grid min-h-[270px] gap-6 rounded-[28px] bg-[#f5f5f7] p-8 sm:grid-cols-[1fr_auto] md:col-span-5">
+            <article data-reveal style={i(2)} className="feat grid min-h-[270px] gap-6 rounded-[28px] bg-[#f5f5f7] p-6 sm:grid-cols-[1fr_auto] sm:p-8 md:grid-cols-1 lg:col-span-5 lg:grid-cols-[1fr_auto]">
               <div>
                 <h3 className="text-[20px] font-semibold tracking-[-0.02em]">Links ilimitados</h3>
                 <ul className="mt-4 flex flex-wrap gap-1.5">
@@ -352,7 +352,7 @@ function Landing() {
         </section>
 
         {/* Como funciona: a linha se desenha com a rolagem e liga os 3 passos */}
-        <section className={`${WRAP} steps py-28 md:py-40`}>
+        <section className={`${WRAP} steps py-20 sm:py-28 md:py-40`}>
           <h2 className={`${H2} max-w-[16ch]`} data-reveal>Pronto em poucos minutos.</h2>
           <div className="relative mt-16">
             <div className="steps-track absolute top-6 right-0 left-0 hidden h-px bg-line-strong md:block"><span className="steps-line" /></div>
@@ -370,7 +370,7 @@ function Landing() {
 
         {/* Modelos */}
         {templates.length > 0 && (
-          <section id="modelos" className="scroll-mt-20 bg-[#f5f5f7] py-24 md:py-32">
+          <section id="modelos" className="scroll-mt-20 bg-[#f5f5f7] py-20 md:py-32">
             <div className={WRAP}>
               <h2 className={H2} data-reveal>Um modelo para cada negócio.</h2>
             </div>
@@ -403,18 +403,18 @@ function Landing() {
         )}
 
         {/* Preço */}
-        <section id="preco" className={`${WRAP} scroll-mt-20 py-28 text-center md:py-40`}>
+        <section id="preco" className={`${WRAP} scroll-mt-20 py-20 text-center sm:py-28 md:py-40`}>
           <h2 className={H2} data-reveal>Um plano. Tudo incluso.</h2>
           <p className="mx-auto mt-4 max-w-[44ch] text-[18px] text-muted" data-reveal>Menos de R$ 0,34 por dia. Sem taxa de adesão e sem fidelidade.</p>
-          <div className="price mx-auto mt-14 max-w-[560px] rounded-[32px] bg-[#f5f5f7] p-8 text-left md:p-12" data-reveal>
-            <div className="flex items-end justify-between gap-4">
+          <div className="price mx-auto mt-14 max-w-[560px] rounded-[32px] bg-[#f5f5f7] p-6 text-left sm:p-8 md:p-12" data-reveal>
+            <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
               <div>
                 <p className="text-[15px] font-semibold text-accent">3 dias grátis</p>
                 <p className="mt-1 text-muted">depois</p>
               </div>
               <p className="flex items-baseline gap-1">
                 <span className="text-xl font-semibold">R$</span>
-                <span className="text-[80px] leading-none font-semibold tracking-[-0.06em]">9,99</span>
+                <span className="text-[clamp(56px,17vw,80px)] leading-none font-semibold tracking-[-0.06em]">9,99</span>
                 <span className="text-muted">/mês</span>
               </p>
             </div>
@@ -434,12 +434,12 @@ function Landing() {
         </section>
 
         {/* Dúvidas */}
-        <section id="duvidas" className={`${WRAP} max-w-[860px] scroll-mt-20 pb-28 md:pb-40`}>
+        <section id="duvidas" className={`${WRAP} max-w-[860px] scroll-mt-20 pb-20 sm:pb-28 md:pb-40`}>
           <h2 className={`${H2} text-center`} data-reveal>Dúvidas frequentes</h2>
           <div className="mt-12 border-t border-line-strong">
             {FAQ.map(({ q, a }) => (
               <details key={q} className="group border-b border-line-strong py-6">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[19px] font-semibold tracking-[-0.015em] [&::-webkit-details-marker]:hidden">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[17px] font-semibold tracking-[-0.015em] sm:text-[19px] [&::-webkit-details-marker]:hidden">
                   {q}
                   <Plus size={20} weight="bold" className="shrink-0 text-muted transition-transform duration-300 group-open:rotate-45" aria-hidden="true" />
                 </summary>
@@ -450,9 +450,9 @@ function Landing() {
         </section>
 
         {/* Fechamento */}
-        <section className="bg-[#f5f5f7] py-28 text-center md:py-40">
+        <section className="bg-[#f5f5f7] py-20 text-center sm:py-28 md:py-40">
           <div className={WRAP} data-reveal>
-            <h2 className="text-[56px] leading-[0.95] font-semibold tracking-[-0.06em] md:text-[96px]">Seu mundo.<br /><span className="text-accent">Um link.</span></h2>
+            <h2 className="text-[clamp(2.75rem,13vw,6rem)] leading-[0.95] font-semibold tracking-[-0.06em]">Seu mundo.<br /><span className="text-accent">Um link.</span></h2>
             <p className="mx-auto mt-6 max-w-[38ch] text-[18px] text-muted">Crie seu cartão agora e use tudo liberado por 3 dias.</p>
             <div className="mt-9"><CtaButton big /></div>
           </div>

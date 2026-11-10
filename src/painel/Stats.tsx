@@ -1,7 +1,7 @@
 import { ArrowDown, ArrowLeft, ArrowUp, CalendarBlank, Lightbulb, X } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
 import { api, ApiError, type Card } from './api'
-import { Errors, errorText, input } from './ui'
+import { Errors, errorText, input, tipAt } from './ui'
 
 interface Summary {
   from: string
@@ -228,9 +228,9 @@ export function Stats({ cardId, onBack, onAuthLost, admin = false }: { cardId: s
               <CalendarBlank size={15} aria-hidden="true" /> Personalizado
             </button>
           </div>
-          <label className="relative">
+          <label className="relative max-w-full">
             <span className="sr-only">Origem das visitas</span>
-            <select className={`${input} w-auto rounded-full py-2 pr-9 text-[14px]`} value={filters.source} onChange={(e) => set({ source: e.target.value })}>
+            <select className={`${input} w-auto max-w-full rounded-full py-2 pr-9 sm:text-[14px]`} value={filters.source} onChange={(e) => set({ source: e.target.value })}>
               <option value="">Todas as origens</option>
               {Object.entries(SOURCE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
@@ -283,7 +283,7 @@ export function Stats({ cardId, onBack, onAuthLost, admin = false }: { cardId: s
             ].map((k) => (
               <div key={k.label} className="tile grid gap-2 p-5">
                 <p className="text-[14px] font-medium">{k.label}</p>
-                <p className="text-[40px] leading-none font-semibold tracking-[-0.04em] tabular-nums">{k.value}</p>
+                <p className="text-[34px] leading-none font-semibold tracking-[-0.04em] tabular-nums sm:text-[40px]">{k.value}</p>
                 <Delta now={k.now} before={k.before} />
                 <p className="text-[12px] text-muted">{k.hint}</p>
               </div>
@@ -327,11 +327,11 @@ export function Stats({ cardId, onBack, onAuthLost, admin = false }: { cardId: s
                     </div>
                     <div className={`relative flex h-full items-end ${series.length > 45 ? 'gap-px' : 'gap-[3px]'}`} role="img"
                       aria-label={`${metric === 'views' ? 'Visitas' : 'Cliques'} por dia, ${periodLabel}. Total ${fmt(data[metric])}.`}>
-                      {series.map((d) => (
+                      {series.map((d, n) => (
                         <div key={d.day} className="group relative flex h-full flex-1 items-end">
                           <div className="w-full rounded-t-[4px] bg-accent transition-[opacity,filter] group-hover:brightness-110"
                             style={{ height: d[metric] ? `${Math.max(3, (d[metric] / peak) * 100)}%` : '2px', opacity: d[metric] ? 1 : 0.2 }} />
-                          <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden -translate-x-1/2 rounded-[10px] bg-[#1d1d1f] px-3 py-2 text-[12px] leading-snug whitespace-nowrap text-white shadow-lg group-hover:block">
+                          <span className={`pointer-events-none absolute bottom-full z-10 mb-2 hidden rounded-[10px] bg-[#1d1d1f] px-3 py-2 text-[12px] leading-snug whitespace-nowrap text-white shadow-lg group-hover:block ${tipAt(n, series.length)}`}>
                             <span className="block font-semibold">{nice(d.day, { weekday: 'short', day: '2-digit', month: 'short' })}</span>
                             {fmt(d.views)} visitas, {fmt(d.clicks)} cliques
                           </span>
@@ -369,7 +369,7 @@ export function Stats({ cardId, onBack, onAuthLost, admin = false }: { cardId: s
                   {hours.map((v, h) => (
                     <div key={h} className="group relative flex h-full flex-1 items-end">
                       <div className="w-full rounded-t-[4px] bg-accent" style={{ height: v ? `${Math.max(4, (v / hourPeak) * 100)}%` : '2px', opacity: v ? 0.35 + 0.65 * (v / hourPeak) : 0.15 }} />
-                      <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden -translate-x-1/2 rounded-[10px] bg-[#1d1d1f] px-2.5 py-1.5 text-[12px] whitespace-nowrap text-white group-hover:block">
+                      <span className={`pointer-events-none absolute bottom-full z-10 mb-2 hidden rounded-[10px] bg-[#1d1d1f] px-2.5 py-1.5 text-[12px] whitespace-nowrap text-white group-hover:block ${tipAt(h, 24)}`}>
                         {h}h: {fmt(v)} {v === 1 ? 'visita' : 'visitas'}
                       </span>
                     </div>

@@ -2,7 +2,7 @@ import { SignOut } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { api, ApiError, session } from '../painel/api'
 import { Auth } from '../painel/Auth'
-import { Errors, errorText, secondary, transition } from '../painel/ui'
+import { Errors, errorText, secondary, tipAt, transition } from '../painel/ui'
 import { Cards } from './Cards'
 import { Site } from './Site'
 import { UserDetail, Users } from './Users'
@@ -77,17 +77,17 @@ export function Admin() {
 
   const tab = (href: string, label: string, on: boolean) => (
     <a href={href} aria-current={on ? 'page' : undefined} onClick={(e) => { e.preventDefault(); navigate(href) }}
-      className={`press shrink-0 rounded-full px-4 py-1.5 text-[14px] font-medium ${on ? 'bg-white text-ink shadow-sm' : 'text-muted hover:text-ink'}`}>{label}</a>
+      className={`press shrink-0 truncate rounded-full px-1.5 py-2 text-center text-[13px] font-medium sm:text-[14px] md:px-4 md:py-1.5 ${on ? 'bg-white text-ink shadow-sm' : 'text-muted hover:text-ink'}`}>{label}</a>
   )
 
   return (
     <div className="mx-auto max-w-[1280px] px-4 pb-16 sm:px-6 lg:px-10">
-      <header className="flex h-[72px] items-center justify-between gap-3">
+      <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-3 md:h-[72px] md:flex-nowrap md:py-0">
         <span className="flex items-center gap-2.5 font-semibold tracking-[-0.02em]">
           <img src="/favicon.png" alt="" width={30} height={30} className="rounded-full" />
-          <span className="hidden sm:inline">VorenMe <span className="text-muted">admin</span></span>
+          <span>VorenMe <span className="text-muted">admin</span></span>
         </span>
-        <nav aria-label="Admin" className="flex min-w-0 gap-1 overflow-x-auto rounded-full bg-[#f5f5f7] p-1">
+        <nav aria-label="Admin" className="order-last grid w-full min-w-0 grid-cols-4 gap-1 rounded-full bg-[#f5f5f7] p-1 md:order-none md:flex md:w-auto">
           {tab('/admin', 'Visão geral', r.view === 'home')}
           {tab('/admin/usuarios', 'Usuários', r.view === 'users' || r.view === 'user')}
           {tab('/admin/cartoes', 'Cartões', r.view === 'cards')}
@@ -172,11 +172,11 @@ export function Kpi({ label, value, sub, href }: { label: string; value: string;
   const body = (
     <>
       <span className="text-[13px] font-medium text-muted">{label}</span>
-      <span className="text-[30px] leading-none font-semibold tracking-[-0.03em] tabular-nums">{value}</span>
+      <span className="text-[24px] leading-none font-semibold tracking-[-0.03em] tabular-nums [overflow-wrap:anywhere] sm:text-[30px]">{value}</span>
       {sub && <span className="text-[13px] text-muted">{sub}</span>}
     </>
   )
-  const cls = 'tile grid content-start gap-2 p-5'
+  const cls = 'tile grid min-w-0 content-start gap-2 p-4 sm:p-5'
   return href
     ? <a href={href} onClick={(e) => { e.preventDefault(); navigate(href) }} className={`${cls} press hover:ring-2 hover:ring-accent/20`}>{body}</a>
     : <div className={cls}>{body}</div>
@@ -192,11 +192,11 @@ export function Bars({ title, rows, total }: { title: string; rows: { key: strin
         <span className="text-[13px] text-muted">{total}</span>
       </div>
       <div className="mt-5 flex h-40 items-end gap-[3px]" role="img" aria-label={`${title}. ${total}.`}>
-        {rows.map((r) => (
+        {rows.map((r, i) => (
           <div key={r.key} className="group relative flex h-full flex-1 items-end">
             <div className="w-full rounded-t-[4px] bg-accent group-hover:brightness-110"
               style={{ height: r.value ? `${Math.max(3, (r.value / peak) * 100)}%` : '2px', opacity: r.value ? 1 : 0.2 }} />
-            <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden -translate-x-1/2 rounded-[10px] bg-[#1d1d1f] px-3 py-2 text-[12px] whitespace-nowrap text-white shadow-lg group-hover:block">
+            <span className={`pointer-events-none absolute bottom-full z-10 mb-2 hidden rounded-[10px] bg-[#1d1d1f] px-3 py-2 text-[12px] whitespace-nowrap text-white shadow-lg group-hover:block ${tipAt(i, rows.length)}`}>
               <span className="block font-semibold">{r.label}</span>{r.tip}
             </span>
           </div>
@@ -276,7 +276,7 @@ function Overview({ fail }: { fail: Fail }) {
     <div className="rise grid gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-[40px] leading-[1.05] font-semibold tracking-[-0.045em]">Visão geral</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button type="button" className={secondary} onClick={() => exp('usuarios')}>Exportar usuários (CSV)</button>
           <button type="button" className={secondary} onClick={() => exp('pagamentos')}>Exportar pagamentos (CSV)</button>
         </div>

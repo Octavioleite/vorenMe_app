@@ -15,7 +15,7 @@ export const vorenHref = (medium: 'selo' | 'topo' = 'selo') => {
 export function Footer() {
   const { website } = creator
   return (
-    <footer className="mt-16 flex flex-col gap-3 border-t border-line pt-6 pb-32 text-sm text-muted md:flex-row md:items-center md:justify-between lg:mt-24 lg:pb-12">
+    <footer className="mt-16 flex flex-col gap-3 border-t border-line pt-6 pb-32 text-sm text-muted md:flex-row md:items-center md:justify-between md:pb-12 lg:mt-24">
       <p className="flex flex-wrap items-center gap-x-4 gap-y-1">
         <span className="font-semibold text-ink">{fullName}</span>
         <span>© {new Date().getFullYear()}</span>

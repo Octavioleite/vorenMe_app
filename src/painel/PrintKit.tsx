@@ -1,5 +1,5 @@
 import { ArrowLeft, ArrowSquareOut, Check, DownloadSimple, Minus, Plus, Printer } from '@phosphor-icons/react'
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { encode } from 'uqr'
 import { QrCode } from '../components/QrCode'
 import { accentForeground } from '../lib/color'
@@ -135,6 +135,7 @@ const Shape = ({ f, on }: { f: Format; on: boolean }) => {
 }
 
 const label = 'text-[13px] font-semibold text-ink'
+const MM = 96 / 25.4 // px por mm (CSS)
 
 /** /painel/imprimir/:id */
 export function PrintKit({ cardId, onBack, onAuthLost }: { cardId: string; onBack: () => void; onAuthLost: () => void }) {
@@ -157,6 +158,19 @@ export function PrintKit({ cardId, onBack, onAuthLost }: { cardId: string; onBac
   const isStory = format === 'story'
   const url = card ? cardUrl(card.slug) : ''
 
+  // A prévia encolhe para caber na largura disponível (no celular a peça em mm passa da tela). O papel não muda.
+  const area = useRef<HTMLDivElement>(null)
+  const [avail, setAvail] = useState(0)
+  useEffect(() => {
+    const el = area.current
+    if (!el) return
+    const ro = new ResizeObserver(([e]) => setAvail(e.contentRect.width))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [card])
+  const base = isStory ? 1.6 : 1
+  const zoom = avail ? Math.min(base, avail / (FORMATS[format].w * MM)) : base
+
   return (
     <div className="rise grid gap-6">
       <button type="button" onClick={onBack} className="print-hide press inline-flex items-center gap-1.5 justify-self-start text-sm font-semibold text-muted hover:text-ink">
@@ -164,7 +178,7 @@ export function PrintKit({ cardId, onBack, onAuthLost }: { cardId: string; onBac
       </button>
 
       <header className="print-hide grid gap-1">
-        <h1 className="text-[40px] leading-[1.05] font-semibold tracking-[-0.045em]">Kit de impressão</h1>
+        <h1 className="text-[34px] leading-[1.05] font-semibold tracking-[-0.045em] sm:text-[40px]">Kit de impressão</h1>
         <p className="text-[17px] text-muted">
           {card ? <>{`${card.config.name.first} ${card.config.name.last}`.trim()} <span className="text-[#c7c7cc]">/</span> {card.slug}</> : 'Carregando...'}
         </p>
@@ -238,9 +252,9 @@ export function PrintKit({ cardId, onBack, onAuthLost }: { cardId: string; onBac
               <div className="flex items-center justify-between gap-3">
                 <span className={label} id="copies-label">Cópias</span>
                 <div className="flex items-center gap-1 rounded-full bg-[#f5f5f7] p-1" role="group" aria-labelledby="copies-label">
-                  <button type="button" className="press grid size-8 place-items-center rounded-full hover:bg-white disabled:opacity-30" disabled={copies <= 1} onClick={() => setCopies((n) => n - 1)} aria-label="Menos uma cópia"><Minus size={14} weight="bold" /></button>
+                  <button type="button" className="press grid size-8 place-items-center rounded-full hover:bg-white disabled:opacity-30 pointer-coarse:size-10" disabled={copies <= 1} onClick={() => setCopies((n) => n - 1)} aria-label="Menos uma cópia"><Minus size={14} weight="bold" /></button>
                   <span className="w-8 text-center text-[15px] font-semibold tabular-nums" aria-live="polite">{copies}</span>
-                  <button type="button" className="press grid size-8 place-items-center rounded-full hover:bg-white disabled:opacity-30" disabled={copies >= 20} onClick={() => setCopies((n) => n + 1)} aria-label="Mais uma cópia"><Plus size={14} weight="bold" /></button>
+                  <button type="button" className="press grid size-8 place-items-center rounded-full hover:bg-white disabled:opacity-30 pointer-coarse:size-10" disabled={copies >= 20} onClick={() => setCopies((n) => n + 1)} aria-label="Mais uma cópia"><Plus size={14} weight="bold" /></button>
                 </div>
               </div>
             )}
@@ -257,10 +271,10 @@ export function PrintKit({ cardId, onBack, onAuthLost }: { cardId: string; onBac
 
           {/* Prévia */}
           <section aria-label="Prévia" className="grid gap-4">
-            <div className="grid min-h-[420px] place-items-center overflow-hidden rounded-[24px] bg-[#ececef] p-6 sm:min-h-[560px] sm:p-10"
+            <div ref={area} className="grid min-h-[320px] place-items-center overflow-hidden rounded-[24px] bg-[#ececef] p-4 sm:min-h-[560px] sm:p-10"
               style={{ backgroundImage: 'radial-gradient(rgb(0 0 0 / 0.06) 1px, transparent 1px)', backgroundSize: '18px 18px' }}>
               <div key={`${format}-${theme}`} className="rise max-w-full overflow-hidden rounded-[6px] shadow-[0_24px_60px_-20px_rgb(40_40_50/0.35),0_2px_6px_rgb(40_40_50/0.08)]"
-                style={isStory ? { borderRadius: 18, zoom: 1.6 } : undefined}>
+                style={{ zoom, ...(isStory && { borderRadius: 18 }) }}>
                 <Piece card={card} format={format} theme={theme} call={call} />
               </div>
             </div>

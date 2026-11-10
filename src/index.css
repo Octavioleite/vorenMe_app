@@ -108,9 +108,12 @@ body {
       background-color 0.3s var(--ease),
       transform 0.4s var(--ease);
   }
-  a.tile:hover {
-    border-color: var(--line-strong);
-    transform: translateY(-3px);
+  /* Hovers com movimento só em quem tem mouse: no toque eles disparam no tap e ficam presos. */
+  @media (hover: hover) {
+    a.tile:hover {
+      border-color: var(--line-strong);
+      transform: translateY(-3px);
+    }
   }
   a.tile:active {
     transform: scale(0.985);
@@ -123,16 +126,20 @@ body {
       transform 0.9s var(--ease),
       opacity 0.6s var(--ease);
   }
-  a:hover .zoom img,
-  a.zoom:hover img {
-    transform: scale(1.045);
+  @media (hover: hover) {
+    a:hover .zoom img,
+    a.zoom:hover img {
+      transform: scale(1.045);
+    }
+    a:hover .nudge {
+      transform: translate(2px, -2px);
+    }
   }
 
   /* Diagonal arrow nudge */
   .nudge {
     transition: transform 0.35s var(--ease);
   }
-  a:hover .nudge,
   a:focus-visible .nudge {
     transform: translate(2px, -2px);
   }
@@ -195,6 +202,9 @@ body {
     font-weight: var(--display-weight, 650);
     text-transform: var(--display-case, none);
     font-style: var(--display-style, normal);
+    /* nome comprido não estoura o cartão */
+    overflow-wrap: anywhere;
+    hyphens: auto;
   }
 
   /* ── Per-tile identity: one metaphor + one motivated motion per objective ── */
@@ -227,15 +237,23 @@ body {
       opacity 0.5s var(--ease),
       color 0.5s var(--ease);
   }
-  .wash:hover::before,
   .wash:focus-visible::before {
     opacity: 1;
   }
-  .wash:hover .watermark,
   .wash:focus-visible .watermark {
     color: var(--brand);
     opacity: 0.18;
     transform: rotate(-8deg) scale(1.08);
+  }
+  @media (hover: hover) {
+    .wash:hover::before {
+      opacity: 1;
+    }
+    .wash:hover .watermark {
+      color: var(--brand);
+      opacity: 0.18;
+      transform: rotate(-8deg) scale(1.08);
+    }
   }
 
   /* Featured (watch): scrubber fills like a playhead, play button rings */
@@ -249,9 +267,13 @@ body {
     transform-origin: left;
     transition: transform 1.2s var(--ease);
   }
-  a:hover .scrub,
   a:focus-visible .scrub {
     transform: scaleX(1);
+  }
+  @media (hover: hover) {
+    a:hover .scrub {
+      transform: scaleX(1);
+    }
   }
   .play-ring::before {
     content: '';
@@ -261,8 +283,10 @@ body {
     box-shadow: 0 0 0 2px var(--accent);
     opacity: 0;
   }
-  a:hover .play-ring::before {
-    animation: ring 1.5s var(--ease) infinite;
+  @media (hover: hover) {
+    a:hover .play-ring::before {
+      animation: ring 1.5s var(--ease) infinite;
+    }
   }
 
   /* Partnership (convert): one light sweep across the primary CTA */
@@ -279,9 +303,11 @@ body {
     transform: translateX(-110%);
     pointer-events: none;
   }
-  .shine:hover::after {
-    transform: translateX(110%);
-    transition: transform 0.9s var(--ease);
+  @media (hover: hover) {
+    .shine:hover::after {
+      transform: translateX(110%);
+      transition: transform 0.9s var(--ease);
+    }
   }
 
   /* Coupons (save money): the code sits in a dashed "cut here" box; copying flashes it in the accent */
@@ -332,8 +358,10 @@ body {
     opacity: 0;
     pointer-events: none;
   }
-  .ticket:hover .scan {
-    animation: scan 1.6s var(--ease) both;
+  @media (hover: hover) {
+    .ticket:hover .scan {
+      animation: scan 1.6s var(--ease) both;
+    }
   }
 }
 
@@ -737,7 +765,7 @@ dialog.qr-dialog[open] > * {
   --card-radius: 36px;
   --tint: 14%;
 }
-@media (prefers-reduced-motion: no-preference) {
+@media (prefers-reduced-motion: no-preference) and (hover: hover) {
   [data-style='leve'] a.tile:hover {
     transform: translateY(-3px) rotate(-1.2deg);
   }

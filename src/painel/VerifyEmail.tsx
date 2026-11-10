@@ -28,7 +28,7 @@ export function VerifyLink({ onVerified }: { onVerified: (u: User) => void }) {
     <div role="status" className="rise fixed inset-x-4 top-4 z-50 mx-auto flex max-w-[480px] items-center gap-3 rounded-[16px] bg-white p-4 shadow-[0_12px_40px_-12px_rgb(40_40_50/0.35)] ring-1 ring-black/5">
       <Icon size={22} weight="fill" className={notice.ok ? 'shrink-0 text-accent' : 'shrink-0 text-red-600'} aria-hidden="true" />
       <p className="flex-1 text-[15px] font-medium">{notice.text}</p>
-      <button type="button" onClick={() => setNotice(null)} aria-label="Fechar aviso" className="grid size-8 place-items-center rounded-full text-muted hover:bg-[#f5f5f7] hover:text-ink"><X size={15} /></button>
+      <button type="button" onClick={() => setNotice(null)} aria-label="Fechar aviso" className="grid size-8 shrink-0 place-items-center rounded-full text-muted hover:bg-[#f5f5f7] hover:text-ink pointer-coarse:size-10"><X size={15} /></button>
     </div>
   )
 }

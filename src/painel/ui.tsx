@@ -6,7 +6,7 @@ import { ApiError, uploadImage } from './api'
 
 /* Forma (mesma linguagem da página inicial): superfícies 20-24px · campos 12px cinza-claro sem borda · botões em pílula · só-ícone em círculo. */
 export const input =
-  'w-full rounded-[12px] border border-transparent bg-[#f2f2f4] px-3.5 py-2.5 text-[15px] text-ink placeholder:text-[#8e8e93] outline-none transition-[background-color,box-shadow] focus:bg-white focus:ring-2 focus:ring-accent/40 disabled:opacity-50'
+  'w-full rounded-[12px] border border-transparent bg-[#f2f2f4] px-3.5 py-2.5 text-[16px] text-ink placeholder:text-[#8e8e93] sm:text-[15px] outline-none transition-[background-color,box-shadow] focus:bg-white focus:ring-2 focus:ring-accent/40 disabled:opacity-50'
 const btn =
   'press inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold disabled:pointer-events-none disabled:opacity-40'
 export const primary = `${btn} bg-accent text-accent-fg hover:brightness-110`
@@ -25,6 +25,9 @@ export function transition(fn: () => void, kind?: 'page') {
   if (kind) root.dataset.vt = kind
   document.startViewTransition(() => flushSync(fn)).finished.finally(() => delete root.dataset.vt)
 }
+
+/** Tooltip das barras: nas pontas do gráfico ancora na borda, para não sair da tela no celular. */
+export const tipAt = (i: number, n: number) => (i < n / 4 ? 'left-0' : i >= (n * 3) / 4 ? 'right-0' : 'left-1/2 -translate-x-1/2')
 
 export const errorText = (e: unknown) =>
   e instanceof ApiError ? [e.message, ...e.errors].join(' · ') : 'Algo deu errado. Tente novamente.'
@@ -67,7 +70,7 @@ export function Section({ id, icon, title, description, badge, defaultOpen = tru
 }) {
   return (
     <details id={id} open={defaultOpen} className="tile group/s scroll-mt-36">
-      <summary className="flex cursor-pointer list-none items-center gap-3 rounded-[20px] p-5 outline-none focus-visible:ring-2 focus-visible:ring-accent sm:px-6 [&::-webkit-details-marker]:hidden">
+      <summary className="flex cursor-pointer list-none items-center gap-3 rounded-[20px] p-4 outline-none sm:p-5 focus-visible:ring-2 focus-visible:ring-accent sm:px-6 [&::-webkit-details-marker]:hidden">
         <span className="grid size-9 shrink-0 place-items-center rounded-full bg-accent/12 text-accent">{icon}</span>
         <span className="min-w-0 flex-1">
           <span className="block text-[15px] font-semibold">{title}</span>
@@ -76,7 +79,7 @@ export function Section({ id, icon, title, description, badge, defaultOpen = tru
         {badge && <span className="shrink-0 rounded-full bg-surface-2 px-2.5 py-1 text-[12px] font-medium text-muted">{badge}</span>}
         <CaretDown size={16} weight="bold" aria-hidden="true" className="shrink-0 text-muted transition-transform duration-200 group-open/s:rotate-180" />
       </summary>
-      <div className="border-t border-line px-5 pt-5 pb-6 sm:px-6">{children}</div>
+      <div className="@container border-t border-line px-4 pt-5 pb-6 sm:px-6">{children}</div>
     </details>
   )
 }
@@ -110,7 +113,7 @@ export function Tags({ label, hint, value, onChange, placeholder }: {
           <span key={t} className="inline-flex items-center gap-1 rounded-full bg-surface-2 py-1 pr-1 pl-3 text-[13px]">
             {t}
             <button type="button" onClick={() => onChange(value.filter((x) => x !== t))} aria-label={`Remover ${t}`}
-              className="grid size-5 place-items-center rounded-full text-muted hover:bg-line-strong hover:text-ink">
+              className="grid size-5 place-items-center rounded-full text-muted hover:bg-line-strong hover:text-ink pointer-coarse:size-8">
               <X size={11} weight="bold" />
             </button>
           </span>
@@ -122,7 +125,7 @@ export function Tags({ label, hint, value, onChange, placeholder }: {
             else if (e.key === 'Backspace' && !draft && value.length) onChange(value.slice(0, -1))
           }}
           onBlur={add}
-          className="min-w-[140px] flex-1 bg-transparent px-2 py-1.5 text-[15px] text-ink outline-none placeholder:text-muted/70" />
+          className="min-w-[140px] flex-1 bg-transparent px-2 py-1.5 text-[16px] text-ink sm:text-[15px] outline-none placeholder:text-muted/70" />
       </div>
       <span className="text-[12px] text-muted">{hint ?? 'Digite e aperte Enter para adicionar.'}</span>
     </div>

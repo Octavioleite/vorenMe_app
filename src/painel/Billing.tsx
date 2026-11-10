@@ -65,11 +65,11 @@ function Referral({ r }: { r: Status['referral'] }) {
           <p className="text-[14px] font-medium">Crie seu primeiro cartão para ganhar seu link de indicação.</p>
         )}
       </div>
-      <dl className="grid grid-cols-3 gap-2 lg:w-[300px] lg:grid-cols-1">
+      <dl className="grid gap-2 min-[420px]:grid-cols-3 lg:w-[300px] lg:grid-cols-1">
         {[['Cadastros pelo seu link', r.total], ['Já assinaram', r.paid], ['Meses grátis guardados', r.freeMonths]].map(([label, n]) => (
-          <div key={label} className="rounded-[16px] bg-white p-4">
+          <div key={label} className="flex items-center gap-3 rounded-[16px] bg-white p-4 min-[420px]:block min-[420px]:p-3 sm:p-4 lg:flex">
             <dd className="text-[28px] leading-none font-semibold tabular-nums">{n}</dd>
-            <dt className="mt-1.5 text-[12px] leading-snug text-muted">{label}</dt>
+            <dt className="text-[13px] leading-snug text-muted min-[420px]:mt-1.5 min-[420px]:text-[12px] lg:mt-0 lg:text-[13px]">{label}</dt>
           </div>
         ))}
       </dl>
@@ -154,7 +154,7 @@ export function Billing() {
             <div className="grid content-start gap-5 border-t border-line bg-[#fafafb] p-6 sm:p-8 lg:border-t-0 lg:border-l">
               <div>
                 <p className="text-[14px] font-medium text-muted">Plano VorenMe</p>
-                <p className="mt-1 flex items-baseline gap-1.5">
+                <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
                   <span className="text-[48px] leading-none font-semibold tracking-[-0.04em] tabular-nums">R$ 9,99</span>
                   <span className="text-[15px] text-muted">por mês</span>
                 </p>

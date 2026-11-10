@@ -78,10 +78,10 @@ export function Site({ fail }: { fail: Fail }) {
           <h1 className="text-[40px] leading-[1.05] font-semibold tracking-[-0.045em]">Site</h1>
           <p className="text-[15px] text-muted">Página inicial: de onde vêm as visitas e os cadastros (utm, anúncios, redes, selo dos cartões).</p>
         </div>
-        <div className="flex gap-1 rounded-full bg-[#f5f5f7] p-1" role="group" aria-label="Período">
+        <div className="flex max-w-full gap-1 overflow-x-auto rounded-full bg-[#f5f5f7] p-1 [scrollbar-width:none]" role="group" aria-label="Período">
           {[...PRESETS, 0].map((n) => (
             <button key={n} type="button" aria-pressed={preset === n} onClick={() => pick(n)}
-              className={`press rounded-full px-4 py-1.5 text-[14px] font-medium ${preset === n ? 'bg-white text-ink shadow-sm' : 'text-muted hover:text-ink'}`}>{n ? `${n} dias` : 'Personalizado'}</button>
+              className={`press shrink-0 rounded-full px-3.5 py-1.5 text-[14px] font-medium sm:px-4 ${preset === n ? 'bg-white text-ink shadow-sm' : 'text-muted hover:text-ink'}`}>{n ? `${n} dias` : 'Personalizado'}</button>
           ))}
         </div>
       </div>

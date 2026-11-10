@@ -26,7 +26,7 @@
   @keyframes word-up { from { transform: translateY(105%); } }
 
   .cta-arrow { transition: transform 0.35s var(--ease); }
-  .cta:hover .cta-arrow { transform: translateX(4px); }
+  @media (hover: hover) { .cta:hover .cta-arrow { transform: translateX(4px); } }
 
   /* ── Aparelhos ── */
   .dev { position: absolute; background: #2b2b2f; box-shadow: 0 0 0 1px rgb(17 17 19 / 0.06), 0 30px 60px -28px rgb(17 17 19 / 0.4), 0 60px 120px -60px rgb(17 17 19 / 0.35); }
@@ -37,6 +37,13 @@
   .dev-tablet .dev-screen { border-radius: 13px; }
   .dev-phone { right: 2%; bottom: 0; width: 15%; aspect-ratio: 9 / 19.5; padding: 0.7%; border-radius: 22px; z-index: 3; }
   .dev-phone .dev-screen { border-radius: 17px; }
+  /* Celular: só computador e celular, maiores, para as telas ficarem legíveis (o container vira 4:3 em Landing.tsx). */
+  @media (max-width: 639px) {
+    .dev-desktop { left: 0; width: 86%; }
+    .dev-tablet { display: none; }
+    .dev-phone { right: 0; width: 33%; padding: 1.1%; border-radius: 18px; }
+    .dev-phone .dev-screen { border-radius: 14px; }
+  }
   .dev-phone .dev-screen::before { content: ''; position: absolute; top: 2.6%; left: 50%; z-index: 3; width: 30%; height: 2.8%; border-radius: 99px; background: #111113; transform: translateX(-50%); }
 
   /* Entrada única ao carregar: o computador chega e o iPad e o celular encostam nele (sempre termina opaco e reto) */
@@ -84,11 +91,13 @@
   /* ── Recursos ── */
   .feat { transition: transform 0.6s var(--ease); }
   .feat-img { transition: transform 1.4s var(--ease); }
-  .feat:hover .feat-img { transform: scale(1.04); }
   .swatch { transition: transform 0.45s var(--ease); }
-  .feat:hover .swatch { transform: translateY(-6px); transition-delay: calc(var(--i) * 45ms); }
+  @media (hover: hover) {
+    .feat:hover .feat-img { transform: scale(1.04); }
+    .feat:hover .swatch { transform: translateY(-6px); transition-delay: calc(var(--i) * 45ms); }
+  }
   .stack3-card { z-index: calc(3 - var(--k)); transform: translateX(calc(var(--k) * -30px)) rotate(calc((var(--k) - 1) * -6deg)); transition: transform 0.6s var(--ease); }
-  .stack3:hover .stack3-card { transform: translateX(calc(var(--k) * -56px)) rotate(calc((var(--k) - 1) * -10deg)) translateY(calc(var(--k) * -4px)); }
+  @media (hover: hover) { .stack3:hover .stack3-card { transform: translateX(calc(var(--k) * -56px)) rotate(calc((var(--k) - 1) * -10deg)) translateY(calc(var(--k) * -4px)); } }
   .reveal-ready [data-reveal]:not([data-shown]) .pill { opacity: 0; transform: translateY(8px) scale(0.92); }
   .pill { transition: opacity 0.5s var(--ease), transform 0.5s var(--ease); transition-delay: calc(var(--i) * 70ms + 250ms); }
 
@@ -120,15 +129,17 @@
   .cover-item > div { box-shadow: 0 calc(28px * var(--p)) calc(56px * var(--p)) -28px rgb(18 18 20 / calc(0.28 * var(--p))); }
   .cover-name { opacity: var(--p); transform: translateY(calc((1 - var(--p)) * 6px)); }
   .cover:focus-visible .cover-item > div { outline: 2px solid var(--color-accent); outline-offset: 4px; }
-  .cover-dot { height: 6px; width: 6px; border-radius: 999px; background: rgb(18 18 20 / 0.18); transition: width 0.4s var(--ease), background-color 0.4s; }
-  .cover-dot:hover { background: rgb(18 18 20 / 0.4); }
+  .cover-dot { position: relative; height: 6px; width: 6px; border-radius: 999px; background: rgb(18 18 20 / 0.18); transition: width 0.4s var(--ease), background-color 0.4s; }
+  /* área de toque de 24px sem mudar o desenho */
+  .cover-dot::before { content: ''; position: absolute; inset: -9px -3px; }
+  @media (hover: hover) { .cover-dot:hover { background: rgb(18 18 20 / 0.4); } }
   .cover-dot[data-on] { width: 22px; background: var(--color-ink); }
   @media (min-width: 768px) {
     .cover { gap: 20px; padding-inline: calc(50% - 160px); }
     .cover-item { flex-basis: 320px; }
   }
   .model img { transition: transform 0.9s var(--ease); }
-  .model:hover img { transform: scale(1.05); }
+  @media (hover: hover) { .model:hover img { transform: scale(1.05); } }
 
   @media (prefers-reduced-motion: no-preference) {
     details[open] .faq-a { animation: rise 0.45s var(--ease); }

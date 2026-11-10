@@ -18,7 +18,7 @@ const PLATFORMS: { id: Platform; label: string }[] = [
 ]
 const PLATFORM_ICON = { instagram: InstagramLogo, tiktok: TiktokLogo, youtube: YoutubeLogo, pinterest: PinterestLogo, spotify: SpotifyLogo, x: XLogo, website: Globe }
 const NAV = [
-  ['identidade', 'Identidade'], ['aparencia', 'Aparência'], ['contato', 'Contato'], ['redes', 'Redes'], ['chamada', 'Chamada'],
+  ['identidade', 'Identidade'], ['aparencia', 'Aparência'], ['contato', 'Contato'], ['local', 'Endereço'], ['pix', 'Pix'], ['redes', 'Redes'], ['chamada', 'Chamada'],
   ['cupons', 'Cupons'], ['destaque', 'Destaque'], ['extra', 'Bloco extra'], ['marcas', 'Marcas'], ['compartilhar', 'Compartilhar'],
 ] as const
 /** Abre a seção (é um <details>) antes de rolar até ela. */
@@ -227,14 +227,14 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
           <Errors text={error} />
 
           <Section icon={<IdentificationCard size={17} weight="bold" />} title="Identidade" id="identidade" description="Nome, foto, bio e endereço do cartão">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 @md:grid-cols-2">
               <Field label="Nome"><input className={input} value={c.name.first} onChange={(e) => set((x) => { x.name.first = e.target.value })} /></Field>
               <Field label="Sobrenome"><input className={input} value={c.name.last} onChange={(e) => set((x) => { x.name.last = e.target.value })} /></Field>
               <Field label="Especialidade ou nicho" hint="Ex: Psicóloga · CRP 06/000000">
                 <input className={input} value={c.niche} onChange={(e) => set((x) => { x.niche = e.target.value })} />
               </Field>
               <Field label="Cidade"><input className={input} value={c.location ?? ''} onChange={(e) => set((x) => { x.location = e.target.value || undefined })} /></Field>
-              <div className="sm:col-span-2">
+              <div className="@md:col-span-2">
                 <Field label="Bio" hint={`${words} palavras${words > 20 ? ' · tente encurtar, o ideal é até 20' : '. Ideal: até 20.'}`}>
                   <textarea rows={2} className={input} value={c.bio} onChange={(e) => set((x) => { x.bio = e.target.value })} />
                 </Field>
@@ -248,18 +248,18 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
               <Field label="Descrição da foto" hint="Lida por leitores de tela.">
                 <input className={input} value={c.photo.alt} onChange={(e) => set((x) => { x.photo.alt = e.target.value })} />
               </Field>
-              <div className="grid gap-3 rounded-[14px] border border-line p-4 sm:col-span-2">
+              <div className="grid gap-3 rounded-[14px] border border-line p-4 @md:col-span-2">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <p className="text-[13px] font-medium">Textos sobre a foto</p>
                     <p className="text-[12px] text-muted">Na prévia, arraste cada texto para mover e a bolinha do canto para mudar o tamanho. Ou digite o tamanho aqui.</p>
                   </div>
-                  <button type="button" disabled={!c.photo.layout} className={`${secondary} py-2 text-[13px]`}
+                  <button type="button" disabled={!c.photo.layout} className={`${secondary} py-2 text-[13px] whitespace-normal`}
                     onClick={() => set((x) => { delete x.photo.layout })}>
                     <ArrowCounterClockwise size={14} weight="bold" aria-hidden="true" /> Restaurar padrão do modelo
                   </button>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2 @xl:grid-cols-2">
                   {TEXT_LABELS.filter(([id]) => id !== 'location' || c.location).map(([id, label]) => {
                     const l = c.photo.layout?.[id]
                     const moved = l?.x !== undefined
@@ -270,13 +270,13 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
                         <div className="flex w-[84px] items-center rounded-[10px] border border-line bg-bg focus-within:border-accent">
                           <input type="number" inputMode="numeric" min={TEXT_SIZE.min} max={TEXT_SIZE.max} placeholder="Auto"
                             aria-label={`Tamanho de ${label} em px`} value={l?.size ?? ''}
-                            className="min-w-0 flex-1 bg-transparent py-1.5 pl-2.5 text-[14px] text-ink outline-none"
+                            className="min-w-0 flex-1 bg-transparent py-1.5 pl-2.5 text-[16px] text-ink outline-none sm:text-[14px]"
                             onChange={(e) => setLayout(id, { size: e.target.value ? +e.target.value : undefined })}
                             onBlur={() => l?.size && setLayout(id, { size: Math.min(TEXT_SIZE.max, Math.max(TEXT_SIZE.min, l.size)) })} />
                           <span className="pr-2 text-[12px] text-muted">px</span>
                         </div>
                         <button type="button" disabled={!l} title={`Voltar ${label} ao padrão`} aria-label={`Voltar ${label} ao padrão`}
-                          className="press grid size-8 place-items-center rounded-full text-muted hover:bg-surface hover:text-ink disabled:opacity-30"
+                          className="press grid size-8 shrink-0 place-items-center rounded-full text-muted hover:bg-surface hover:text-ink disabled:opacity-30 pointer-coarse:size-10"
                           onClick={() => setLayout(id, { x: undefined, y: undefined, size: undefined })}>
                           <ArrowCounterClockwise size={14} aria-hidden="true" />
                         </button>
@@ -289,7 +289,7 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
                 <div className="flex items-center rounded-[12px] bg-[#f2f2f4] focus-within:bg-white focus-within:ring-2 focus-within:ring-accent/40">
                   <span className="pl-3.5 text-[15px] text-muted">/</span>
                   <input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase())}
-                    className="min-w-0 flex-1 bg-transparent py-2.5 pr-3.5 pl-0.5 text-[15px] text-ink outline-none" />
+                    className="min-w-0 flex-1 bg-transparent py-2.5 pr-3.5 pl-0.5 text-[16px] text-ink outline-none sm:text-[15px]" />
                 </div>
               </Field>
               <Field label="Usuário exibido" hint="Aparece como @usuario no cartão.">
@@ -299,10 +299,10 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
           </Section>
 
           <Section icon={<Palette size={17} weight="bold" />} title="Aparência" id="aparencia" description="Estilo, cor de destaque e tema">
-            <div className="grid gap-5 sm:grid-cols-2">
-              <fieldset className="grid gap-2 sm:col-span-2">
+            <div className="grid gap-5 @md:grid-cols-2">
+              <fieldset className="grid gap-2 @md:col-span-2">
                 <legend className="mb-2 text-[13px] font-medium">Estilo</legend>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="grid grid-cols-2 gap-2 @lg:grid-cols-3 @2xl:grid-cols-4">
                   {STYLES.map((s) => {
                     const on = (c.style ?? 'criador') === s
                     return (
@@ -347,7 +347,7 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
           </Section>
 
           <Section icon={<ChatCircleText size={17} weight="bold" />} title="Contato" id="contato" description="WhatsApp, e-mail e site">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 @md:grid-cols-2">
               <Field label="WhatsApp" hint="Só números, com 55 e DDD.">
                 <input inputMode="numeric" className={input} value={c.whatsapp?.number ?? ''} placeholder="5511987654321"
                   onChange={(e) => set((x) => {
@@ -359,7 +359,7 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
                 <input className={input} value={c.whatsapp?.display ?? ''} disabled={!c.whatsapp} placeholder="+55 11 98765-4321"
                   onChange={(e) => set((x) => { x.whatsapp!.display = e.target.value })} />
               </Field>
-              <div className="sm:col-span-2">
+              <div className="@md:col-span-2">
                 <Field label="Mensagem pronta" hint="Texto que já vem escrito quando a pessoa abre o WhatsApp.">
                   <input className={input} value={c.whatsapp?.message ?? ''} disabled={!c.whatsapp}
                     onChange={(e) => set((x) => { x.whatsapp!.message = e.target.value })} />
@@ -394,8 +394,8 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
                   <span className="text-[13px] font-medium text-ink">Horário de funcionamento</span>
                   {(c.address.hours ?? []).map((h, i) => (
                     <div key={i} className="flex gap-2">
-                      <input aria-label="Dias" placeholder="Seg a Sex" className={input} value={h.days} onChange={(e) => set((x) => { x.address!.hours![i].days = e.target.value })} />
-                      <input aria-label="Horário" placeholder="9h às 18h" className={input} value={h.time} onChange={(e) => set((x) => { x.address!.hours![i].time = e.target.value })} />
+                      <input aria-label="Dias" placeholder="Seg a Sex" className={`${input} min-w-0`} value={h.days} onChange={(e) => set((x) => { x.address!.hours![i].days = e.target.value })} />
+                      <input aria-label="Horário" placeholder="9h às 18h" className={`${input} min-w-0`} value={h.time} onChange={(e) => set((x) => { x.address!.hours![i].time = e.target.value })} />
                       <button type="button" className={`${iconBtn} hover:text-red-500`} aria-label="Remover horário" title="Remover horário"
                         onClick={() => set((x) => { x.address!.hours!.splice(i, 1); if (!x.address!.hours!.length) delete x.address!.hours })}>
                         <Trash size={16} />
@@ -417,8 +417,8 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
           </Section>
 
           <Section icon={<CurrencyDollar size={17} weight="bold" />} title="Pix" id="pix" defaultOpen={false} description="O cliente copia sua chave ou o Pix copia e cola" badge={c.pix ? 'Ativo' : 'Opcional'}>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
+            <div className="grid gap-4 @md:grid-cols-2">
+              <div className="@md:col-span-2">
                 <Field label="Chave Pix" hint="CPF, CNPJ, e-mail, celular (+55...) ou chave aleatória. Vazio esconde.">
                   <input className={input} value={c.pix?.key ?? ''} maxLength={77}
                     onChange={(e) => set((x) => {
@@ -440,8 +440,8 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
             <div className="grid gap-3">
               {c.socials.length === 0 && <p className="rounded-[14px] border border-dashed border-line p-4 text-center text-sm text-muted">Adicione seu Instagram, TikTok ou site. Eles aparecem como botões no cartão.</p>}
               {c.socials.map((s, i) => (
-                <div key={i} className="grid gap-2 rounded-[14px] border border-line p-3 transition-colors hover:bg-surface-2/50 sm:grid-cols-[auto_130px_1fr_1.3fr_auto] sm:items-center">
-                  {(() => { const Icon = PLATFORM_ICON[s.platform] ?? Globe; return <span className="hidden size-10 place-items-center rounded-full bg-accent/12 text-accent sm:grid"><Icon size={18} weight="bold" aria-hidden="true" /></span> })()}
+                <div key={i} className="grid gap-2 rounded-[14px] border border-line p-3 transition-colors hover:bg-surface-2/50 @xl:grid-cols-[auto_130px_1fr_1.3fr_auto] @xl:items-center">
+                  {(() => { const Icon = PLATFORM_ICON[s.platform] ?? Globe; return <span className="hidden size-10 place-items-center rounded-full bg-accent/12 text-accent @xl:grid"><Icon size={18} weight="bold" aria-hidden="true" /></span> })()}
                   <select aria-label="Rede" className={input} value={s.platform} onChange={(e) => setSocial(i, { platform: e.target.value as Platform })}>
                     {PLATFORMS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
                   </select>
@@ -474,13 +474,13 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
             <div className="grid gap-3">
               <p className="text-sm text-muted">Códigos das marcas parceiras. O visitante copia com um toque. Sem nenhum, a seção some.</p>
               {(c.coupons ?? []).map((k, i) => (
-                <div key={i} className="grid gap-2 rounded-[14px] border border-line p-3 sm:grid-cols-2">
+                <div key={i} className="grid gap-2 rounded-[14px] border border-line p-3 @md:grid-cols-2">
                   <input aria-label="Marca" placeholder="Marca" className={input} value={k.brand} onChange={(e) => set((x) => { x.coupons![i].brand = e.target.value })} />
                   <input aria-label="Código do cupom" placeholder="CÓDIGO" className={`${input} font-mono uppercase`} value={k.code}
                     onChange={(e) => set((x) => { x.coupons![i].code = e.target.value.toUpperCase().replace(/\s/g, '') })} />
                   <input aria-label="Desconto" placeholder="Ex: 15% OFF, Frete grátis" className={input} value={k.discount ?? ''} onChange={(e) => set((x) => { x.coupons![i].discount = e.target.value || undefined })} />
                   <div className="flex gap-2">
-                    <input aria-label="Link da loja" type="url" placeholder="Link da loja (opcional)" className={input} value={k.url ?? ''} onChange={(e) => set((x) => { x.coupons![i].url = e.target.value || undefined })} />
+                    <input aria-label="Link da loja" type="url" placeholder="Link da loja (opcional)" className={`${input} min-w-0`} value={k.url ?? ''} onChange={(e) => set((x) => { x.coupons![i].url = e.target.value || undefined })} />
                     <button type="button" className={`${iconBtn} hover:text-red-500`} onClick={() => set((x) => { x.coupons!.splice(i, 1) })} aria-label="Remover cupom" title="Remover cupom">
                       <Trash size={16} />
                     </button>
@@ -503,8 +503,8 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
                 </button>
               </div>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="sm:col-span-2">
+              <div className="grid gap-4 @md:grid-cols-2">
+                <div className="@md:col-span-2">
                   <Field label="Título"><input className={input} value={c.featured.title} onChange={(e) => set((x) => { x.featured!.title = e.target.value })} /></Field>
                 </div>
                 <Field label="Link"><input type="url" placeholder="https://" className={input} value={c.featured.url} onChange={(e) => set((x) => { x.featured!.url = e.target.value })} /></Field>
@@ -522,7 +522,7 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
                 <Field label="Descrição da imagem" hint="Lida por leitores de tela.">
                   <input className={input} value={c.featured.image.alt} onChange={(e) => set((x) => { x.featured!.image.alt = e.target.value })} />
                 </Field>
-                <fieldset className="grid gap-2 sm:col-span-2">
+                <fieldset className="grid gap-2 @md:col-span-2">
                   <legend className="mb-2 text-[13px] font-medium">Tipo</legend>
                   <div className="grid grid-cols-3 rounded-[12px] border border-line bg-bg p-1">
                     {KINDS.map((k) => (
@@ -570,8 +570,8 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
             <div className="grid gap-3">
               <p className="text-sm text-muted">Só marcas com quem já trabalhou de verdade. Sem nenhuma, a seção some.</p>
               {(c.brands ?? []).map((b, i) => (
-                <div key={i} className="grid gap-2 rounded-[14px] border border-line p-3 sm:grid-cols-[auto_1fr_1.3fr_auto] sm:items-center">
-                  <Thumb src={b.logo} className="hidden size-10 rounded-[10px] sm:grid" fallback={<ListBullets size={16} aria-hidden="true" />} />
+                <div key={i} className="grid gap-2 rounded-[14px] border border-line p-3 @lg:grid-cols-[auto_1fr_1.3fr_auto] @lg:items-center">
+                  <Thumb src={b.logo} className="hidden size-10 rounded-[10px] @lg:grid" fallback={<ListBullets size={16} aria-hidden="true" />} />
                   <input aria-label="Nome da marca" placeholder="Nome" className={input} value={b.name} onChange={(e) => set((x) => { x.brands![i].name = e.target.value })} />
                   <input aria-label="Logo (link)" type="url" placeholder="Logo (link, opcional)" className={input} value={b.logo ?? ''} onChange={(e) => set((x) => { x.brands![i].logo = e.target.value || undefined })} />
                   <button type="button" className={`${iconBtn} hover:text-red-500`} onClick={() => set((x) => { x.brands!.splice(i, 1) })} aria-label="Remover marca" title="Remover marca">
@@ -607,9 +607,9 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
         </div>
 
         {/* Um único preview: coluna lateral no desktop, tela cheia no celular quando aberto. */}
-        <aside className={preview ? 'fixed inset-0 z-30 overflow-auto bg-[#f5f5f7] p-4 pt-16 lg:static lg:z-auto lg:overflow-visible lg:bg-transparent lg:p-0' : 'hidden lg:block'}>
+        <aside className={preview ? 'fixed inset-0 z-30 overflow-auto overscroll-contain bg-[#f5f5f7] p-4 pt-16 pb-[max(1rem,env(safe-area-inset-bottom))] lg:static lg:z-auto lg:overflow-visible lg:bg-transparent lg:p-0' : 'hidden lg:block'}>
           {preview && (
-            <button type="button" onClick={() => setPreview(false)} className={`${iconBtn} fixed top-4 right-4 bg-surface lg:hidden`} aria-label="Fechar prévia">
+            <button type="button" onClick={() => setPreview(false)} className={`${iconBtn} fixed top-[max(1rem,env(safe-area-inset-top))] right-4 bg-surface lg:hidden`} aria-label="Fechar prévia">
               <X size={17} />
             </button>
           )}
@@ -617,7 +617,7 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
         </aside>
         {!preview && (
           <button type="button" onClick={() => setPreview(true)}
-            className="press fixed right-4 bottom-4 z-20 inline-flex items-center gap-2 rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-fg shadow-2xl lg:hidden">
+            className="press fixed right-4 bottom-[calc(1rem+var(--banner-h,0px)+env(safe-area-inset-bottom))] z-20 inline-flex items-center gap-2 rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-fg shadow-2xl lg:hidden">
             <Eye size={17} weight="bold" aria-hidden="true" /> Ver prévia
           </button>
         )}

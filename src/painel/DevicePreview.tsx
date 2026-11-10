@@ -36,7 +36,8 @@ export function DevicePreview({ frame, src, pulse }: { frame: RefObject<HTMLIFra
 
   // Espaço disponível: largura da coluna e altura da janela (o preview fica fixo ao rolar).
   useEffect(() => {
-    const measure = () => setSpace({ w: box.current?.clientWidth ?? 360, h: innerHeight - 250 })
+    // Desktop: barra fixa do editor (~124px) + moldura cinza e seletor. Celular (tela cheia): só o seletor e o rodapé.
+    const measure = () => setSpace({ w: box.current?.clientWidth ?? 360, h: innerHeight - (matchMedia('(min-width: 1024px)').matches ? 300 : 190) })
     measure()
     const ro = new ResizeObserver(measure)
     if (box.current) ro.observe(box.current)
@@ -62,16 +63,17 @@ export function DevicePreview({ frame, src, pulse }: { frame: RefObject<HTMLIFra
   }
 
   return (
-    <div className="sticky top-24 lg:rounded-[32px] lg:bg-[#f5f5f7] lg:p-8" data-device={device}>
+    <div className="sticky top-24 lg:top-[124px] lg:rounded-[32px] lg:bg-[#f5f5f7] lg:p-8" data-device={device}>
       <div role="radiogroup" aria-label="Tamanho da tela" className="mx-auto mb-6 flex w-fit gap-1 rounded-full bg-[#f2f2f4] p-1">
         {(Object.keys(DEVICES) as Device[]).map((key) => {
           const { label, icon: Icon } = DEVICES[key]
           const on = key === device
           return (
-            <button key={key} type="button" role="radio" aria-checked={on} onClick={() => pick(key)}
-              className={`press flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-medium ${on ? 'bg-white text-ink shadow-[0_1px_3px_rgb(17_17_19/0.12)]' : 'text-muted hover:text-ink'}`}>
+            <button key={key} type="button" role="radio" aria-checked={on} onClick={() => pick(key)} aria-label={label}
+              className={`press flex items-center gap-1.5 rounded-full px-3 py-1.5 sm:px-3.5 text-[13px] font-medium ${on ? 'bg-white text-ink shadow-[0_1px_3px_rgb(17_17_19/0.12)]' : 'text-muted hover:text-ink'}`}>
               <Icon size={16} weight={on ? 'fill' : 'regular'} aria-hidden="true" />
-              {label}
+              {/* No celular estreito fica só o ícone (o nome vai no aria-label). */}
+              <span aria-hidden="true" className="max-[359px]:hidden">{label}</span>
             </button>
           )
         })}
