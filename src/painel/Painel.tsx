@@ -53,8 +53,10 @@ export function Painel() {
     session.set(null)
     transition(() => { setUser(null); open(null) }, 'page')
   }
-  const open = (card: Card | null) => {
+  const [fresh, setFresh] = useState(false) // acabou de criar: editor em etapas
+  const open = (card: Card | null, isNew = false) => {
     go(card ? String(card.id) : null)
+    setFresh(isNew)
     setEditing(card)
     setEditingId(card ? String(card.id) : null)
     if (!card) setTab('/painel')
@@ -62,7 +64,7 @@ export function Painel() {
 
   // Voltar/avançar do navegador.
   useEffect(() => {
-    const onPop = () => { setEditingId(idFromUrl()); setEditing(null); setTab(tabFromUrl()); setSub(subFromUrl()) }
+    const onPop = () => { setFresh(false); setEditingId(idFromUrl()); setEditing(null); setTab(tabFromUrl()); setSub(subFromUrl()) }
     addEventListener('popstate', onPop)
     return () => removeEventListener('popstate', onPop)
   }, [])
@@ -139,7 +141,7 @@ export function Painel() {
         {!editingId && <VerifyBanner user={user} />}
         <Suspense fallback={<p className="pt-4 text-sm text-muted">Carregando...</p>}>
         {editing ? (
-          <Editor key={editing.id} card={editing} onBack={() => open(null)} onAuthLost={logout} />
+          <Editor key={editing.id} card={editing} wizard={fresh} onBack={() => open(null)} onAuthLost={logout} />
         ) : editingId ? (
           <div className="grid justify-items-start gap-4 pt-10">
             {loadError ? (

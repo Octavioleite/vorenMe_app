@@ -933,6 +933,9 @@ dialog.qr-dialog[open] > * {
 [data-style='sereno'] .id-copy {
   text-align: center;
 }
+[data-style='sereno'] .id-copy > span {
+  margin-inline: auto;
+}
 [data-style='sereno'] .id-copy > div {
   justify-content: center;
   gap: 1.25rem;

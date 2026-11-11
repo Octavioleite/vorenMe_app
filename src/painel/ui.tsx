@@ -30,7 +30,7 @@ export function transition(fn: () => void, kind?: 'page') {
 export const tipAt = (i: number, n: number) => (i < n / 4 ? 'left-0' : i >= (n * 3) / 4 ? 'right-0' : 'left-1/2 -translate-x-1/2')
 
 export const errorText = (e: unknown) =>
-  e instanceof ApiError ? [e.message, ...e.errors].join(' · ') : 'Algo deu errado. Tente novamente.'
+  e instanceof ApiError ? (e.errors.length ? e.errors : [e.message]).join(' · ') : 'Algo deu errado. Tente novamente.'
 
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
@@ -65,11 +65,11 @@ export function Logo({ size = 32 }: { size?: number }) {
 }
 
 /** Seção recolhível (<details> nativo). `badge` aparece à direita: "Opcional", "2 cupons"... */
-export function Section({ id, icon, title, description, badge, defaultOpen = true, children }: {
-  id: string; icon: ReactNode; title: string; description?: string; badge?: string; defaultOpen?: boolean; children: ReactNode
+export function Section({ id, icon, title, description, badge, defaultOpen = true, hidden, children }: {
+  id: string; icon: ReactNode; title: string; description?: string; badge?: string; defaultOpen?: boolean; hidden?: boolean; children: ReactNode
 }) {
   return (
-    <details id={id} open={defaultOpen} className="tile group/s scroll-mt-36">
+    <details id={id} open={defaultOpen} hidden={hidden} className="tile group/s scroll-mt-36">
       <summary className="flex cursor-pointer list-none items-center gap-3 rounded-[20px] p-4 outline-none sm:p-5 focus-visible:ring-2 focus-visible:ring-accent sm:px-6 [&::-webkit-details-marker]:hidden">
         <span className="grid size-9 shrink-0 place-items-center rounded-full bg-accent/12 text-accent">{icon}</span>
         <span className="min-w-0 flex-1">
@@ -176,8 +176,28 @@ export function ImagePicker({ value, onChange, onError, thumbClass, fallback, ma
 }
 
 /** Confirmação em modal (substitui o confirm() nativo). Esc ou clique fora = cancelar. */
-export function ask({ title, text, confirm = 'Confirmar', cancel = 'Cancelar', danger = false }: {
-  title: string; text: string; confirm?: string; cancel?: string; danger?: boolean
+/** Copia o link com confirmação passageira. Sem área de transferência (http, navegador antigo): seleciona o
+ *  texto do link na tela, para a pessoa copiar com Ctrl/Cmd+C (abrir aba aqui seria bloqueado como pop-up). */
+export function useCopyLink(url: string) {
+  const [done, setDone] = useState(false)
+  const [failed, setFailed] = useState(false)
+  const copy = async (e?: { currentTarget: Element }) => {
+    const ok = await navigator.clipboard?.writeText(url).then(() => true, () => false)
+    if (!ok) {
+      const text = e?.currentTarget.closest('[data-copy]')?.querySelector('[data-url]')
+      if (text) getSelection()?.selectAllChildren(text)
+      setFailed(true)
+      setTimeout(() => setFailed(false), 2400)
+      return
+    }
+    setDone(true)
+    setTimeout(() => setDone(false), 1600)
+  }
+  return { done, failed, copy }
+}
+
+export function ask({ title, text, confirm = 'Confirmar', cancel = 'Cancelar', danger = false, icon, extra }: {
+  title: string; text: string; confirm?: string; cancel?: string; danger?: boolean; icon?: ReactNode; extra?: ReactNode
 }): Promise<boolean> {
   return new Promise((resolve) => {
     const host = document.body.appendChild(document.createElement('div'))
@@ -200,10 +220,11 @@ export function ask({ title, text, confirm = 'Confirmar', cancel = 'Cancelar', d
         onClick={(e) => e.target === e.currentTarget && e.currentTarget.close()}>
         <div className="tile p-6 sm:p-7">
           <span className={`mb-4 grid size-11 place-items-center rounded-full ${danger ? 'bg-red-500/12 text-red-500' : 'bg-accent/12 text-accent'}`}>
-            <WarningCircle size={22} weight="bold" aria-hidden="true" />
+            {icon ?? <WarningCircle size={22} weight="bold" aria-hidden="true" />}
           </span>
           <h2 id="ask-title" className="text-[17px] font-semibold tracking-tight">{title}</h2>
           <p id="ask-text" className="mt-2 text-sm leading-relaxed text-muted">{text}</p>
+          {extra}
           <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button type="button" autoFocus className={secondary} onClick={done(false)}>{cancel}</button>
             <button type="button" onClick={done(true)}

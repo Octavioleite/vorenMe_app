@@ -1,23 +1,20 @@
 import { ArrowLeft, ArrowSquareOut, Globe, Check, Info, LinkSimple, MagnifyingGlass, PencilSimple, Plus, Trash, X } from '@phosphor-icons/react'
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import { api, ApiError, type Card, type Template } from './api'
-import { Errors, Field, ask, errorText, iconBtn, primary, secondary, thumb, transition } from './ui'
+import { Errors, Field, ask, errorText, useCopyLink, iconBtn, primary, secondary, thumb, transition } from './ui'
 import { SUPPORT_EMAIL, SUPPORT_PHONE } from './Support'
+import { GuideButton } from './Guide'
+import { SLUG, toSlug } from './forSave'
 
 const MAX_CARDS = 3 // espelha vorenMe_api/src/utils/plan.js
 
 /** Copiar o link: o ícone vira check e um balão confirma (feedback da ação). */
 function CopyLink({ slug, className }: { slug: string; className: string }) {
-  const [done, setDone] = useState(false)
-  const copy = async () => {
-    await navigator.clipboard.writeText(`${location.origin}/${slug}`)
-    setDone(true)
-    setTimeout(() => setDone(false), 1600)
-  }
+  const { done, failed, copy } = useCopyLink(`${location.origin}/${slug}`)
   return (
     <button type="button" onClick={copy} className={`${className} relative`} aria-label={done ? 'Link copiado' : 'Copiar link'} title={done ? 'Link copiado' : 'Copiar link'}>
       {done ? <Check size={17} weight="bold" className="text-accent" /> : <LinkSimple size={17} />}
-      {done && <span role="status" className="copied absolute -top-10 left-1/2 rounded-full bg-ink px-3 py-1.5 text-[12px] font-semibold whitespace-nowrap text-bg">Link copiado</span>}
+      {(done || failed) && <span role="status" className="copied absolute -top-10 left-1/2 rounded-full bg-ink px-3 py-1.5 text-[12px] font-semibold whitespace-nowrap text-bg">{done ? 'Link copiado' : 'Não deu para copiar o link'}</span>}
     </button>
   )
 }
@@ -97,8 +94,10 @@ function AddTile({ i, onClick }: { i: number; onClick: () => void }) {
   )
 }
 
-function NewCardDialog({ templates, dialog, onCreated, fail }: {
+
+function NewCardDialog({ templates, name, dialog, onCreated, fail }: {
   templates: Template[]
+  name?: string | null
   dialog: React.RefObject<HTMLDialogElement>
   onCreated: (c: Card) => void
   fail: (e: unknown) => boolean
@@ -111,34 +110,42 @@ function NewCardDialog({ templates, dialog, onCreated, fail }: {
   const [query, setQuery] = useState('')
   const selected = template
   const chosen = templates.find((t) => t.id === template)
-  // Passo 2: ao escolher o modelo, sugere o endereço a partir do @ do modelo (a pessoa ajusta).
+  // Passo 2: ao escolher o modelo, sugere o endereço pelo nome da conta (o @ do modelo é igual para todo mundo
+  // que escolhe o mesmo modelo e daria "já está em uso"). A pessoa ajusta.
   // A foto do modelo escolhido "voa" da grade para o passo 2 (View Transitions, nativo); o resto entra em sequência.
   const [last, setLast] = useState('')
   const pick = (t: Template) => transition(() => {
     setTemplate(t.id); setLast(t.id); setError('')
-    setSlug(t.config.username.toLowerCase().replace(/[^a-z0-9._-]/g, '').slice(0, 31))
+    setSlug(SLUG.test(toSlug(name ?? '')) ? toSlug(name!) : toSlug(t.config.username))
   })
   const back = () => transition(() => setTemplate(''))
   const cats = ['Todos', ...new Set(templates.map((t) => t.category))]
   const q = query.trim().toLowerCase()
   const shown = templates.filter((t) => (cat === 'Todos' || t.category === cat) && (!q || `${t.name} ${t.category} ${t.config.niche}`.toLowerCase().includes(q)))
 
+  const pending = useRef(0) // id do envio atual; fechar o diálogo invalida (resposta tardia não abre o editor)
   const create = async (e: FormEvent) => {
     e.preventDefault()
+    if (!chosen || busy) return
+    if (!SLUG.test(slug)) return setError('O endereço precisa ter de 3 a 31 caracteres e começar com letra ou número. Use letras minúsculas, números, ponto, hífen ou _.')
     setBusy(true)
     setError('')
+    const me = ++pending.current
     try {
-      onCreated(await api<Card>('/cards', 'POST', { slug, template: selected }))
+      const card = await api<Card>('/cards', 'POST', { slug, template: selected })
+      if (me === pending.current) onCreated(card)
     } catch (err) {
-      if (!fail(err)) setError(errorText(err))
-      setBusy(false)
+      if (me === pending.current && !fail(err)) setError(errorText(err))
+    } finally {
+      if (me === pending.current) setBusy(false)
     }
   }
 
   return (
     <dialog ref={dialog} className="qr-dialog w-[860px]" aria-labelledby="new-card-title"
+      onClose={() => { pending.current++; setTemplate(''); setError(''); setBusy(false) }}
       onClick={(e) => e.target === e.currentTarget && dialog.current?.close()}>
-      <form onSubmit={create} className="tile flex max-h-[calc(100dvh-32px)] flex-col overflow-hidden">
+      <form noValidate onSubmit={create} className="tile flex max-h-[calc(100dvh-32px)] flex-col overflow-hidden">
         <div className="flex shrink-0 items-start justify-between gap-4 border-b border-line p-4 sm:px-7 sm:py-5">
           <div>
             <h2 id="new-card-title" className="text-xl font-semibold tracking-tight">Novo cartão</h2>
@@ -224,8 +231,8 @@ function NewCardDialog({ templates, dialog, onCreated, fail }: {
           <Field label="Endereço do cartão" hint="Letras minúsculas, números, ponto, hífen ou _. Mínimo 3 caracteres.">
             <div className="flex items-center gap-2 rounded-[12px] bg-[#f2f2f4] px-3.5 focus-within:bg-white focus-within:ring-2 focus-within:ring-accent/40">
               <span aria-hidden="true" className="text-[17px] text-muted">/</span>
-              <input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase())} required autoFocus
-                pattern="[a-z0-9][a-z0-9._\-]{2,30}" placeholder="seunome" autoCapitalize="none" autoCorrect="off" spellCheck={false}
+              <input value={slug} onChange={(e) => setSlug(toSlug(e.target.value))} autoFocus
+                aria-label="Endereço do cartão" placeholder="seunome" autoCapitalize="none" autoCorrect="off" spellCheck={false}
                 className="min-w-0 flex-1 bg-transparent py-3 text-[16px] font-medium text-ink outline-none placeholder:text-muted/70" />
             </div>
           </Field>
@@ -251,7 +258,7 @@ function NewCardDialog({ templates, dialog, onCreated, fail }: {
   )
 }
 
-export function Cards({ name, verified, onEdit, onAuthLost }: { name?: string | null; verified: boolean; onEdit: (c: Card) => void; onAuthLost: () => void }) {
+export function Cards({ name, verified, onEdit, onAuthLost }: { name?: string | null; verified: boolean; onEdit: (c: Card, isNew?: boolean) => void; onAuthLost: () => void }) {
   const [cards, setCards] = useState<Card[] | null>(null)
   const [templates, setTemplates] = useState<Template[]>([])
   const [error, setError] = useState('')
@@ -295,10 +302,15 @@ export function Cards({ name, verified, onEdit, onAuthLost }: { name?: string | 
             {cards === null ? 'Carregando seus cartões...' : cards.length === 0 ? 'Vamos colocar seu primeiro cartão no ar.' : cards.length === 1 ? '1 cartão no ar.' : `${cards.length} cartões no ar.`}
           </p>
         </div>
-        {!!cards?.length && canCreate && (
-          <button type="button" onClick={openNew} className={`${primary} h-11`}>
-            <Plus size={16} weight="bold" aria-hidden="true" /> Novo cartão
-          </button>
+        {!!cards?.length && (
+          <div className="flex items-center gap-2">
+            <GuideButton compact onStart={canCreate ? openNew : undefined} verified={verified} />
+            {canCreate && (
+              <button type="button" onClick={openNew} className={`${primary} h-11`}>
+                <Plus size={16} weight="bold" aria-hidden="true" /> Novo cartão
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -331,11 +343,14 @@ export function Cards({ name, verified, onEdit, onAuthLost }: { name?: string | 
           <div className="max-w-md">
             <h2 className="text-[32px] leading-[1.05] font-semibold tracking-[-0.04em]">Crie seu primeiro cartão.</h2>
             <p className="mt-3 text-[17px] text-muted">Escolha um modelo pronto para o seu ramo, troque foto e textos e compartilhe o link.</p>
-            {verified && (
-              <button type="button" onClick={openNew} className={`${primary} mt-7 h-12 px-6 text-[15px]`}>
-                <Plus size={16} weight="bold" aria-hidden="true" /> Novo cartão
-              </button>
-            )}
+            <div className="mt-7 flex flex-wrap gap-2">
+              {verified && (
+                <button type="button" onClick={openNew} className={`${primary} h-12 px-6 text-[15px]`}>
+                  <Plus size={16} weight="bold" aria-hidden="true" /> Novo cartão
+                </button>
+              )}
+              <GuideButton onStart={openNew} verified={verified} autoOpen />
+            </div>
           </div>
           <div className="empty-fan relative hidden h-[260px] w-[300px] md:block" aria-hidden="true">
             {templates.slice(0, 3).map((t, i) => (
@@ -354,8 +369,8 @@ export function Cards({ name, verified, onEdit, onAuthLost }: { name?: string | 
         </ul>
       )}
 
-      <NewCardDialog templates={templates} dialog={dialog} fail={fail}
-        onCreated={(c) => { dialog.current?.close(); onEdit(c) }} />
+      <NewCardDialog templates={templates} name={name} dialog={dialog} fail={fail}
+        onCreated={(c) => { dialog.current?.close(); onEdit(c, true) }} />
     </>
   )
 }

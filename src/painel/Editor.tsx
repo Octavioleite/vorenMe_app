@@ -1,11 +1,14 @@
 import {
-  ArrowCounterClockwise, ArrowLeft, ArrowSquareOut, ChatCircleText, Check, CloudArrowUp, WarningCircle, Code, Eye, Globe, IdentificationCard, Image as ImageIcon, InstagramLogo, PinterestLogo, SpotifyLogo, TiktokLogo, User, X, XLogo, YoutubeLogo, LinkSimple, ListBullets, MapPin, Megaphone, CurrencyDollar, Palette, Plus, ShareNetwork, Sparkle, Ticket, Star, Trash,
+  ArrowCounterClockwise, ArrowLeft, ArrowRight, ArrowSquareOut, ChatCircleText, Check, CloudArrowUp, Confetti, Copy, WarningCircle, Code, Eye, Globe, IdentificationCard, Image as ImageIcon, InstagramLogo, PinterestLogo, SpotifyLogo, TiktokLogo, User, X, XLogo, YoutubeLogo, LinkSimple, ListBullets, MapPin, Megaphone, CurrencyDollar, Palette, Plus, ShareNetwork, Sparkle, Ticket, Star, Trash,
 } from '@phosphor-icons/react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { STYLES, TEXT_IDS, TEXT_SIZE, type CreatorConfig, type Style, type TextId, type TextLayout, type Platform, type SocialLink } from '../config/types'
 import { api, ApiError, type Card } from './api'
 import { DevicePreview } from './DevicePreview'
-import { Errors, Field, ImagePicker, ask, Section, Tags, Thumb, errorText, iconBtn, input, secondary } from './ui'
+import { GuideButton } from './Guide'
+import { confetti } from './confetti'
+import { SLUG, forSave, toSlug } from './forSave'
+import { Errors, Field, ImagePicker, ask, useCopyLink, Section, Tags, Thumb, errorText, iconBtn, input, secondary } from './ui'
 
 const PLATFORMS: { id: Platform; label: string }[] = [
   { id: 'instagram', label: 'Instagram' },
@@ -21,6 +24,14 @@ const NAV = [
   ['identidade', 'Identidade'], ['aparencia', 'Aparência'], ['contato', 'Contato'], ['local', 'Endereço'], ['pix', 'Pix'], ['redes', 'Redes'], ['chamada', 'Chamada'],
   ['cupons', 'Cupons'], ['destaque', 'Destaque'], ['extra', 'Bloco extra'], ['marcas', 'Marcas'], ['compartilhar', 'Compartilhar'],
 ] as const
+/** Etapas da criação: agrupam as seções acima (o editor completo continua igual). */
+const STEPS: [string, string[], string, string][] = [
+  ['Identidade', ['identidade'], 'Quem é você?', 'Nome, foto e uma bio curta. É a primeira coisa que as pessoas veem.'],
+  ['Aparência', ['aparencia'], 'Escolha a cara do cartão', 'Um estilo e uma cor. Dá para trocar quando quiser.'],
+  ['Contato', ['contato', 'local', 'pix'], 'Como te encontram', 'WhatsApp e e-mail viram botões de um toque. Endereço e Pix são opcionais.'],
+  ['Redes', ['redes', 'chamada'], 'Onde te seguem', 'Suas redes e o convite para trabalhar com você.'],
+  ['Extras', ['cupons', 'destaque', 'extra', 'marcas', 'compartilhar'], 'Toques finais', 'Tudo aqui é opcional. Pule o que não fizer sentido e conclua.'],
+]
 /** Abre a seção (é um <details>) antes de rolar até ela. */
 const goTo = (id: string) => {
   const el = document.getElementById(id) as HTMLDetailsElement | null
@@ -47,19 +58,47 @@ const SWATCHES = ['#6D3BF5', '#E8552B', '#2A7A8C', '#3B82C4', '#7A8F6B', '#B5838
 
 const AUTOSAVE_MS = 900
 
-/** Itens ainda sendo preenchidos não vão para o servidor (ele recusaria); voltam a ir quando completos. */
-const filled = (v?: string) => !!v?.trim()
-const forSave = (c: CreatorConfig): CreatorConfig => ({
-  ...c,
-  socials: c.socials.filter((s) => filled(s.handle) && filled(s.url)),
-  featured: c.featured && filled(c.featured.title) && filled(c.featured.url) && filled(c.featured.image.src) ? c.featured : undefined,
-  now: c.now && filled(c.now.title) && filled(c.now.text) ? c.now : undefined,
-  brands: c.brands?.filter((b) => filled(b.name)),
-  coupons: c.coupons?.filter((k) => filled(k.brand) && filled(k.code)),
-})
 const PREVIEW_MSG = 'vorenme:preview' // mesmo valor de src/render.tsx
 
-export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () => void; onAuthLost: () => void }) {
+/** Link do cartão com botão de copiar (diálogo de conclusão). */
+function CopyLink({ url }: { url: string }) {
+  const { done: copied, copy } = useCopyLink(url)
+  return (
+    <div data-copy className="mt-5 flex items-center gap-2 rounded-[14px] border border-line bg-surface-2/60 py-1.5 pr-1.5 pl-3.5">
+      <span data-url className="min-w-0 flex-1 truncate text-[14px] font-medium">{url.replace(/^https?:\/\//, '')}</span>
+      <button type="button" onClick={copy} aria-live="polite" className={`${secondary} shrink-0 py-2 text-[13px]`}>
+        {copied ? <><Check size={14} weight="bold" className="text-accent" aria-hidden="true" /> Copiado</> : <><Copy size={14} aria-hidden="true" /> Copiar link</>}
+      </button>
+    </div>
+  )
+}
+
+export function Editor({ card, wizard, onBack, onAuthLost }: { card: Card; wizard?: boolean; onBack: () => void; onAuthLost: () => void }) {
+  const [step, setStep] = useState(wizard ? 0 : -1) // -1 = editor completo
+  const hide = (id: string) => step >= 0 && !STEPS[step][1].includes(id)
+  const toStep = (i: number) => {
+    setStep(i)
+    if (i >= 0) STEPS[i][1].forEach((id) => { const el = document.getElementById(id) as HTMLDetailsElement | null; if (el) el.open = true })
+    scrollTo({ top: 0 })
+  }
+  /** Última etapa: comemora e vira o editor completo. */
+  const finish = async () => {
+    if (dirty && !(await save())) return // o erro aparece no topo; sem confete com cartão desatualizado
+    toStep(-1)
+    const url = `${location.origin}/${saved.slug}`
+    setTimeout(() => confetti([config.accent, '#FFC94A', '#FF6B6B', '#34D399', '#60A5FA', '#F472B6']), 120) // depois do diálogo abrir
+    const go = await ask({
+      icon: <span className="deal relative grid place-items-center">
+        <span className="absolute inset-0 rounded-full bg-accent/30 [animation:ring_1.1s_var(--ease)_2]" aria-hidden="true" />
+        <Confetti size={22} weight="bold" aria-hidden="true" />
+      </span>,
+      title: 'Seu cartão está pronto!',
+      text: 'Ele já está no ar. Mande o link para seus clientes ou volte aqui para ajustar quando quiser.',
+      extra: <CopyLink url={url} />,
+      confirm: 'Ver meu cartão', cancel: 'Continuar editando',
+    })
+    if (go) open(url, '_blank', 'noreferrer')
+  }
   const [config, setConfig] = useState<CreatorConfig>(card.config)
   const [slug, setSlug] = useState(card.slug)
   const [saved, setSaved] = useState<{ slug: string; json: string; failed?: string }>({ slug: card.slug, json: JSON.stringify(card.config) })
@@ -71,7 +110,12 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
   const [active, setActive] = useState<string>(NAV[0][0])
   const frame = useRef<HTMLIFrameElement>(null)
 
-  const dirty = slug !== saved.slug || JSON.stringify(config) !== saved.json
+  const current = JSON.stringify(config) // uma vez por render (config pode ter foto em data URL)
+  const configDirty = current !== saved.json
+  const slugPending = slug !== saved.slug && !busy
+  const dirty = slug !== saved.slug || configDirty
+  // Voltou ao que está salvo: o erro do último envio não vale mais.
+  useEffect(() => { if (!dirty) setError('') }, [dirty])
 
   // Avisa antes de fechar a aba com alterações não salvas.
   useEffect(() => {
@@ -98,34 +142,39 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
     })
   const setSocial = (i: number, patch: Partial<SocialLink>) => set((c) => Object.assign(c.socials[i], patch))
 
-  /** true = salvou. Compara com o que foi ENVIADO (o jsonb do Postgres reordena as chaves). */
-  const save = async (e?: FormEvent): Promise<boolean> => {
-    e?.preventDefault()
-    if (busy) return false
-    setBusy(true)
-    const sent = { slug, json: JSON.stringify(config) }
-    try {
-      await api<Card>(`/cards/${card.id}`, 'PUT', { slug: sent.slug, config: forSave(config) })
-      setSaved(sent)
-      setError('')
-      return true
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) onAuthLost()
-      else setError(errorText(err))
-      setSaved((s) => ({ ...s, failed: sent.json + sent.slug }))
-      return false
-    } finally {
-      setBusy(false)
+  /** true = salvou. Envios entram em fila: quem chama durante um envio espera por ele (não vira "falhou").
+   *  O endereço (slug) só vai nos envios explícitos: no automático, cada pausa na digitação trocaria o link.
+   *  Compara com o que foi ENVIADO (o jsonb do Postgres reordena as chaves). */
+  const queue = useRef(Promise.resolve(true))
+  const save = (withSlug = true): Promise<boolean> => {
+    const sent = { slug: withSlug ? slug : undefined, json: current }
+    const body = { slug: sent.slug, config: forSave(config) }
+    const run = async () => {
+      setBusy(true)
+      try {
+        await api<Card>(`/cards/${card.id}`, 'PUT', body)
+        setSaved((s) => ({ slug: sent.slug ?? s.slug, json: sent.json }))
+        setError('')
+        return true
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) onAuthLost()
+        else setError(errorText(err))
+        setSaved((s) => ({ ...s, failed: sent.json }))
+        return false
+      } finally {
+        setBusy(false)
+      }
     }
+    return (queue.current = queue.current.then(run))
   }
 
   // Salvamento automático: espera a pessoa parar de digitar. Não repete um envio que já falhou igual.
-  const failedSame = saved.failed === JSON.stringify(config) + slug
+  const failedSame = saved.failed === current
   useEffect(() => {
-    if (!dirty || busy || failedSame) return
-    const t = setTimeout(() => save(), AUTOSAVE_MS)
+    if (!configDirty || busy || failedSame) return
+    const t = setTimeout(() => save(false), AUTOSAVE_MS)
     return () => clearTimeout(t)
-  }, [config, slug, dirty, busy, failedSame]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [config, configDirty, busy, failedSame]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pré-visualização ao vivo: manda o cartão para o iframe a cada alteração, sem salvar nem recarregar.
   const sendPreview = () =>
@@ -137,14 +186,23 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
     else setPulse((n) => n + 1)
   }, [config]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Atalho da seção visível fica ativo (IntersectionObserver, sem ouvir o scroll).
+  // Atalho da seção visível fica ativo (IntersectionObserver, sem ouvir o scroll): vence a mais de cima na faixa.
+  // Clicou num atalho: ele fica ativo até a pessoa rolar por conta própria (no fim da página a seção
+  // clicada não chega ao topo e as seguintes também entram na faixa).
+  const pinned = useRef(false)
+  const jump = (id: string) => { pinned.current = true; setActive(id); goTo(id) }
   useEffect(() => {
-    const io = new IntersectionObserver(
-      (entries) => entries.forEach((e) => e.isIntersecting && setActive(e.target.id)),
-      { rootMargin: '-140px 0px -60% 0px' },
-    )
+    const seen = new Set<string>()
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => (e.isIntersecting ? seen.add(e.target.id) : seen.delete(e.target.id)))
+      const top = NAV.find(([id]) => seen.has(id))
+      if (top && !pinned.current) setActive(top[0])
+    }, { rootMargin: '-140px 0px -60% 0px' })
     NAV.forEach(([id]) => { const el = document.getElementById(id); if (el) io.observe(el) })
-    return () => io.disconnect()
+    const unpin = () => { pinned.current = false }
+    const events = ['wheel', 'touchmove', 'keydown'] as const
+    events.forEach((t) => addEventListener(t, unpin, { passive: true }))
+    return () => { io.disconnect(); events.forEach((t) => removeEventListener(t, unpin)) }
   }, [])
   useEffect(() => {
     const onReady = (e: MessageEvent) => {
@@ -182,17 +240,21 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
 
   const applyJson = () => {
     try {
-      setConfig(JSON.parse(json))
+      const next = JSON.parse(json)
+      // Sem esses campos a tela do editor quebraria; o resto o servidor valida ao salvar.
+      if (!next?.name || !next.photo || !Array.isArray(next.socials) || !next.partnership || !next.seo || !next.labels) throw 0
+      setConfig(next)
       setError('')
     } catch {
-      setError('JSON inválido. Confira vírgulas e aspas.')
+      setError('JSON inválido. Confira vírgulas, aspas e se nenhum campo obrigatório foi apagado.')
     }
   }
 
   const c = config
   const words = c.bio.trim().split(/\s+/).filter(Boolean).length
   return (
-    <form onSubmit={save}>
+    // noValidate: os avisos nativos do navegador saem no idioma dele (inglês, às vezes); quem valida é o servidor, em português.
+    <form noValidate onSubmit={(e: FormEvent) => { e.preventDefault(); save() }}>
       {/* Barra de ações fixa */}
       <div className="sticky top-0 z-10 -mx-4 mb-6 border-b border-line bg-bg/85 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10">
         <div className="flex items-center gap-3">
@@ -203,33 +265,67 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
             <p className="truncate font-semibold">{c.name.first} {c.name.last}</p>
             <p className="truncate text-[13px] text-muted">{location.host}/{saved.slug}</p>
           </div>
-          <span aria-live="polite" className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium ${error ? 'bg-red-500/10 text-red-500' : busy || dirty ? 'bg-surface-2 text-muted' : 'bg-accent/10 text-accent'}`}>
-            {error ? <><WarningCircle size={15} weight="bold" aria-hidden="true" /> Não salvo</>
-              : busy || dirty ? <><CloudArrowUp size={15} aria-hidden="true" /> Salvando...</>
+          <span aria-live="polite" className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium ${error || slugPending ? 'bg-red-500/10 text-red-500' : busy || configDirty ? 'bg-surface-2 text-muted' : 'bg-accent/10 text-accent'}`}>
+            {error || slugPending ? <><WarningCircle size={15} weight="bold" aria-hidden="true" /> Não salvo</>
+              : busy || configDirty ? <><CloudArrowUp size={15} aria-hidden="true" /> Salvando...</>
               : <><Check size={15} weight="bold" aria-hidden="true" /> Salvo</>}
           </span>
+          <GuideButton compact onSection={(id) => (step >= 0 ? toStep(STEPS.findIndex(([, ids]) => ids.includes(id))) : jump(id))} start="identidade" />
           <a href={`/${saved.slug}`} target="_blank" rel="noreferrer" className={`${secondary} hidden sm:inline-flex`}>
             <ArrowSquareOut size={16} aria-hidden="true" /> Abrir
           </a>
         </div>
-        <nav aria-label="Seções" className="-mx-1 mt-3 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none]">
-          {NAV.map(([id, label]) => (
-            <button key={id} type="button" onClick={() => goTo(id)} aria-current={active === id ? 'true' : undefined}
-              className={`press shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors ${active === id ? 'bg-ink text-bg' : 'bg-[#f2f2f4] text-muted hover:text-ink'}`}>
-              {label}
-            </button>
-          ))}
-        </nav>
+        {step >= 0 ? (
+          <nav aria-label={`Etapa ${step + 1} de ${STEPS.length}`} className="mt-3">
+            <ol className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none]">
+              {STEPS.map(([label], i) => (
+                <li key={label} className="shrink-0">
+                  <button type="button" onClick={() => toStep(i)} aria-current={i === step ? 'step' : undefined}
+                    className={`press inline-flex items-center gap-1.5 rounded-full py-1.5 pr-3.5 pl-1.5 text-[13px] font-medium transition-colors ${i === step ? 'bg-ink text-bg' : i < step ? 'bg-accent/10 text-accent' : 'bg-[#f2f2f4] text-muted hover:text-ink'}`}>
+                    <span className={`grid size-5 place-items-center rounded-full text-[11px] ${i === step ? 'bg-bg text-ink' : 'bg-bg/70'}`}>
+                      {i < step ? <Check size={11} weight="bold" aria-hidden="true" /> : i + 1}
+                    </span>
+                    {label}
+                  </button>
+                </li>
+              ))}
+            </ol>
+            <div className="mt-2.5 grid grid-cols-5 gap-1" aria-hidden="true">
+              {STEPS.map(([label], i) => (
+                <span key={label} className="h-1 overflow-hidden rounded-full bg-line">
+                  <span className={`block h-full origin-left rounded-full bg-accent transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${i <= step ? 'scale-x-100' : 'scale-x-0'}`} />
+                </span>
+              ))}
+            </div>
+          </nav>
+        ) : (
+          <nav aria-label="Seções" className="-mx-1 mt-3 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none]">
+            {NAV.map(([id, label]) => (
+              <button key={id} type="button" onClick={() => jump(id)} aria-current={active === id ? 'true' : undefined}
+                className={`press shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors ${active === id ? 'bg-ink text-bg' : 'bg-[#f2f2f4] text-muted hover:text-ink'}`}>
+                {label}
+              </button>
+            ))}
+          </nav>
+        )}
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(360px,42%)] lg:has-[[data-device=computador]]:grid-cols-[minmax(340px,1fr)_minmax(0,64%)]">
         <div className="grid gap-5">
           <Errors text={error} />
 
-          <Section icon={<IdentificationCard size={17} weight="bold" />} title="Identidade" id="identidade" description="Nome, foto, bio e endereço do cartão">
+          {step >= 0 && (
+            <header key={step} className="rise grid gap-1.5 px-1 pt-1 [--i:-3]">
+              <p className="text-[13px] font-semibold text-accent">Etapa {step + 1} de {STEPS.length}</p>
+              <h2 className="text-[26px] leading-tight font-semibold tracking-[-0.03em] sm:text-[30px]">{STEPS[step][2]}</h2>
+              <p className="max-w-[52ch] text-[15px] text-muted">{STEPS[step][3]}</p>
+            </header>
+          )}
+
+          <Section icon={<IdentificationCard size={17} weight="bold" />} title="Identidade" id="identidade" hidden={hide('identidade')} description="Nome, foto, bio e endereço do cartão">
             <div className="grid gap-4 @md:grid-cols-2">
               <Field label="Nome"><input className={input} value={c.name.first} onChange={(e) => set((x) => { x.name.first = e.target.value })} /></Field>
-              <Field label="Sobrenome"><input className={input} value={c.name.last} onChange={(e) => set((x) => { x.name.last = e.target.value })} /></Field>
+              <Field label="Sobrenome (opcional)"><input className={input} value={c.name.last} onChange={(e) => set((x) => { x.name.last = e.target.value })} /></Field>
               <Field label="Especialidade ou nicho" hint="Ex: Psicóloga · CRP 06/000000">
                 <input className={input} value={c.niche} onChange={(e) => set((x) => { x.niche = e.target.value })} />
               </Field>
@@ -260,7 +356,7 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
                   </button>
                 </div>
                 <div className="grid gap-2 @xl:grid-cols-2">
-                  {TEXT_LABELS.filter(([id]) => id !== 'location' || c.location).map(([id, label]) => {
+                  {TEXT_LABELS.filter(([id]) => (id !== 'location' || c.location) && (id !== 'last' || c.name.last)).map(([id, label]) => {
                     const l = c.photo.layout?.[id]
                     const moved = l?.x !== undefined
                     return (
@@ -285,10 +381,14 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
                   })}
                 </div>
               </div>
-              <Field label="Endereço do cartão">
+              <Field label="Endereço do cartão" hint={slug !== saved.slug
+                ? (SLUG.test(slug) ? 'Ainda não salvo: aperte Enter ou saia do campo.' : 'Use de 3 a 31 caracteres: letras minúsculas, números, ponto, hífen ou _.')
+                : 'Mudar o endereço faz o link e os QR codes antigos pararem de funcionar.'}>
                 <div className="flex items-center rounded-[12px] bg-[#f2f2f4] focus-within:bg-white focus-within:ring-2 focus-within:ring-accent/40">
                   <span className="pl-3.5 text-[15px] text-muted">/</span>
-                  <input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase())}
+                  <input value={slug} autoCapitalize="none" autoCorrect="off" spellCheck={false}
+                    onChange={(e) => setSlug(toSlug(e.target.value))}
+                    onBlur={() => slug !== saved.slug && SLUG.test(slug) && save()}
                     className="min-w-0 flex-1 bg-transparent py-2.5 pr-3.5 pl-0.5 text-[16px] text-ink outline-none sm:text-[15px]" />
                 </div>
               </Field>
@@ -298,7 +398,7 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
             </div>
           </Section>
 
-          <Section icon={<Palette size={17} weight="bold" />} title="Aparência" id="aparencia" description="Estilo, cor de destaque e tema">
+          <Section icon={<Palette size={17} weight="bold" />} title="Aparência" id="aparencia" hidden={hide('aparencia')} description="Estilo, cor de destaque e tema">
             <div className="grid gap-5 @md:grid-cols-2">
               <fieldset className="grid gap-2 @md:col-span-2">
                 <legend className="mb-2 text-[13px] font-medium">Estilo</legend>
@@ -346,7 +446,7 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
             </div>
           </Section>
 
-          <Section icon={<ChatCircleText size={17} weight="bold" />} title="Contato" id="contato" description="WhatsApp, e-mail e site">
+          <Section icon={<ChatCircleText size={17} weight="bold" />} title="Contato" id="contato" hidden={hide('contato')} description="WhatsApp, e-mail e site">
             <div className="grid gap-4 @md:grid-cols-2">
               <Field label="WhatsApp" hint="Só números, com 55 e DDD.">
                 <input inputMode="numeric" className={input} value={c.whatsapp?.number ?? ''} placeholder="5511987654321"
@@ -383,7 +483,7 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
             </div>
           </Section>
 
-          <Section icon={<MapPin size={17} weight="bold" />} title="Endereço e avaliações" id="local" defaultOpen={false} description="Rota no Maps, Waze e Uber, horário e avaliação no Google" badge={c.address || c.review ? 'Ativo' : 'Opcional'}>
+          <Section icon={<MapPin size={17} weight="bold" />} title="Endereço e avaliações" id="local" hidden={hide('local')} defaultOpen={false} description="Rota no Maps, Waze e Uber, horário e avaliação no Google" badge={c.address || c.review ? 'Ativo' : 'Opcional'}>
             <div className="grid gap-4">
               <Field label="Endereço" hint="Como você digitaria no Google Maps. Vazio esconde.">
                 <input className={input} value={c.address?.text ?? ''} placeholder="Rua Augusta, 1500 - Consolação, São Paulo - SP"
@@ -416,7 +516,7 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
             </div>
           </Section>
 
-          <Section icon={<CurrencyDollar size={17} weight="bold" />} title="Pix" id="pix" defaultOpen={false} description="O cliente copia sua chave ou o Pix copia e cola" badge={c.pix ? 'Ativo' : 'Opcional'}>
+          <Section icon={<CurrencyDollar size={17} weight="bold" />} title="Pix" id="pix" hidden={hide('pix')} defaultOpen={false} description="O cliente copia sua chave ou o Pix copia e cola" badge={c.pix ? 'Ativo' : 'Opcional'}>
             <div className="grid gap-4 @md:grid-cols-2">
               <div className="@md:col-span-2">
                 <Field label="Chave Pix" hint="CPF, CNPJ, e-mail, celular (+55...) ou chave aleatória. Vazio esconde.">
@@ -436,7 +536,7 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
             </div>
           </Section>
 
-          <Section icon={<LinkSimple size={17} weight="bold" />} title="Redes e links" id="redes" description="Onde as pessoas te seguem" badge={c.socials.length ? `${c.socials.length}` : undefined}>
+          <Section icon={<LinkSimple size={17} weight="bold" />} title="Redes e links" id="redes" hidden={hide('redes')} description="Onde as pessoas te seguem" badge={c.socials.length ? `${c.socials.length}` : undefined}>
             <div className="grid gap-3">
               {c.socials.length === 0 && <p className="rounded-[14px] border border-dashed border-line p-4 text-center text-sm text-muted">Adicione seu Instagram, TikTok ou site. Eles aparecem como botões no cartão.</p>}
               {c.socials.map((s, i) => (
@@ -460,7 +560,7 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
             </div>
           </Section>
 
-          <Section icon={<Megaphone size={17} weight="bold" />} title="Chamada principal" id="chamada" defaultOpen={false} description="O convite para trabalhar com você">
+          <Section icon={<Megaphone size={17} weight="bold" />} title="Chamada principal" id="chamada" hidden={hide('chamada')} defaultOpen={false} description="O convite para trabalhar com você">
             <div className="grid gap-4">
               <Field label="Título"><input className={input} value={c.partnership.title} onChange={(e) => set((x) => { x.partnership.title = e.target.value })} /></Field>
               <Field label="Texto"><textarea rows={2} className={input} value={c.partnership.text} onChange={(e) => set((x) => { x.partnership.text = e.target.value })} /></Field>
@@ -470,7 +570,7 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
             </div>
           </Section>
 
-          <Section icon={<Ticket size={17} weight="bold" />} title="Cupons de desconto" id="cupons" defaultOpen={false} description="Códigos que o visitante copia com um toque" badge={count(c.coupons?.length, "cupom", "cupons")}>
+          <Section icon={<Ticket size={17} weight="bold" />} title="Cupons de desconto" id="cupons" hidden={hide('cupons')} defaultOpen={false} description="Códigos que o visitante copia com um toque" badge={count(c.coupons?.length, "cupom", "cupons")}>
             <div className="grid gap-3">
               <p className="text-sm text-muted">Códigos das marcas parceiras. O visitante copia com um toque. Sem nenhum, a seção some.</p>
               {(c.coupons ?? []).map((k, i) => (
@@ -493,7 +593,7 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
             </div>
           </Section>
 
-          <Section icon={<Star size={17} weight="bold" />} title="Destaque" id="destaque" defaultOpen={false} description="Um vídeo, post ou projeto em evidência" badge={c.featured ? "Ativo" : "Opcional"}>
+          <Section icon={<Star size={17} weight="bold" />} title="Destaque" id="destaque" hidden={hide('destaque')} defaultOpen={false} description="Um vídeo, post ou projeto em evidência" badge={c.featured ? "Ativo" : "Opcional"}>
             {!c.featured ? (
               <div className="grid justify-items-start gap-3">
                 <p className="text-sm text-muted">Um vídeo, post ou projeto em evidência, com imagem grande.</p>
@@ -540,7 +640,7 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
             )}
           </Section>
 
-          <Section icon={<Sparkle size={17} weight="bold" />} title={c.now?.title || 'Bloco extra'} id="extra" defaultOpen={false} description="Um bloco livre com o que quiser" badge={c.now ? "Ativo" : "Opcional"}>
+          <Section icon={<Sparkle size={17} weight="bold" />} title={c.now?.title || 'Bloco extra'} id="extra" hidden={hide('extra')} defaultOpen={false} description="Um bloco livre com o que quiser" badge={c.now ? "Ativo" : "Opcional"}>
             {!c.now ? (
               <div className="grid justify-items-start gap-3">
                 <p className="text-sm text-muted">Um bloco livre: o que está fazendo agora, especialidades, convênios aceitos...</p>
@@ -566,7 +666,7 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
             )}
           </Section>
 
-          <Section icon={<ListBullets size={17} weight="bold" />} title="Marcas parceiras" id="marcas" defaultOpen={false} description="Marcas com quem você já trabalhou" badge={count(c.brands?.length, "marca", "marcas")}>
+          <Section icon={<ListBullets size={17} weight="bold" />} title="Marcas parceiras" id="marcas" hidden={hide('marcas')} defaultOpen={false} description="Marcas com quem você já trabalhou" badge={count(c.brands?.length, "marca", "marcas")}>
             <div className="grid gap-3">
               <p className="text-sm text-muted">Só marcas com quem já trabalhou de verdade. Sem nenhuma, a seção some.</p>
               {(c.brands ?? []).map((b, i) => (
@@ -585,7 +685,7 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
             </div>
           </Section>
 
-          <Section icon={<ShareNetwork size={17} weight="bold" />} title="Compartilhamento" id="compartilhar" defaultOpen={false} description="Como o link aparece no Google e no WhatsApp">
+          <Section icon={<ShareNetwork size={17} weight="bold" />} title="Compartilhamento" id="compartilhar" hidden={hide('compartilhar')} defaultOpen={false} description="Como o link aparece no Google e no WhatsApp">
             <div className="grid gap-4">
               <Field label="Título da página" hint="Aparece na aba do navegador e nos resultados de busca.">
                 <input className={input} value={c.seo.title} onChange={(e) => set((x) => { x.seo.title = e.target.value })} />
@@ -594,7 +694,22 @@ export function Editor({ card, onBack, onAuthLost }: { card: Card; onBack: () =>
             </div>
           </Section>
 
-          <details className="group rounded-[20px] border border-dashed border-line px-5 py-4 sm:px-6" onToggle={(e) => e.currentTarget.open && setJson(JSON.stringify(config, null, 2))}>
+          {step >= 0 && (
+            <div className="flex items-center gap-3">
+              <button type="button" className={secondary} disabled={step === 0} onClick={() => toStep(step - 1)}>
+                <ArrowLeft size={15} aria-hidden="true" /> Voltar
+              </button>
+              <span className="flex-1 text-center text-[13px] text-muted">
+                {step === STEPS.length - 1 ? 'Seu cartão já está no ar. Pode concluir.' : <>A seguir: <b className="font-medium text-ink">{STEPS[step + 1][0]}</b></>}
+              </span>
+              <button type="button" onClick={() => (step === STEPS.length - 1 ? finish() : toStep(step + 1))}
+                className="press inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg hover:brightness-110">
+                {step === STEPS.length - 1 ? <><Check size={15} weight="bold" aria-hidden="true" /> Concluir</> : <>Continuar <ArrowRight size={15} weight="bold" aria-hidden="true" /></>}
+              </button>
+            </div>
+          )}
+
+          <details hidden={step >= 0} className="group rounded-[20px] border border-dashed border-line px-5 py-4 sm:px-6" onToggle={(e) => e.currentTarget.open && setJson(JSON.stringify(config, null, 2))}>
             <summary className="flex cursor-pointer list-none items-center gap-2.5 text-[15px] font-semibold">
               <Code size={16} className="text-muted" aria-hidden="true" />
               <span className="text-sm font-medium text-muted">Edição técnica</span>

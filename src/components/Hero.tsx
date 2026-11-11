@@ -40,6 +40,7 @@ function Piece({ id, label, className = '', children }: { id: TextId; label: str
     const el = ref.current!
     const start = { ...posOf(el), cx: e.clientX, cy: e.clientY }
     let dx = 0, dy = 0
+    const off = new AbortController() // solta todos os ouvintes de uma vez (senão o pointercancel sobra e reenvia depois)
     el.setPointerCapture(e.pointerId)
     el.dataset.dragging = ''
     const move = (ev: PointerEvent) => {
@@ -50,13 +51,13 @@ function Piece({ id, label, className = '', children }: { id: TextId; label: str
     }
     const up = () => {
       delete el.dataset.dragging
-      el.removeEventListener('pointermove', move)
+      off.abort()
       if (Math.abs(dx) + Math.abs(dy) < 2) return (el.style.transform = '')
       send(id, { x: pct(start.x + (dx / start.free.w) * 100), y: pct(start.y + (dy / start.free.h) * 100) })
     }
-    el.addEventListener('pointermove', move)
-    el.addEventListener('pointerup', up, { once: true })
-    el.addEventListener('pointercancel', up, { once: true })
+    el.addEventListener('pointermove', move, { signal: off.signal })
+    el.addEventListener('pointerup', up, { signal: off.signal })
+    el.addEventListener('pointercancel', up, { signal: off.signal })
   }
 
   const resize = (e: ReactPointerEvent<HTMLSpanElement>) => {
@@ -65,6 +66,7 @@ function Piece({ id, label, className = '', children }: { id: TextId; label: str
     const handle = e.currentTarget
     const start = { size: parseFloat(getComputedStyle(el).fontSize), w: el.getBoundingClientRect().width, cx: e.clientX, cy: e.clientY }
     let size = px(start.size)
+    const off = new AbortController()
     handle.setPointerCapture(e.pointerId)
     el.dataset.dragging = ''
     const move = (ev: PointerEvent) => {
@@ -73,12 +75,12 @@ function Piece({ id, label, className = '', children }: { id: TextId; label: str
     }
     const up = () => {
       delete el.dataset.dragging
-      handle.removeEventListener('pointermove', move)
+      off.abort()
       send(id, { size })
     }
-    handle.addEventListener('pointermove', move)
-    handle.addEventListener('pointerup', up, { once: true })
-    handle.addEventListener('pointercancel', up, { once: true })
+    handle.addEventListener('pointermove', move, { signal: off.signal })
+    handle.addEventListener('pointerup', up, { signal: off.signal })
+    handle.addEventListener('pointercancel', up, { signal: off.signal })
   }
 
   // Teclado: setas movem 2% (Shift = 10%); + e - mudam o tamanho.
@@ -112,17 +114,21 @@ function IdentityCard() {
   const lay = photo.layout ?? {}
   const free = (id: TextId) => lay[id]?.x !== undefined && lay[id]?.y !== undefined
   const pieces: Record<TextId, { label: string; className: string; content: ReactNode } | null> = {
-    first: { label: 'Nome', className: 'id-name block', content: name.first },
-    last: { label: 'Sobrenome', className: 'id-name block', content: <>{name.last}<span className="text-accent">.</span></> },
-    niche: { label: 'Especialidade', className: 'block text-[15px] font-medium text-white/90', content: niche },
-    username: { label: 'Usuário', className: 'block truncate text-[13px] text-white/70', content: `@${username}` },
+    // Sem sobrenome (lojas, marcas): o ponto de destaque vai para o fim do nome.
+    first: { label: 'Nome', className: 'id-name block w-fit', content: name.last ? name.first : <>{name.first}<span className="text-accent">.</span></> },
+    last: name.last ? { label: 'Sobrenome', className: 'id-name block w-fit', content: <>{name.last}<span className="text-accent">.</span></> } : null,
+    niche: { label: 'Especialidade', className: 'block w-fit text-[15px] font-medium text-white/90', content: niche },
+    username: { label: 'Usuário', className: 'block w-fit max-w-full truncate text-[13px] text-white/70', content: `@${username}` },
     location: location
       ? { label: 'Cidade', className: 'flex shrink-0 items-center gap-1 text-[13px] text-white/70', content: <><MapPin size="1em" aria-hidden="true" />{location}</> }
       : null,
   }
+  // Peça solta deixa o lugar reservado (invisível): senão as outras do bloco se mexem para ocupar o espaço.
   const piece = (id: TextId, wrap = '') => {
     const p = pieces[id]
-    if (!p || free(id)) return null
+    if (!p) return null
+    // O lugar reservado é um span comum: o Piece aplicaria position:absolute do layout e não ocuparia espaço.
+    if (free(id)) return <span aria-hidden="true" className={`${p.className} ${wrap} invisible`}>{p.content}</span>
     return <Piece id={id} label={p.label} className={`${p.className} ${wrap}`}>{p.content}</Piece>
   }
   const moved = TEXT_IDS.filter(free)
@@ -149,12 +155,10 @@ function IdentityCard() {
           {piece('first')}
           {piece('last')}
           {piece('niche', 'mt-3')}
-          {!rowFree && (
-            <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/15 pt-3">
-              {piece('username')}
-              {piece('location')}
-            </div>
-          )}
+          <div className={`mt-4 flex items-center justify-between gap-3 border-t border-white/15 pt-3 ${rowFree ? 'invisible' : ''}`}>
+            {piece('username')}
+            {piece('location')}
+          </div>
         </div>
         {moved.map((id) => {
           const p = pieces[id]
