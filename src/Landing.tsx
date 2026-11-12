@@ -216,6 +216,54 @@ function useCoverflow(count: number) {
   return { ref, step, go }
 }
 
+/* ── Movimento ─────────────────────────────────────────────────────── */
+
+/** Número que conta de 0 até o valor quando entra na tela (mostra que o painel "vive"). Escreve direto no DOM, sem re-render. */
+function CountUp({ value }: { value: string }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  useEffect(() => {
+    const el = ref.current
+    const end = parseInt(value, 10)
+    if (!el || Number.isNaN(end) || reduced()) return
+    el.textContent = '0'
+    let raf = 0
+    const io = new IntersectionObserver(([e]) => {
+      if (!e.isIntersecting) return
+      io.disconnect()
+      const t0 = performance.now()
+      const tick = (t: number) => {
+        const p = Math.min(1, (t - t0) / 1400)
+        el.textContent = String(Math.round(end * (1 - Math.pow(1 - p, 4))))
+        if (p < 1) raf = requestAnimationFrame(tick)
+      }
+      raf = requestAnimationFrame(tick)
+    }, { threshold: 0.4 })
+    io.observe(el)
+    return () => { io.disconnect(); cancelAnimationFrame(raf); el.textContent = value }
+  }, [value])
+  return <span ref={ref}>{value}</span>
+}
+
+/** Luz que segue o cursor nos cards .spot (feedback de que dá para interagir). Um listener só, variáveis CSS, sem estado do React. */
+function useSpotlight() {
+  useEffect(() => {
+    if (!matchMedia('(hover: hover) and (pointer: fine)').matches || reduced()) return
+    let raf = 0
+    const move = (e: PointerEvent) => {
+      const el = (e.target as HTMLElement).closest<HTMLElement>('.spot')
+      if (!el) return
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => {
+        const r = el.getBoundingClientRect()
+        el.style.setProperty('--mx', `${e.clientX - r.left}px`)
+        el.style.setProperty('--my', `${e.clientY - r.top}px`)
+      })
+    }
+    addEventListener('pointermove', move, { passive: true })
+    return () => { removeEventListener('pointermove', move); cancelAnimationFrame(raf) }
+  }, [])
+}
+
 /* ── Peças ─────────────────────────────────────────────────────────── */
 
 /** Cartão de exemplo: o modelo renderizado de verdade num iframe (/?preview), recebido pelo mesmo
@@ -289,6 +337,7 @@ function Landing() {
   }, [])
   const { ref: focusRef, step, go } = useCoverflow(templates.length)
   useReveal(templates.length)
+  useSpotlight()
   const pick = (n: number) => templates[n % Math.max(templates.length, 1)]
   const [example, setExample] = useState<number | null>(null)
   const [active, setActive] = useState(0) // modelo nas telas do hero
@@ -339,34 +388,52 @@ function Landing() {
 
       <main>
         {/* Hero: o slogan é a mensagem, centralizado; os aparelhos se encaixam conforme a rolagem */}
-        <section className="overflow-hidden pt-14 pb-10 text-center md:pt-20">
-          <div className={WRAP}>
-            <p className="rise text-[15px] font-medium text-muted">Cartão de visita digital</p>
-            <h1 className="mt-4 text-[clamp(3.25rem,15vw,7.5rem)] leading-[0.95] font-semibold tracking-[-0.06em]">
-              <span className="word"><span style={i(0)}>Seu</span></span>{' '}
-              <span className="word"><span style={i(1)}>mundo.</span></span>
-              <br />
-              <span className="word"><span className="text-accent" style={i(2)}>Um</span></span>{' '}
-              <span className="word"><span className="text-accent" style={i(3)}>link.</span></span>
-            </h1>
-            <p className="rise mx-auto mt-6 max-w-[40ch] text-[18px] leading-relaxed text-muted md:text-[20px]" style={i(4)}>
-              Um cartão bonito que leva o cliente direto ao seu WhatsApp e mostra o que traz resultado. 3 dias grátis, depois R$ 9,99/mês ou R$ 99,90/ano.
-            </p>
-            <div className="rise mt-8 flex flex-wrap justify-center gap-3" style={i(5)}>
-              <CtaButton />
-              <a href="#modelos" onClick={(e) => { if (templates.length) { e.preventDefault(); setExample(active) } }}
-                className="press inline-flex h-12 items-center gap-2 rounded-full px-6 text-[15px] font-semibold text-accent hover:bg-accent/8">
-                <Eye size={18} weight="bold" aria-hidden="true" /> Ver um exemplo
-              </a>
+        <section className="hero relative isolate overflow-hidden pt-14 pb-10 md:pt-20 lg:pt-24 lg:pb-20">
+          <div className="hero-bg" aria-hidden="true"><span className="hero-orb hero-orb-a" /><span className="hero-orb hero-orb-b" /></div>
+          <div className={`${WRAP} lg:grid lg:max-w-[1320px] lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:gap-12`}>
+            <div className="text-center lg:text-left">
+              <p className="rise text-[15px] font-medium text-muted">Cartão de visita digital</p>
+              <h1 className="mt-4 text-[clamp(3.25rem,15vw,7.5rem)] leading-[0.95] font-semibold tracking-[-0.06em] lg:text-[clamp(4rem,6.4vw,6rem)]">
+                <span className="word"><span style={i(0)}>Seu</span></span>{' '}
+                <span className="word"><span style={i(1)}>mundo.</span></span>
+                <br />
+                <span className="word"><span className="text-accent" style={i(2)}>Um</span></span>{' '}
+                <span className="word"><span className="text-accent" style={i(3)}>link.</span></span>
+              </h1>
+              <p className="rise mx-auto mt-6 max-w-[38ch] text-[18px] leading-relaxed text-muted md:text-[20px] lg:mx-0" style={i(4)}>
+                Um cartão bonito que leva o cliente direto ao seu WhatsApp. 3 dias grátis, depois R$ 9,99/mês.
+              </p>
+              <div className="rise mt-8 flex flex-wrap justify-center gap-3 lg:justify-start" style={i(5)}>
+                <CtaButton />
+                <a href="#modelos" onClick={(e) => { if (templates.length) { e.preventDefault(); setExample(active) } }}
+                  className="press inline-flex h-12 items-center gap-2 rounded-full px-6 text-[15px] font-semibold text-accent hover:bg-accent/8">
+                  <Eye size={18} weight="bold" aria-hidden="true" /> Ver um exemplo
+                </a>
+              </div>
             </div>
+            <div className="devices-stage mt-14 md:mt-20 lg:mt-0"><Devices templates={templates} active={active} setActive={setActive} onOpen={() => setExample(active)} /></div>
           </div>
-          <div className="mt-14 px-4 md:mt-20"><Devices templates={templates} active={active} setActive={setActive} onOpen={() => setExample(active)} /></div>
         </section>
+
+        {/* Faixa de nichos: a amplitude dos modelos num relance (única faixa em movimento da página) */}
+        {templates.length > 0 && (
+          <div className="niches mt-6 overflow-hidden py-6" aria-label="Nichos com modelo pronto">
+            <ul className="niches-track flex w-max gap-3">
+              {[...templates, ...templates].map((t, n) => (
+                <li key={`${t.id}-${n}`} aria-hidden={n >= templates.length || undefined}
+                  className="flex shrink-0 items-center gap-2.5 rounded-full border border-line-strong bg-white py-1.5 pr-4 pl-1.5 text-[14px] font-medium whitespace-nowrap">
+                  <img src={responsive(t.config.photo.src, [80]).src} alt="" loading="lazy" className="size-7 rounded-full object-cover" style={focal(t)} />
+                  {t.config.niche || t.name}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* VorenMe Conecta, o diferencial: único bloco escuro da página (o cartão deixa de ser só vitrine).
             Logo depois do hero: é o motivo de escolher o VorenMe. Esquerda: a promessa. Direita: o painel do dono com dados de exemplo. Embaixo: uma visita contada. */}
         <section id="conecta" className={`${WRAP} scroll-mt-20 pt-20 sm:pt-28 md:pt-32`}>
-          <div data-reveal className="conecta grid gap-12 overflow-hidden rounded-[32px] bg-ink p-6 text-white sm:p-10 lg:grid-cols-[1fr_1.05fr] lg:items-center lg:gap-14 lg:p-14">
+          <div data-reveal className="conecta spot spot-dark grid gap-12 overflow-hidden rounded-[32px] bg-ink p-6 text-white sm:p-10 lg:grid-cols-[1fr_1.05fr] lg:items-center lg:gap-14 lg:p-14">
             <div>
               <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[13px] font-semibold"><Target size={16} weight="bold" aria-hidden="true" /> VorenMe Conecta</p>
               <h2 className={`${H2} mt-6 max-w-[15ch]`}>Seu cliente chama no WhatsApp. Você vê o que funciona.</h2>
@@ -390,7 +457,7 @@ function Landing() {
                 <dl className="mt-5 grid grid-cols-2 gap-2">
                   {CONECTA_STATS.map(([n, label], k) => (
                     <div key={label} className="conecta-stat rounded-[16px] bg-[#f5f5f7] p-4" style={i(k)}>
-                      <dd className="text-[30px] leading-none font-semibold tracking-[-0.04em] tabular-nums">{n}</dd>
+                      <dd className="text-[30px] leading-none font-semibold tracking-[-0.04em] tabular-nums"><CountUp value={n} /></dd>
                       <dt className="mt-1.5 text-[13px] text-muted">{label}</dt>
                     </div>
                   ))}
@@ -461,7 +528,7 @@ function Landing() {
         <section id="recursos" className={`${WRAP} scroll-mt-20`}>
           <h2 className={`${H2} max-w-[14ch]`} data-reveal>Tudo o que seu negócio precisa.</h2>
           <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-12">
-            <article data-reveal className="feat group relative min-h-[420px] overflow-hidden rounded-[28px] bg-ink text-white md:col-span-2 md:min-h-[480px] lg:col-span-7 lg:row-span-2 lg:min-h-[560px]">
+            <article data-reveal className="feat spot group relative min-h-[420px] overflow-hidden rounded-[28px] bg-ink text-white md:col-span-2 md:min-h-[480px] lg:col-span-7 lg:row-span-2 lg:min-h-[560px]">
               {pick(1) && <img src={responsive(pick(1).config.photo.src, [900]).src} alt="" loading="lazy" className="feat-img absolute inset-0 h-full w-full object-cover opacity-80" style={focal(pick(1))} />}
               <div className="absolute inset-0 bg-linear-to-t from-black/85 via-black/10 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8 md:p-10">
@@ -475,7 +542,7 @@ function Landing() {
               </div>
             </article>
 
-            <article data-reveal style={i(1)} className="feat stack3 relative flex min-h-[270px] flex-col overflow-hidden rounded-[28px] bg-[#f5f5f7] p-6 sm:p-8 lg:col-span-5">
+            <article data-reveal style={i(1)} className="feat spot stack3 relative flex min-h-[270px] flex-col overflow-hidden rounded-[28px] bg-[#f5f5f7] p-6 sm:p-8 lg:col-span-5">
               <p className="text-[64px] leading-none font-semibold tracking-[-0.06em]">3</p>
               <h3 className="mt-2 text-[20px] font-semibold tracking-[-0.02em]">cartões por conta</h3>
               <p className="mt-1 max-w-[20ch] text-muted">Um para cada negócio ou serviço.</p>
@@ -488,7 +555,7 @@ function Landing() {
               </div>
             </article>
 
-            <article data-reveal style={i(2)} className="feat grid min-h-[270px] gap-6 rounded-[28px] bg-[#f5f5f7] p-6 sm:grid-cols-[1fr_auto] sm:p-8 md:grid-cols-1 lg:col-span-5 lg:grid-cols-[1fr_auto]">
+            <article data-reveal style={i(2)} className="feat spot grid min-h-[270px] gap-6 rounded-[28px] bg-[#f5f5f7] p-6 sm:grid-cols-[1fr_auto] sm:p-8 md:grid-cols-1 lg:col-span-5 lg:grid-cols-[1fr_auto]">
               <div>
                 <h3 className="text-[20px] font-semibold tracking-[-0.02em]">Links ilimitados</h3>
                 <ul className="mt-4 flex flex-wrap gap-1.5">
@@ -509,17 +576,23 @@ function Landing() {
           </div>
         </section>
 
-        {/* Como funciona: a linha se desenha com a rolagem e liga os 3 passos */}
-        <section className={`${WRAP} steps py-20 sm:py-28 md:py-40`}>
-          <h2 className={`${H2} max-w-[16ch]`} data-reveal>Pronto em poucos minutos.</h2>
-          <div className="relative mt-16">
-            <div className="steps-track absolute top-6 right-0 left-0 hidden h-px bg-line-strong md:block"><span className="steps-line" /></div>
-            <ol className="grid gap-10 md:grid-cols-3 md:gap-8">
-              {STEPS.map(({ Icon, title, text }, n) => (
-                <li key={title} className="relative" data-reveal style={i(n)}>
-                  <span className="relative grid size-12 place-items-center rounded-full bg-accent text-accent-fg ring-8 ring-bg"><Icon size={22} aria-hidden="true" /></span>
-                  <h3 className="mt-6 text-[22px] font-semibold tracking-[-0.025em]">{title}</h3>
-                  <p className="mt-2 max-w-[30ch] text-[17px] leading-relaxed text-muted">{text}</p>
+        {/* Como funciona: título fixo à esquerda enquanto os passos passam; a linha vertical se desenha com a rolagem */}
+        <section className={`${WRAP} steps grid gap-12 py-20 sm:py-28 md:py-40 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16`}>
+          <div className="lg:sticky lg:top-28 lg:self-start">
+            <h2 className={`${H2} max-w-[14ch]`} data-reveal>Pronto em poucos minutos.</h2>
+            <p className="mt-4 max-w-[36ch] text-[18px] text-muted" data-reveal>Do modelo ao link compartilhado, tudo pelo celular.</p>
+            <div className="mt-8 hidden lg:block" data-reveal><CtaButton /></div>
+          </div>
+          <div className="relative">
+            <div className="steps-track absolute top-6 bottom-6 left-6 w-px bg-line-strong"><span className="steps-line" /></div>
+            <ol className="grid gap-6">
+              {STEPS.map(({ Icon, title, text }) => (
+                <li key={title} className="step spot relative flex gap-6 rounded-[28px] py-6 pr-6 lg:min-h-[260px] lg:items-center" data-reveal>
+                  <span className="relative z-[2] grid size-12 shrink-0 place-items-center rounded-full bg-accent text-accent-fg ring-8 ring-bg"><Icon size={22} aria-hidden="true" /></span>
+                  <span className="relative z-[2]">
+                    <h3 className="text-[clamp(1.5rem,3vw,2.25rem)] font-semibold tracking-[-0.03em]">{title}</h3>
+                    <p className="mt-2 max-w-[34ch] text-[17px] leading-relaxed text-muted">{text}</p>
+                  </span>
                 </li>
               ))}
             </ol>

@@ -3,6 +3,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { forSave, socialFrom, socialText, waNumber } from '../src/painel/forSave.ts'
+import { blockOrder, CARD_BLOCKS } from '../src/config/types.ts'
 // @ts-expect-error JS da API, sem tipos
 import { validateCardConfig } from '../../vorenMe_api/src/dto/card/config.js'
 // @ts-expect-error JS da API, sem tipos
@@ -46,6 +47,15 @@ test('link sem https ganha https; esquema perigoso continua barrado', () => {
   assert.deepEqual(validateCardConfig(out), [])
   c.socials[0].url = 'javascript:alert(1)'
   assert.equal(validateCardConfig(forSave(c)).length, 1)
+})
+
+test('ordem dos blocos: completa o que falta, tira desconhecido e repetido, bate com a API', () => {
+  const o = blockOrder({ order: ['cupons', 'xx', 'destaque', 'cupons'] })
+  assert.deepEqual(o, ['cupons', 'destaque', 'redes', 'local', 'pix', 'chamada', 'extra', 'marcas'])
+  assert.deepEqual(blockOrder({}), Object.keys(CARD_BLOCKS))
+  const c = structuredClone(templates[0].config)
+  c.order = o
+  assert.deepEqual(validateCardConfig(forSave(c)), [])
 })
 
 test('WhatsApp e redes num campo só', () => {

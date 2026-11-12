@@ -163,6 +163,9 @@ export interface CreatorConfig {
   /** Conecta: ações do visitante. Sem valor = desligado. */
   connect?: ConnectConfig
 
+  /** Ordem dos blocos no cartão (arrastada no painel). Sem valor = ordem padrão de cada estilo. */
+  order?: BlockId[]
+
   /** Main personal website: footer + saved contact. */
   website?: { label: string; url: string }
 
@@ -205,3 +208,13 @@ export interface CreatorConfig {
     copied: string
   }
 }
+
+/** Blocos que a pessoa reordena no painel → classe do bloco no cartão (App.tsx). Conecta fica sempre em 1º. Espelhado em vorenMe_api/src/dto/card/config.js. */
+export const CARD_BLOCKS = {
+  redes: 't-social', destaque: 't-featured', local: 't-local', pix: 't-pix',
+  cupons: 't-coupons', chamada: 't-pship', extra: 't-now', marcas: 't-brands',
+} as const
+export type BlockId = keyof typeof CARD_BLOCKS
+/** Ordem salva + blocos que faltarem no fim (ids desconhecidos e repetidos caem fora). */
+export const blockOrder = (c: { order?: string[] }): BlockId[] =>
+  [...new Set([...(c.order ?? []), ...Object.keys(CARD_BLOCKS)])].filter((k): k is BlockId => k in CARD_BLOCKS)

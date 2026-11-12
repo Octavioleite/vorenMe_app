@@ -14,6 +14,7 @@ import { SocialTiles } from './components/tiles/SocialTiles'
 import { TopBar } from './components/TopBar'
 import { SimpleCard } from './components/SimpleCard'
 import { creator } from './config/creator'
+import { blockOrder, CARD_BLOCKS } from './config/types'
 import { useReveal } from './lib/motion'
 
 /**
@@ -28,9 +29,14 @@ export default function App() {
   useReveal(creator) // a prévia troca o cartão sem remontar: blocos novos também precisam entrar
   if (creator.style === 'simples') return <SimpleCard />
   const hasNow = !!creator.now
+  // Ordem escolhida no painel vence as classes order-* e a composição de cada estilo (index.css). QR fica colado ao Bloco extra.
+  const order = creator.order && blockOrder(creator)
+  const orderCss = order && order.map((id, i) => `.tiles>.${CARD_BLOCKS[id]}{order:${i * 2} !important}`).join('')
+    + `.tiles>.t-qr{order:${order.indexOf('extra') * 2 + 1} !important}`
 
   return (
     <>
+      {orderCss && <style>{orderCss}</style>}
       <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-10">
         <TopBar />
         <div className="layout lg:grid lg:grid-cols-12 lg:items-start lg:gap-10">

@@ -1,10 +1,10 @@
 import {
-  ArrowCounterClockwise, ArrowLeft, Desktop, DeviceMobile, CircleNotch, NavigationArrow, ArrowRight, Target, ArrowSquareOut, ChatCircleText, Check, CloudArrowUp, Confetti, Copy, WarningCircle, Code, Eye, GearSix, IdentificationCard, Image as ImageIcon, User, X, LinkSimple, ListBullets, MapPin, Megaphone, CurrencyDollar, Palette, Plus, ShareNetwork, Sparkle, Ticket, Star, Trash,
+  ArrowCounterClockwise, ArrowLeft, CaretDown, CaretUp, DotsSixVertical, Desktop, DeviceMobile, CircleNotch, NavigationArrow, ArrowRight, Target, ArrowSquareOut, ChatCircleText, Check, CloudArrowUp, Confetti, Copy, WarningCircle, Code, Eye, GearSix, IdentificationCard, Image as ImageIcon, User, X, LinkSimple, ListBullets, MapPin, Megaphone, CurrencyDollar, Palette, Plus, ShareNetwork, Sparkle, Ticket, Star, Trash,
 } from '@phosphor-icons/react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { platformMeta } from '../components/icons'
 import { addressFromCep, addressFromGeo, placeLinks } from '../lib/places'
-import { STYLES, TEXT_IDS, TEXT_SIZE, textLayout, type CreatorConfig, type Style, type TextId, type TextLayout, type Platform, type SocialLink } from '../config/types'
+import { STYLES, TEXT_IDS, TEXT_SIZE, blockOrder, textLayout, type BlockId, type CreatorConfig, type Style, type TextId, type TextLayout, type Platform, type SocialLink } from '../config/types'
 import { api, ApiError, type Card } from './api'
 import { ConnectEditor } from './ConnectEditor'
 import { DevicePreview } from './DevicePreview'
@@ -33,6 +33,8 @@ const BLOCKS: { id: string; title: string; text: string; Icon: typeof Target; on
   { id: 'marcas', title: 'Marcas', text: 'Com quem você já trabalhou', Icon: ListBullets, on: (c) => !!c.brands?.length },
 ]
 const isBlock = (id: string) => BLOCKS.some((b) => b.id === id)
+/** Linhas de "Ordem no cartão": Redes + os blocos que existem em CARD_BLOCKS (Conecta fica sempre em 1º). */
+const ORDER_ROWS = [{ id: 'redes', title: 'Redes', Icon: LinkSimple, on: (c: CreatorConfig) => c.socials.length > 0 }, ...BLOCKS]
 /** Abre a seção e tudo que a contém (<details>) antes de rolar até ela. */
 const goTo = (id: string) => {
   const el = document.getElementById(id)
@@ -300,6 +302,7 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
   const pinned = useRef(false)
   // Bloco aberto uma vez continua montado (apagar o conteúdo não faz a seção sumir no meio da digitação).
   const [opened, setOpened] = useState(() => new Set(BLOCKS.filter((b) => b.on(card.config)).map((b) => b.id)))
+  const [dragging, setDragging] = useState<BlockId>()
   const jump = (id: string) => {
     pinned.current = true
     setActive(id === 'conecta' && hasConecta ? 'conecta' : isBlock(id) ? 'blocos' : id === 'redes' ? 'contato' : id)
@@ -376,6 +379,18 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
   const lay = textLayout(c.photo, mobileView)
   const words = c.bio.trim().split(/\s+/).filter(Boolean).length
   const full = step < 0
+  // Ordem no cartão: só os blocos ligados aparecem; os desligados guardam o lugar em c.order.
+  const rows = c.style === 'simples' ? [] : blockOrder(c).flatMap((id) => {
+    const r = ORDER_ROWS.find((r) => r.id === id)!
+    return r.on(c) ? [{ ...r, id }] : []
+  })
+  const move = (from: BlockId, to: BlockId) => set((x) => {
+    const o = blockOrder(x)
+    const down = o.indexOf(from) < o.indexOf(to)
+    o.splice(o.indexOf(from), 1)
+    o.splice(o.indexOf(to) + (down ? 1 : 0), 0, from)
+    x.order = o
+  })
   return (
     // noValidate: os avisos nativos do navegador saem no idioma dele (inglês, às vezes); quem valida é o servidor, em português.
     <form noValidate onSubmit={(e: FormEvent) => { e.preventDefault(); save() }}>
@@ -632,6 +647,34 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
                   })}
                 </div>
               </div>
+              {rows.length > 1 && (
+                <div className="mt-3 grid gap-2">
+                  <div className="px-1">
+                    <h3 className="text-[15px] font-semibold tracking-tight">Ordem no cartão</h3>
+                    <p className="text-[13px] text-muted">Arraste ou use as setas.</p>
+                  </div>
+                  <ol className="grid gap-1.5">
+                    {rows.map(({ id, title, Icon }, i) => (
+                      <li key={id} draggable
+                        onDragStart={(e) => { setDragging(id); e.dataTransfer.effectAllowed = 'move' }}
+                        onDragEnd={() => setDragging(undefined)}
+                        onDragOver={(e) => { if (dragging) e.preventDefault() }}
+                        onDrop={(e) => { e.preventDefault(); if (dragging && dragging !== id) move(dragging, id) }}
+                        className={`flex cursor-grab items-center gap-2.5 rounded-[12px] border border-line bg-surface py-1.5 pr-1.5 pl-3 active:cursor-grabbing ${dragging === id ? 'opacity-40' : ''}`}>
+                        <DotsSixVertical size={16} weight="bold" className="text-muted" aria-hidden="true" />
+                        <Icon size={16} weight="bold" className="text-accent" aria-hidden="true" />
+                        <span className="flex-1 text-[14px] font-medium">{title}</span>
+                        <button type="button" className={`${iconBtn} disabled:opacity-30`} disabled={i === 0} onClick={() => move(id, rows[i - 1].id)} aria-label={`Subir ${title}`} title="Subir">
+                          <CaretUp size={15} weight="bold" />
+                        </button>
+                        <button type="button" className={`${iconBtn} disabled:opacity-30`} disabled={i === rows.length - 1} onClick={() => move(id, rows[i + 1].id)} aria-label={`Descer ${title}`} title="Descer">
+                          <CaretDown size={15} weight="bold" />
+                        </button>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
             </section>
           )}
 
