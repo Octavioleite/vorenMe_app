@@ -4,6 +4,11 @@ export type TextId = (typeof TEXT_IDS)[number]
 /** x/y em % (0 = esquerda/topo, 100 = direita/base); size em px. Campo vazio = padrão do modelo. */
 export interface TextLayout { x?: number; y?: number; size?: number }
 export const TEXT_SIZE = { min: 8, max: 200 }
+/** Abaixo disto o cartão usa o ajuste de textos do celular (mesmo corte do md: do Tailwind). */
+export const MOBILE_QUERY = '(max-width: 767.98px)'
+/** Ajuste de textos que vale na tela atual. */
+export const textLayout = (p: { layout?: Photo['layout']; layoutMobile?: Photo['layout'] }, mobile: boolean) =>
+  (mobile ? p.layoutMobile ?? p.layout : p.layout) ?? {}
 
 export type Platform = 'instagram' | 'tiktok' | 'youtube' | 'pinterest' | 'spotify' | 'x' | 'website'
 
@@ -23,8 +28,10 @@ export interface Photo {
   zoom?: number
   /** 'contain' = mostra a foto inteira, sem cortar. */
   fit?: 'contain'
-  /** Posição e tamanho de cada texto sobre a foto. Vazio = padrão do modelo. */
+  /** Posição e tamanho de cada texto sobre a foto em tablet e computador (768px ou mais). Vazio = padrão do modelo. */
   layout?: Partial<Record<TextId, TextLayout>>
+  /** O mesmo para o celular (abaixo de 768px). Ausente = usa `layout` (cartões de antes da separação); {} = padrão do modelo. */
+  layoutMobile?: Partial<Record<TextId, TextLayout>>
 }
 
 export interface SocialLink {

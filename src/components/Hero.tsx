@@ -1,7 +1,7 @@
 import { Envelope, MapPin, UserPlus, WhatsappLogo } from '@phosphor-icons/react'
-import { useLayoutEffect, useRef, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, useSyncExternalStore, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { creator } from '../config/creator'
-import { TEXT_IDS, TEXT_SIZE, type TextId, type TextLayout } from '../config/types'
+import { MOBILE_QUERY, TEXT_IDS, TEXT_SIZE, textLayout, type TextId, type TextLayout } from '../config/types'
 import { connectPrimary, emailHref, initials, whatsappHref } from '../config/derived'
 import { CHANNEL_TARGET } from '../lib/links'
 import { CHANNEL_ICON } from './icons'
@@ -14,7 +14,11 @@ import { SmartImage } from './ui/SmartImage'
 const editable = window.parent !== window && new URLSearchParams(location.search).has('preview')
 const pct = (v: number) => Math.round(Math.min(100, Math.max(0, v)) * 10) / 10
 const px = (v: number) => Math.round(Math.min(TEXT_SIZE.max, Math.max(TEXT_SIZE.min, v)))
-const send = (id: TextId, patch: TextLayout) => parent.postMessage({ type: 'vorenme:layout', id, patch }, location.origin)
+const send = (id: TextId, patch: TextLayout) =>
+  parent.postMessage({ type: 'vorenme:layout', id, patch, mobile: matchMedia(MOBILE_QUERY).matches }, location.origin)
+/** Celular e telas maiores têm ajustes de texto separados; troca ao vivo se a tela mudar de tamanho. */
+const mq = matchMedia(MOBILE_QUERY)
+const useMobile = () => useSyncExternalStore((cb) => (mq.addEventListener('change', cb), () => mq.removeEventListener('change', cb)), () => mq.matches)
 
 /** Posição atual do elemento em % do espaço livre do cartão (translate(-x%,-y%) mantém tudo dentro da foto). */
 function posOf(el: HTMLElement) {
@@ -25,9 +29,8 @@ function posOf(el: HTMLElement) {
 }
 
 /** Uma peça de texto: no lugar padrão (dentro do bloco de baixo) ou solta, onde a pessoa deixou. */
-function Piece({ id, label, className = '', children }: { id: TextId; label: string; className?: string; children: ReactNode }) {
+function Piece({ id, label, l, className = '', children }: { id: TextId; label: string; l?: TextLayout; className?: string; children: ReactNode }) {
   const ref = useRef<HTMLSpanElement>(null)
-  const l = creator.photo.layout?.[id]
   // O arrasto usa transform; some quando a nova posição chega do editor (próximo render).
   useLayoutEffect(() => { if (ref.current) ref.current.style.transform = '' })
 
@@ -113,7 +116,7 @@ function Piece({ id, label, className = '', children }: { id: TextId; label: str
 function IdentityCard() {
   const tilt = useTilt<HTMLDivElement>(editable ? 0 : 7) // na prévia, a inclinação atrapalharia o arrasto
   const { name, username, photo, niche, location } = creator
-  const lay = photo.layout ?? {}
+  const lay = textLayout(photo, useMobile())
   const free = (id: TextId) => lay[id]?.x !== undefined && lay[id]?.y !== undefined
   const pieces: Record<TextId, { label: string; className: string; content: ReactNode } | null> = {
     // Sem sobrenome (lojas, marcas): o ponto de destaque vai para o fim do nome.
@@ -131,7 +134,7 @@ function IdentityCard() {
     if (!p) return null
     // O lugar reservado é um span comum: o Piece aplicaria position:absolute do layout e não ocuparia espaço.
     if (free(id)) return <span aria-hidden="true" className={`${p.className} ${wrap} invisible`}>{p.content}</span>
-    return <Piece id={id} label={p.label} className={`${p.className} ${wrap}`}>{p.content}</Piece>
+    return <Piece id={id} label={p.label} l={lay[id]} className={`${p.className} ${wrap}`}>{p.content}</Piece>
   }
   const moved = TEXT_IDS.filter(free)
   const rowFree = free('username') && (!location || free('location'))
@@ -164,7 +167,7 @@ function IdentityCard() {
         </div>
         {moved.map((id) => {
           const p = pieces[id]
-          return p && <Piece key={id} id={id} label={p.label} className={`${p.className} text-[#FAFAF9] [text-shadow:0_1px_12px_rgb(0_0_0/0.45)]`}>{p.content}</Piece>
+          return p && <Piece key={id} id={id} label={p.label} l={lay[id]} className={`${p.className} text-[#FAFAF9] [text-shadow:0_1px_12px_rgb(0_0_0/0.45)]`}>{p.content}</Piece>
         })}
         <span aria-hidden="true" className="id-sheen" />
       </div>

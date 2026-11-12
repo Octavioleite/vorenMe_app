@@ -1,6 +1,7 @@
 import { ArrowsOutCardinal, CaretDown, CircleNotch, UploadSimple, WarningCircle, X } from '@phosphor-icons/react'
 import { useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
 import { photoStyle } from '../lib/img'
+import type { Style } from '../config/types'
 import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import { ApiError, uploadImage } from './api'
@@ -136,13 +137,40 @@ export function Tags({ label, hint, value, onChange, placeholder }: {
 
 /** Foto: enviar do aparelho (clique ou arrastar) ou colar um link. */
 type Frame = { focal?: string; zoom?: number; fit?: 'contain' }
+
+/** Formato em que cada estilo mostra a foto. Espelha o aspect-ratio do .id-card em index.css
+    (padrão 4:5; tinta/clinica 1:1; forte 21:9 só no computador; simples é o círculo do SimpleCard). Mudou lá, muda aqui. */
+export interface PhotoSpec { aspect: string; ratio: number; shape: string; px: string; note?: string; round?: boolean }
+const VERTICAL: PhotoSpec = { aspect: 'aspect-[4/5]', ratio: 4 / 5, shape: 'vertical (4:5)', px: '1080 × 1350 px' }
+const SQUARE: PhotoSpec = { aspect: 'aspect-square', ratio: 1, shape: 'quadrada (1:1)', px: '1080 × 1080 px' }
+export const PHOTO_SPEC: Record<Style, PhotoSpec> = {
+  criador: VERTICAL, atelie: VERTICAL, sereno: VERTICAL, glam: VERTICAL, leve: VERTICAL,
+  tinta: SQUARE, clinica: SQUARE,
+  forte: { ...VERTICAL, note: 'No computador ela vira uma faixa larga e baixa: deixe o rosto no centro da foto.' },
+  simples: { ...SQUARE, round: true, note: 'Aparece pequena e redonda: use um close do rosto.' },
+}
+/** Imagem do destaque (FeaturedTile): 16:9 no computador, 4:3 no celular. */
+export const FEATURED_SPEC: PhotoSpec = { aspect: 'aspect-video', ratio: 16 / 9, shape: 'horizontal (16:9)', px: '1600 × 900 px', note: 'No celular as laterais aparecem um pouco cortadas.' }
+
+/** O tamanho ideal fica visível antes mesmo de enviar a foto. */
+export function PhotoHint({ spec, style }: { spec: PhotoSpec; style?: string }) {
+  return (
+    <p className="mt-1.5 text-[12px] text-muted">
+      <strong className="font-semibold text-ink">Tamanho ideal{style && ` no estilo ${style}`}: {spec.px}</strong>, foto {spec.shape}.{spec.note && ` ${spec.note}`}
+    </p>
+  )
+}
 const clamp = (n: number) => Math.round(Math.min(100, Math.max(0, n)))
 
 /** Enquadrar a foto: arrastar move, o controle de tamanho aproxima, "Foto inteira" não corta nada.
     Mesma proporção e o mesmo photoStyle do cartão, então o que se vê aqui é o que vai ao ar. */
-export function PhotoFrame({ src, value, onChange, aspect, fallback = '50% 50%' }: {
-  src: string; value: Frame; onChange: (f: Frame) => void; aspect: string; fallback?: string
+export function PhotoFrame({ src, value, onChange, spec, fallback = '50% 50%' }: {
+  src: string; value: Frame; onChange: (f: Frame) => void; spec: PhotoSpec; fallback?: string
 }) {
+  // Proporção da foto enviada: se for muito diferente da do estilo, avisa que ela vai ser cortada.
+  const [natural, setNatural] = useState(0)
+  const kind = (r: number) => (r > 1.05 ? 'horizontal' : r < 0.95 ? 'vertical' : 'quadrada')
+  const off = natural > 0 && Math.abs(Math.log(natural / spec.ratio)) > 0.2
   const [x, y] = (value.focal ?? fallback).split(' ').map(parseFloat)
   const zoom = value.zoom ?? 1
   const whole = value.fit === 'contain'
@@ -166,14 +194,21 @@ export function PhotoFrame({ src, value, onChange, aspect, fallback = '50% 50%' 
   return (
     <div className="grid gap-3">
       <div role="slider" tabIndex={0} aria-label="Posição da foto. Use as setas para mover." aria-valuetext={`${x}% horizontal, ${y}% vertical`}
-        className={`relative w-full max-w-[260px] cursor-grab touch-none overflow-hidden rounded-[14px] bg-surface-2 select-none active:cursor-grabbing focus-visible:outline-2 focus-visible:outline-accent ${aspect}`}
+        className={`relative w-full max-w-[260px] cursor-grab touch-none overflow-hidden rounded-[14px] bg-surface-2 select-none active:cursor-grabbing focus-visible:outline-2 focus-visible:outline-accent ${spec.aspect} ${spec.round ? '!rounded-full max-w-[200px]' : ''}`}
         onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); drag.current = { px: e.clientX, py: e.clientY, x, y } }}
         onPointerMove={onMove} onPointerUp={() => (drag.current = null)} onPointerCancel={() => (drag.current = null)} onKeyDown={onKey}>
-        <img src={thumb(src, 640)} alt="" draggable={false} className="pointer-events-none absolute inset-0 h-full w-full" style={photoStyle(value, fallback)} />
+        <img src={thumb(src, 640)} alt="" draggable={false} className="pointer-events-none absolute inset-0 h-full w-full" style={photoStyle(value, fallback)}
+          onLoad={(e) => setNatural(e.currentTarget.naturalWidth / e.currentTarget.naturalHeight)} />
         <span className="pointer-events-none absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-1 text-[11px] font-medium text-white">
           <ArrowsOutCardinal size={12} weight="bold" aria-hidden="true" /> Arraste para ajustar
         </span>
       </div>
+      {off && !whole && (
+        <p className="flex max-w-[360px] items-start gap-1.5 text-[12px] text-amber-700">
+          <WarningCircle size={15} weight="bold" className="mt-px shrink-0" aria-hidden="true" />
+          Sua foto é {kind(natural)} e aqui ela aparece {spec.shape}, então uma parte fica de fora. Arraste para escolher o que mostrar ou marque "Foto inteira".
+        </p>
+      )}
       <label className="grid max-w-[260px] gap-1.5 text-[13px] font-medium">
         <span className="flex justify-between">Tamanho <span className="text-muted tabular-nums">{Math.round(zoom * 100)}%</span></span>
         <input type="range" min={1} max={3} step={0.05} value={zoom} disabled={whole} className="accent-accent disabled:opacity-40"

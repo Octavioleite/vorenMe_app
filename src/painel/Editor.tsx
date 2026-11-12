@@ -1,17 +1,17 @@
 import {
-  ArrowCounterClockwise, ArrowLeft, CircleNotch, NavigationArrow, ArrowRight, Target, ArrowSquareOut, ChatCircleText, Check, CloudArrowUp, Confetti, Copy, WarningCircle, Code, Eye, GearSix, IdentificationCard, Image as ImageIcon, User, X, LinkSimple, ListBullets, MapPin, Megaphone, CurrencyDollar, Palette, Plus, ShareNetwork, Sparkle, Ticket, Star, Trash,
+  ArrowCounterClockwise, ArrowLeft, Desktop, DeviceMobile, CircleNotch, NavigationArrow, ArrowRight, Target, ArrowSquareOut, ChatCircleText, Check, CloudArrowUp, Confetti, Copy, WarningCircle, Code, Eye, GearSix, IdentificationCard, Image as ImageIcon, User, X, LinkSimple, ListBullets, MapPin, Megaphone, CurrencyDollar, Palette, Plus, ShareNetwork, Sparkle, Ticket, Star, Trash,
 } from '@phosphor-icons/react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { platformMeta } from '../components/icons'
 import { addressFromCep, addressFromGeo, placeLinks } from '../lib/places'
-import { STYLES, TEXT_IDS, TEXT_SIZE, type CreatorConfig, type Style, type TextId, type TextLayout, type Platform, type SocialLink } from '../config/types'
+import { STYLES, TEXT_IDS, TEXT_SIZE, textLayout, type CreatorConfig, type Style, type TextId, type TextLayout, type Platform, type SocialLink } from '../config/types'
 import { api, ApiError, type Card } from './api'
 import { ConnectEditor } from './ConnectEditor'
 import { DevicePreview } from './DevicePreview'
 import { GuideButton } from './Guide'
 import { confetti } from './confetti'
 import { SLUG, forSave, socialFrom, socialText, toSlug, waNumber } from './forSave'
-import { Errors, Field, ImagePicker, PhotoFrame, ask, useCopyLink, Section, Tags, Thumb, errorText, iconBtn, input, primary, secondary } from './ui'
+import { Errors, Field, FEATURED_SPEC, ImagePicker, PHOTO_SPEC, PhotoFrame, PhotoHint, ask, useCopyLink, Section, Tags, Thumb, errorText, iconBtn, input, primary, secondary } from './ui'
 
 const PLATFORMS = Object.keys(platformMeta) as Platform[]
 const NAV = [['identidade', 'Você'], ['aparencia', 'Visual'], ['contato', 'Contato'], ['blocos', 'Blocos']] as const
@@ -206,7 +206,8 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
   const [active, setActive] = useState<string>(NAV[0][0])
   // Conecta ativo ganha atalho próprio na barra (é o bloco que mais importa).
   const hasConecta = !!config.connect
-  const nav: readonly (readonly [string, string])[] = hasConecta ? [...NAV, ['conecta', 'Conecta']] : NAV
+  // Avançado fica sempre por último: são as configurações que raramente mudam.
+  const nav: readonly (readonly [string, string])[] = [...NAV, ...(hasConecta ? [['conecta', 'Conecta'] as const] : []), ['avancado', 'Avançado']]
   const frame = useRef<HTMLIFrameElement>(null)
 
   const current = JSON.stringify(config) // uma vez por render (config pode ter foto em data URL)
@@ -231,14 +232,21 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
       fn(next)
       return next
     })
-  /** Mescla na posição/tamanho de um texto; campos undefined voltam ao padrão do modelo. */
-  const setLayout = (id: TextId, patch: TextLayout) =>
+  /** Mescla na posição/tamanho de um texto, no ajuste do celular ou no de tablet/computador; campos undefined voltam ao padrão.
+      Cartão de antes da separação (sem layoutMobile): na primeira mudança o celular ganha cópia do ajuste atual,
+      e daí em diante um nunca mexe no outro. */
+  const setLayout = (id: TextId, patch: TextLayout, mobile: boolean) =>
     set((c) => {
-      const next = Object.fromEntries(Object.entries({ ...c.photo.layout?.[id], ...patch }).filter(([, v]) => v !== undefined))
-      const all = { ...c.photo.layout, [id]: next }
+      c.photo.layoutMobile ??= structuredClone(c.photo.layout ?? {})
+      const key = mobile ? 'layoutMobile' : 'layout'
+      const next = Object.fromEntries(Object.entries({ ...c.photo[key]?.[id], ...patch }).filter(([, v]) => v !== undefined))
+      const all = { ...c.photo[key], [id]: next }
       if (!Object.keys(next).length) delete all[id]
-      c.photo.layout = Object.keys(all).length ? all : undefined
+      // O celular guarda {} (padrão próprio) em vez de sumir: sumir faria ele voltar a copiar o computador.
+      c.photo[key] = Object.keys(all).length || mobile ? all : undefined
     })
+  /** Qual ajuste a lista de textos mostra: segue o aparelho escolhido na prévia (tablet usa o do computador). */
+  const [mobileView, setMobileView] = useState(true)
   const setSocial = (i: number, patch: Partial<SocialLink>) => set((c) => Object.assign(c.socials[i], patch))
 
   /** true = salvou. Envios entram em fila: quem chama durante um envio espera por ele (não vira "falhou").
@@ -322,7 +330,7 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
         setLayout(e.data.id, {
           ...(Number.isFinite(px) && Number.isFinite(py) && { x: px, y: py }),
           ...(Number.isFinite(size) && { size }),
-        })
+        }, e.data.mobile === true)
       }
     }
     addEventListener('message', onReady)
@@ -365,6 +373,7 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
   }
 
   const c = config
+  const lay = textLayout(c.photo, mobileView)
   const words = c.bio.trim().split(/\s+/).filter(Boolean).length
   const full = step < 0
   return (
@@ -462,8 +471,8 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
               <div className="@md:col-span-2">
                 <ImagePicker value={c.photo.src} onChange={(v) => set((x) => { x.photo = { ...x.photo, src: v, focal: undefined, zoom: undefined, fit: undefined } })} onError={setError}
                   thumbClass="size-20 rounded-full" fallback={<User size={24} aria-hidden="true" />} />
-                <p className="mt-1.5 text-[12px] text-muted">Foto vertical, com o rosto bem visível.</p>
-                {c.photo.src && <div className="mt-3"><PhotoFrame src={c.photo.src} value={c.photo} aspect="aspect-[4/5]"
+                <PhotoHint spec={PHOTO_SPEC[c.style ?? 'criador']} style={STYLE_NAMES[c.style ?? 'criador'][0]} />
+                {c.photo.src && <div className="mt-3"><PhotoFrame src={c.photo.src} value={c.photo} spec={PHOTO_SPEC[c.style ?? 'criador']}
                   onChange={(f) => set((x) => { x.photo = { ...x.photo, ...f } })} /></div>}
               </div>
               <Field label="Nome"><input className={input} value={c.name.first} onChange={(e) => set((x) => { x.name.first = e.target.value })} /></Field>
@@ -494,6 +503,7 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
                         <input type="radio" name="style" className="sr-only" checked={on} onChange={() => set((x) => { x.style = s })} />
                         <span data-style={s} className="display block text-[20px] leading-tight font-semibold tracking-[-0.03em]">{STYLE_NAMES[s][0]}</span>
                         <span className="mt-0.5 block text-[12px] text-muted">{STYLE_NAMES[s][1]}</span>
+                        <span className="mt-1.5 block text-[11px] font-medium text-muted">Foto {PHOTO_SPEC[s].round ? 'redonda' : PHOTO_SPEC[s].shape}</span>
                       </label>
                     )
                   })}
@@ -748,7 +758,8 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
                     <span className="text-[13px] font-medium">Imagem</span>
                     <ImagePicker value={c.featured.image.src} onChange={(v) => set((x) => { x.featured!.image = { ...x.featured!.image, src: v, focal: undefined, zoom: undefined, fit: undefined } })} onError={setError}
                       thumbClass="h-14 w-[100px] rounded-[8px]" fallback={<ImageIcon size={20} aria-hidden="true" />} />
-                    {c.featured.image.src && <PhotoFrame src={c.featured.image.src} value={c.featured.image} aspect="aspect-video"
+                    <PhotoHint spec={FEATURED_SPEC} />
+                    {c.featured.image.src && <PhotoFrame src={c.featured.image.src} value={c.featured.image} spec={FEATURED_SPEC}
                       onChange={(f) => set((x) => { x.featured!.image = { ...x.featured!.image, ...f } })} />}
                   </div>
                   <fieldset className="grid gap-2 @md:col-span-2">
@@ -832,7 +843,7 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
           )}
 
           {/* Avançado: o que é raro mudar ou pode quebrar algo (link, QR) fica guardado aqui. */}
-          <details hidden={!full} className="group rounded-[20px] border border-dashed border-line px-5 py-4 sm:px-6">
+          <details id="avancado" hidden={!full} className="group scroll-mt-36 rounded-[20px] border border-dashed border-line px-5 py-4 sm:px-6">
             <summary className="flex cursor-pointer list-none items-center gap-2.5 [&::-webkit-details-marker]:hidden">
               <GearSix size={16} className="text-muted" aria-hidden="true" />
               <span className="text-sm font-medium text-muted">Configurações avançadas</span>
@@ -868,16 +879,21 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <p className="text-[13px] font-medium">Textos sobre a foto</p>
-                    <p className="text-[12px] text-muted">Na prévia, arraste cada texto para mover e a bolinha do canto para mudar o tamanho.</p>
+                    <p className="max-w-[56ch] text-[12px] text-muted">Na prévia, arraste cada texto para mover e a bolinha do canto para mudar o tamanho.
+                      O celular tem um ajuste e o computador outro: o que você muda num não mexe no outro. O tablet usa o do computador.</p>
                   </div>
-                  <button type="button" disabled={!c.photo.layout} className={`${secondary} py-2 text-[13px] whitespace-normal`}
-                    onClick={() => set((x) => { delete x.photo.layout })}>
-                    <ArrowCounterClockwise size={14} weight="bold" aria-hidden="true" /> Restaurar padrão
+                  <button type="button" disabled={!Object.keys(lay).length} className={`${secondary} py-2 text-[13px] whitespace-normal`}
+                    onClick={() => set((x) => { x.photo.layoutMobile ??= structuredClone(x.photo.layout ?? {}); if (mobileView) x.photo.layoutMobile = {}; else delete x.photo.layout })}>
+                    <ArrowCounterClockwise size={14} weight="bold" aria-hidden="true" /> Restaurar {mobileView ? 'celular' : 'computador'}
                   </button>
                 </div>
+                <p className="flex items-center gap-1.5 rounded-[10px] bg-accent/8 px-3 py-2 text-[12px] font-medium text-accent">
+                  {mobileView ? <DeviceMobile size={15} weight="bold" aria-hidden="true" /> : <Desktop size={15} weight="bold" aria-hidden="true" />}
+                  Mostrando o ajuste do {mobileView ? 'celular' : 'tablet e computador'}. Troque o aparelho na prévia para ajustar o outro.
+                </p>
                 <div className="grid gap-2 @xl:grid-cols-2">
                   {TEXT_LABELS.filter(([id]) => (id !== 'location' || c.location) && (id !== 'last' || c.name.last)).map(([id, label]) => {
-                    const l = c.photo.layout?.[id]
+                    const l = lay[id]
                     const moved = l?.x !== undefined
                     return (
                       <div key={id} className="flex items-center gap-2 rounded-[12px] bg-surface-2/60 py-1.5 pr-1.5 pl-3">
@@ -887,13 +903,13 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
                           <input type="number" inputMode="numeric" min={TEXT_SIZE.min} max={TEXT_SIZE.max} placeholder="Auto"
                             aria-label={`Tamanho de ${label} em px`} value={l?.size ?? ''}
                             className="min-w-0 flex-1 bg-transparent py-1.5 pl-2.5 text-[16px] text-ink outline-none sm:text-[14px]"
-                            onChange={(e) => setLayout(id, { size: e.target.value ? +e.target.value : undefined })}
-                            onBlur={() => l?.size && setLayout(id, { size: Math.min(TEXT_SIZE.max, Math.max(TEXT_SIZE.min, l.size)) })} />
+                            onChange={(e) => setLayout(id, { size: e.target.value ? +e.target.value : undefined }, mobileView)}
+                            onBlur={() => l?.size && setLayout(id, { size: Math.min(TEXT_SIZE.max, Math.max(TEXT_SIZE.min, l.size)) }, mobileView)} />
                           <span className="pr-2 text-[12px] text-muted">px</span>
                         </div>
                         <button type="button" disabled={!l} title={`Voltar ${label} ao padrão`} aria-label={`Voltar ${label} ao padrão`}
                           className="press grid size-8 shrink-0 place-items-center rounded-full text-muted hover:bg-surface hover:text-ink disabled:opacity-30 pointer-coarse:size-10"
-                          onClick={() => setLayout(id, { x: undefined, y: undefined, size: undefined })}>
+                          onClick={() => setLayout(id, { x: undefined, y: undefined, size: undefined }, mobileView)}>
                           <ArrowCounterClockwise size={14} aria-hidden="true" />
                         </button>
                       </div>
@@ -926,7 +942,7 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
               <X size={17} />
             </button>
           )}
-          <DevicePreview frame={frame} src={`/${saved.slug}?preview`} pulse={pulse} />
+          <DevicePreview frame={frame} src={`/${saved.slug}?preview`} pulse={pulse} onDevice={(d) => setMobileView(d === 'celular')} />
         </aside>
         {!preview && (
           <button type="button" onClick={() => setPreview(true)}
