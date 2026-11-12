@@ -34,6 +34,6 @@ function Preview() {
 
 const inPanel = window.parent !== window && new URLSearchParams(location.search).has('preview')
 const slug = location.pathname.split('/')[1]
-if (!inPanel && slug) startTracking(slug)
+if (!inPanel && slug) startTracking(slug, creator.connect?.actions.map((a) => a.id))
 
 createRoot(document.getElementById('root')!).render(<StrictMode>{inPanel ? <Preview /> : <App />}</StrictMode>)

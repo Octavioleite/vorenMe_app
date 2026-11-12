@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowLeft, ArrowUp, CalendarBlank, Lightbulb, X } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
 import { api, ApiError, type Card } from './api'
+import { Conecta } from './Conecta'
 import { Errors, errorText, input, tipAt } from './ui'
 
 interface Summary {
@@ -26,6 +27,7 @@ const TARGET: Record<string, string> = {
   whatsapp: 'WhatsApp', email: 'E-mail', site: 'Site', website: 'Site', instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube',
   pinterest: 'Pinterest', spotify: 'Spotify', x: 'X (Twitter)', cupom: 'Cupom copiado', pix: 'Pix', maps: 'Google Maps', waze: 'Waze',
   uber: 'Uber', avaliar: 'Avaliar no Google', contato: 'Salvar contato', compartilhar: 'Compartilhar', link: 'Outros links',
+  telefone: 'Ligação', formulario: 'Formulário de contato',
 }
 
 /* Datas em YYYY-MM-DD no fuso de Brasília (o mesmo da API). */
@@ -381,6 +383,8 @@ export function Stats({ cardId, onBack, onAuthLost, admin = false }: { cardId: s
           )}
         </>
       )}
+
+      {card && !admin && <Conecta card={card} range={range} onAuthLost={onAuthLost} />}
     </div>
   )
 }

@@ -2,7 +2,9 @@ import { Envelope, MapPin, UserPlus, WhatsappLogo } from '@phosphor-icons/react'
 import { useLayoutEffect, useRef, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { creator } from '../config/creator'
 import { TEXT_IDS, TEXT_SIZE, type TextId, type TextLayout } from '../config/types'
-import { emailHref, initials, whatsappHref } from '../config/derived'
+import { connectPrimary, emailHref, initials, whatsappHref } from '../config/derived'
+import { CHANNEL_TARGET } from '../lib/links'
+import { CHANNEL_ICON } from './icons'
 import { useTilt } from '../lib/motion'
 import { ExternalLink } from './ui/ExternalLink'
 import { SaveContact } from './ui/SaveContact'
@@ -174,7 +176,11 @@ const i = (n: number) => ({ '--i': n }) as CSSProperties
 
 export function Hero({ className = '' }: { className?: string }) {
   const { bio, labels } = creator
-  const primary = whatsappHref
+  // Conecta ligado: a ação principal do dono toma o lugar do WhatsApp genérico.
+  const primary = connectPrimary
+    ? { href: connectPrimary.href, label: connectPrimary.action.label, Icon: CHANNEL_ICON[connectPrimary.action.channel],
+        track: { 'data-track': CHANNEL_TARGET[connectPrimary.action.channel], 'data-action': connectPrimary.action.id } }
+    : whatsappHref
     ? { href: whatsappHref, label: labels.whatsapp, Icon: WhatsappLogo }
     : emailHref
       ? { href: emailHref, label: labels.email, Icon: Envelope }
@@ -191,6 +197,7 @@ export function Hero({ className = '' }: { className?: string }) {
           {primary && (
             <ExternalLink
               href={primary.href}
+              {...('track' in primary ? primary.track : {})}
               className="press flex min-h-[52px] items-center justify-center gap-2 rounded-[var(--radius-ctl)] bg-accent px-3 py-2 text-center text-[15px] leading-tight sm:px-4 font-semibold text-accent-fg hover:brightness-110"
             >
               <primary.Icon size={20} weight="bold" aria-hidden="true" className="shrink-0" />

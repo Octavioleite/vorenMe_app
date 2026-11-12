@@ -64,19 +64,20 @@ export function Logo({ size = 32 }: { size?: number }) {
   )
 }
 
-/** Seção recolhível (<details> nativo). `badge` aparece à direita: "Opcional", "2 cupons"... */
-export function Section({ id, icon, title, description, badge, defaultOpen = true, hidden, children }: {
-  id: string; icon: ReactNode; title: string; description?: string; badge?: string; defaultOpen?: boolean; hidden?: boolean; children: ReactNode
+/** Seção recolhível (<details> nativo). `badge` aparece à direita: "Opcional", "2 cupons"...
+ *  `highlight`: seção que queremos que a pessoa note (borda e ícone na cor de destaque). */
+export function Section({ id, icon, title, description, badge, defaultOpen = true, hidden, highlight, children }: {
+  id: string; icon: ReactNode; title: string; description?: string; badge?: string; defaultOpen?: boolean; hidden?: boolean; highlight?: boolean; children: ReactNode
 }) {
   return (
-    <details id={id} open={defaultOpen} hidden={hidden} className="tile group/s scroll-mt-36">
+    <details id={id} open={defaultOpen} hidden={hidden} className={`tile group/s scroll-mt-36 ${highlight ? '!border-accent/40 ring-4 ring-accent/8' : ''}`}>
       <summary className="flex cursor-pointer list-none items-center gap-3 rounded-[20px] p-4 outline-none sm:p-5 focus-visible:ring-2 focus-visible:ring-accent sm:px-6 [&::-webkit-details-marker]:hidden">
-        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-accent/12 text-accent">{icon}</span>
+        <span className={`grid size-9 shrink-0 place-items-center rounded-full ${highlight ? 'bg-accent text-accent-fg' : 'bg-accent/12 text-accent'}`}>{icon}</span>
         <span className="min-w-0 flex-1">
           <span className="block text-[15px] font-semibold">{title}</span>
           {description && <span className="block truncate text-[13px] text-muted">{description}</span>}
         </span>
-        {badge && <span className="shrink-0 rounded-full bg-surface-2 px-2.5 py-1 text-[12px] font-medium text-muted">{badge}</span>}
+        {badge && <span className={`shrink-0 rounded-full px-2.5 py-1 text-[12px] font-medium ${highlight ? 'bg-accent/12 font-semibold text-accent' : 'bg-surface-2 text-muted'}`}>{badge}</span>}
         <CaretDown size={16} weight="bold" aria-hidden="true" className="shrink-0 text-muted transition-transform duration-200 group-open/s:rotate-180" />
       </summary>
       <div className="@container border-t border-line px-4 pt-5 pb-6 sm:px-6">{children}</div>

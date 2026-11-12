@@ -4,6 +4,7 @@ import { creator } from '../config/creator'
 import { emailHref, initials, whatsappHref } from '../config/derived'
 import { platformMeta } from './icons'
 import { Footer } from './Footer'
+import { ConnectTile } from './tiles/ConnectTile'
 import { LocalTile } from './tiles/LocalTile'
 import { PixTile } from './tiles/PixTile'
 import { TopBar } from './TopBar'
@@ -38,6 +39,8 @@ export function SimpleCard() {
             {availability.label}
           </p>
         )}
+
+        <ConnectTile className="mt-7 text-left" />
 
         <ul className="mt-7 grid gap-2.5 text-left">
           {whatsappHref && whatsapp && (

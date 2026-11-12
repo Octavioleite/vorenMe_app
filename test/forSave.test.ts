@@ -2,7 +2,7 @@
 // O que o editor envia (forSave) precisa passar na validação real da API, mesmo no meio da digitação.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { forSave } from '../src/painel/forSave.ts'
+import { forSave, socialFrom, socialText, waNumber } from '../src/painel/forSave.ts'
 // @ts-expect-error JS da API, sem tipos
 import { validateCardConfig } from '../../vorenMe_api/src/dto/card/config.js'
 // @ts-expect-error JS da API, sem tipos
@@ -19,7 +19,20 @@ test('itens pela metade não travam o salvamento', () => {
     c.brands = [{ name: '' }]
     c.now = { title: 'Agora', text: '' }
     c.featured = { title: '', platform: 'youtube', url: '', kind: 'video', image: { src: '', alt: '' } }
-    assert.deepEqual(validateCardConfig(forSave(c)), [], t.id)
+    c.connect = {
+      goal: 'clientes', title: '  ', audience: '',
+      actions: [
+        { id: 'ok', label: 'Deixar contato', channel: 'form', message: ' ' },
+        { id: 'semnome', label: '', channel: 'form' },
+        { id: 'semlink', label: 'Site', channel: 'link', url: '' },
+        { id: 'tel', label: 'Ligar', channel: 'phone', phone: '119' },
+      ],
+      services: [{ id: 's1', name: 'Clareamento', action: 'semnome' }, { id: 's2', name: '', action: 'ok' }, { id: 's3', name: 'Implante', action: 'ok' }],
+    }
+    const out = forSave(c)
+    assert.deepEqual(validateCardConfig(out), [], t.id)
+    assert.deepEqual(out.connect!.actions.map((a) => a.id), ['ok'])
+    assert.deepEqual(out.connect!.services!.map((s) => s.id), ['s3'])
   }
 })
 
@@ -33,4 +46,18 @@ test('link sem https ganha https; esquema perigoso continua barrado', () => {
   assert.deepEqual(validateCardConfig(out), [])
   c.socials[0].url = 'javascript:alert(1)'
   assert.equal(validateCardConfig(forSave(c)).length, 1)
+})
+
+test('WhatsApp e redes num campo só', () => {
+  assert.equal(waNumber('(11) 98765-4321'), '5511987654321')
+  assert.equal(waNumber('+55 11 98765-4321'), '5511987654321')
+  assert.equal(waNumber('1133334444'), '551133334444')
+  assert.deepEqual(socialFrom('instagram', '@fulana'), { handle: '@fulana', url: 'https://instagram.com/fulana' })
+  assert.deepEqual(socialFrom('tiktok', 'fulana'), { handle: '@fulana', url: 'https://tiktok.com/@fulana' })
+  assert.deepEqual(socialFrom('instagram', 'https://www.instagram.com/fulana/?hl=pt'), { handle: '@fulana', url: 'https://www.instagram.com/fulana/?hl=pt' })
+  assert.deepEqual(socialFrom('website', 'meusite.com.br'), { handle: 'meusite.com.br', url: 'meusite.com.br' })
+  assert.deepEqual(socialFrom('spotify', 'artista'), { handle: '@artista', url: '' })
+  assert.deepEqual(socialFrom('x', ''), { handle: '', url: '' })
+  assert.equal(socialText({ platform: 'instagram', ...socialFrom('instagram', 'fulana') }), '@fulana')
+  assert.equal(socialText({ platform: 'instagram', ...socialFrom('instagram', 'instagram.com/fulana') }), 'instagram.com/fulana')
 })

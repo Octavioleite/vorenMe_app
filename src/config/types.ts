@@ -51,6 +51,44 @@ export interface Coupon {
   url?: string
 }
 
+/** Conecta: objetivo do cartão e as ações do visitante (validado em vorenMe_api/src/dto/card/config.js). */
+export const GOALS = ['clientes', 'orcamento', 'agendamento', 'parcerias', 'vendas', 'contatos'] as const
+export type Goal = (typeof GOALS)[number]
+export type Channel = 'whatsapp' | 'form' | 'phone' | 'email' | 'link'
+
+export interface ConnectAction {
+  /** Curto e estável: identifica a ação nas estatísticas. */
+  id: string
+  /** Texto do botão, ex: "Solicitar avaliação". */
+  label: string
+  channel: Channel
+  /** WhatsApp: mensagem pronta (aceita {servico}). E-mail: corpo do e-mail. */
+  message?: string
+  /** Só números, com DDD (channel "phone"). */
+  phone?: string
+  /** channel "link". */
+  url?: string
+}
+
+export interface ConnectService {
+  id: string
+  name: string
+  description?: string
+  /** id da ação que este serviço abre. */
+  action: string
+}
+
+export interface ConnectConfig {
+  goal: Goal
+  /** Título do bloco no cartão. Vazio = título padrão do objetivo. */
+  title?: string
+  /** Para quem é, ex: "Pacientes que querem um sorriso mais claro". */
+  audience?: string
+  /** Em ordem de prioridade: a primeira é a ação principal. */
+  actions: ConnectAction[]
+  services?: ConnectService[]
+}
+
 export interface CreatorConfig {
   name: { first: string; last: string }
   username: string
@@ -105,10 +143,14 @@ export interface CreatorConfig {
   pix?: { key: string; name: string; city: string }
 
   /** Endereço do negócio: abre no Google Maps, Waze ou Uber. */
-  address?: { text: string; hours?: { days: string; time: string }[] }
+  /** geo: veio de "Usar minha localização"; os links de rota usam o ponto exato. */
+  address?: { text: string; geo?: { lat: number; lng: number }; hours?: { days: string; time: string }[] }
 
   /** Link de avaliação do Google (Perfil da Empresa → Pedir avaliações). */
   review?: { url: string }
+
+  /** Conecta: ações do visitante. Sem valor = desligado. */
+  connect?: ConnectConfig
 
   /** Main personal website: footer + saved contact. */
   website?: { label: string; url: string }

@@ -1,5 +1,10 @@
 import {
+  Envelope,
   GlobeSimple,
+  LinkSimple,
+  NotePencil,
+  Phone,
+  WhatsappLogo,
   InstagramLogo,
   PinterestLogo,
   SpotifyLogo,
@@ -8,7 +13,7 @@ import {
   YoutubeLogo,
   type Icon,
 } from '@phosphor-icons/react'
-import type { Platform } from '../config/types'
+import type { Channel, Platform } from '../config/types'
 
 /** `brand` is decorative only (hover wash / watermark), never used for text or CTAs. */
 export const platformMeta: Record<Platform, { name: string; Icon: Icon; brand: string }> = {
@@ -20,3 +25,6 @@ export const platformMeta: Record<Platform, { name: string; Icon: Icon; brand: s
   x: { name: 'X', Icon: XLogo, brand: 'var(--ink)' },
   website: { name: 'Site', Icon: GlobeSimple, brand: 'var(--accent)' },
 }
+
+/** Ícone de cada destino de ação do Conecta (cartão e painel). */
+export const CHANNEL_ICON: Record<Channel, Icon> = { whatsapp: WhatsappLogo, form: NotePencil, phone: Phone, email: Envelope, link: LinkSimple }

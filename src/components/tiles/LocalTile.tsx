@@ -9,7 +9,7 @@ const pill = 'press inline-flex items-center gap-1.5 rounded-full border border-
 export function LocalTile({ className = '' }: { className?: string }) {
   const { address, review } = creator
   if (!address && !review) return null
-  const links = address && placeLinks(address.text)
+  const links = address && placeLinks(address.text, address.geo)
   return (
     <section aria-labelledby="local-title" data-reveal className={`tile p-6 ${className}`}>
       <h2 id="local-title" className="mb-4 flex items-center gap-2 text-[13px] font-medium text-muted">

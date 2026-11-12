@@ -1,7 +1,9 @@
 import { Envelope, WhatsappLogo } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { creator } from '../config/creator'
-import { emailHref, fullName, whatsappHref } from '../config/derived'
+import { connectPrimary, emailHref, fullName, whatsappHref } from '../config/derived'
+import { CHANNEL_TARGET } from '../lib/links'
+import { CHANNEL_ICON } from './icons'
 import { responsive } from '../lib/img'
 import { ExternalLink } from './ui/ExternalLink'
 
@@ -17,7 +19,8 @@ export function MobileDock() {
     return () => io.disconnect()
   }, [])
 
-  if (!whatsappHref && !emailHref) return null
+  if (!connectPrimary && !whatsappHref && !emailHref) return null
+  const MainIcon = connectPrimary ? CHANNEL_ICON[connectPrimary.action.channel] : WhatsappLogo
   const avatar = responsive(creator.photo.src, [96, 160])
 
   return (
@@ -36,13 +39,14 @@ export function MobileDock() {
           style={{ objectPosition: creator.photo.focal }}
         />
         <span className="sr-only">{fullName}</span>
-        {whatsappHref && (
+        {(connectPrimary || whatsappHref) && (
           <ExternalLink
-            href={whatsappHref}
-            className="press flex h-12 flex-1 items-center justify-center gap-2 rounded-[var(--radius-ctl)] bg-accent text-[15px] font-semibold text-accent-fg"
+            href={connectPrimary?.href ?? whatsappHref}
+            {...(connectPrimary && { 'data-track': CHANNEL_TARGET[connectPrimary.action.channel], 'data-action': connectPrimary.action.id })}
+            className="press flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-[var(--radius-ctl)] bg-accent px-3 text-[15px] font-semibold text-accent-fg"
           >
-            <WhatsappLogo size={20} weight="bold" aria-hidden="true" />
-            {creator.labels.whatsapp}
+            <MainIcon size={20} weight="bold" aria-hidden="true" className="shrink-0" />
+            <span className="truncate">{connectPrimary?.action.label ?? creator.labels.whatsapp}</span>
           </ExternalLink>
         )}
         {emailHref && (

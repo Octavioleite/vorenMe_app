@@ -771,6 +771,12 @@ dialog.qr-dialog[open] > * {
   }
 }
 
+/* Conecta: sempre o primeiro bloco e na largura toda, em qualquer estilo (as grades por estilo têm 2 a 4 colunas). */
+.tiles > .t-connect {
+  grid-column: 1 / -1;
+  order: -1;
+}
+
 /* ── Composição por estilo ─────────────────────────────────────────────
    Ganchos: .layout (grade principal), .hero-col (cartão + bio), .hero-copy, .id-copy,
    .tiles (blocos), .t-social/.t-featured/.t-coupons/.t-pship/.t-now/.t-qr/.t-brands,

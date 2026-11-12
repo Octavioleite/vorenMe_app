@@ -28,8 +28,9 @@ export function targetOf(href: string): string {
   return known.find(([re]) => re.test(host))?.[1] ?? 'link'
 }
 
-/** Liga o rastreamento (uma vez, só na página pública; nunca no preview do painel). */
-export function startTracking(slug: string) {
+/** Liga o rastreamento (uma vez, só na página pública; nunca no preview do painel).
+ *  `shown` = ids das ações do Conecta no cartão: base da taxa de clique de cada ação. */
+export function startTracking(slug: string, shown: string[] = []) {
   const source = detectSource(location.search, navigator.userAgent, document.referrer)
   // text/plain: não dispara preflight de CORS; sendBeacon não se perde quando o clique troca de página.
   const send = (body: object) => {
@@ -37,13 +38,23 @@ export function startTracking(slug: string) {
     const url = `${import.meta.env.VITE_API_URL ?? ''}/api/v1/public/cards/${encodeURIComponent(slug)}/events`
     if (!navigator.sendBeacon?.(url, blob)) fetch(url, { method: 'POST', body: blob, keepalive: true }).catch(() => {})
   }
-  send({ kind: 'view' })
+  send({ kind: 'view', shown })
   document.addEventListener('click', (e) => {
     const el = (e.target as Element | null)?.closest<HTMLElement>('[data-track], a[href]')
     if (!el) return
     const target = el.dataset.track ?? targetOf(el.getAttribute('href') ?? '')
-    send({ kind: 'click', target })
+    // data-action/data-interest: botões do Conecta (qual ação e, se veio de um, qual serviço).
+    send({ kind: 'click', target, action: el.dataset.action, interest: el.dataset.interest })
   }, { capture: true })
+  // Bloco que entrou na tela (metade visível), uma vez por visita. O React monta logo depois desta chamada.
+  setTimeout(() => {
+    const io = new IntersectionObserver((entries) => entries.forEach((en) => {
+      if (!en.isIntersecting) return
+      io.unobserve(en.target)
+      send({ kind: 'section', target: (en.target as HTMLElement).dataset.trackSection })
+    }), { threshold: 0.5 })
+    document.querySelectorAll('[data-track-section]').forEach((el) => io.observe(el))
+  }, 500)
 }
 
 /** Link do cartão marcado com a origem (QR impresso, botão compartilhar), para aparecer certo nas estatísticas. */

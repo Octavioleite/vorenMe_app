@@ -1,4 +1,4 @@
-import { CaretDown, SignOut } from '@phosphor-icons/react'
+import { CaretDown, SignOut, WarningCircle } from '@phosphor-icons/react'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { api, ApiError, session, supportTab, type Card } from './api'
 import { SupportBanner, SupportEnded } from './SupportBanner'
@@ -14,7 +14,7 @@ const Cards = lazy(() => import('./Cards').then((m) => ({ default: m.Cards })))
 const Editor = lazy(() => import('./Editor').then((m) => ({ default: m.Editor })))
 const Stats = lazy(() => import('./Stats').then((m) => ({ default: m.Stats })))
 const PrintKit = lazy(() => import('./PrintKit').then((m) => ({ default: m.PrintKit })))
-import { Errors, errorText, transition } from './ui'
+import { Errors, errorText, transition, primary } from './ui'
 
 /** Rotas: /painel (cartões) · /painel/estatisticas[/:id] · /painel/imprimir[/:id] · /painel/assinatura · /painel/perfil · /painel/:id/editar.
  *  Recarregar mantém onde a pessoa estava. */
@@ -54,9 +54,11 @@ export function Painel() {
     transition(() => { setUser(null); open(null) }, 'page')
   }
   const [fresh, setFresh] = useState(false) // acabou de criar: editor em etapas
-  const open = (card: Card | null, isNew = false) => {
+  const [focus, setFocus] = useState<string>() // seção do editor para abrir (atalho vindo de Cartões)
+  const open = (card: Card | null, isNew = false, section?: string) => {
     go(card ? String(card.id) : null)
     setFresh(isNew)
+    setFocus(section)
     setEditing(card)
     setEditingId(card ? String(card.id) : null)
     if (!card) setTab('/painel')
@@ -139,9 +141,10 @@ export function Painel() {
       {verifyLink}
       <div className={editingId ? '' : 'pt-6'}>
         {!editingId && <VerifyBanner user={user} />}
+        {!editingId && tab !== '/painel/assinatura' && <PlanBanner onSubscribe={() => goTab('/painel/assinatura')} />}
         <Suspense fallback={<p className="pt-4 text-sm text-muted">Carregando...</p>}>
         {editing ? (
-          <Editor key={editing.id} card={editing} wizard={fresh} onBack={() => open(null)} onAuthLost={logout} />
+          <Editor key={editing.id} card={editing} wizard={fresh} focus={focus} onBack={() => open(null)} onAuthLost={logout} />
         ) : editingId ? (
           <div className="grid justify-items-start gap-4 pt-10">
             {loadError ? (
@@ -166,6 +169,28 @@ export function Painel() {
         )}
         </Suspense>
       </div>
+    </div>
+  )
+}
+
+/** Plano vencido: aviso fixo no painel. Sem ele a pessoa só descobria ao tentar salvar. */
+function PlanBanner({ onSubscribe }: { onSubscribe: () => void }) {
+  const [b, setB] = useState<{ active: boolean; offlineAt: string } | null>(null)
+  useEffect(() => { api<{ active: boolean; offlineAt: string }>('/billing').then(setB, () => {}) }, [])
+  if (!b || b.active) return null
+  const online = new Date(b.offlineAt) > new Date()
+  return (
+    <div role="alert" className="mb-6 flex flex-col gap-4 rounded-[20px] border border-amber-500/30 bg-amber-500/10 p-5 sm:flex-row sm:items-center">
+      <span className="grid size-11 shrink-0 place-items-center rounded-full bg-amber-500/15 text-amber-700"><WarningCircle size={22} weight="bold" aria-hidden="true" /></span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[15px] font-semibold text-ink">Seu plano está vencido. Você não consegue editar nem salvar seus cartões.</p>
+        <p className="mt-1 text-[14px] text-muted">
+          {online
+            ? `Seus cartões continuam no ar até ${new Date(b.offlineAt).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}. Assine para não perder nada.`
+            : 'Seus cartões saíram do ar. Assine para eles voltarem.'}
+        </p>
+      </div>
+      <button type="button" onClick={onSubscribe} className={`${primary} shrink-0`}>Assinar agora</button>
     </div>
   )
 }

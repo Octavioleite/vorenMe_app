@@ -22,21 +22,21 @@ const STEPS: Step[] = [
     tips: ['De 3 a 31 caracteres: letras minúsculas, números, ponto, hífen ou _.', 'Se aparecer "já está em uso", tente outra variação, como o nome da cidade no final.', 'Toque em Criar cartão. O editor abre na hora.'] },
 
   // Montar o cartão
-  { id: 'identidade', chapter: 'Montar', section: 'identidade', icon: IdentificationCard, title: 'Identidade',
+  { id: 'identidade', chapter: 'Montar', section: 'identidade', icon: IdentificationCard, title: 'Sobre você',
     text: 'É a parte de cima do cartão, a primeira coisa que o cliente vê. Preencha nome, sobrenome, especialidade e cidade.',
-    tips: ['Especialidade é o que você faz, ex: "Psicóloga · CRP 06/000000" ou "Barbeiro".', 'A bio ideal tem até 20 palavras. O contador avisa se passar.', 'Usuário exibido aparece como @usuario no cartão.'] },
+    tips: ['Especialidade é o que você faz, ex: "Psicóloga · CRP 06/000000" ou "Barbeiro".', 'A bio ideal tem até 20 palavras. O contador avisa se passar.', 'O @ exibido e o link do cartão ficam em Configurações avançadas, no fim do editor.'] },
   { id: 'foto', chapter: 'Montar', section: 'identidade', icon: TextAa, title: 'Foto e textos sobre a foto',
     text: 'Troque a foto do modelo por uma sua. Ela ocupa o fundo do cartão, com seu nome por cima.',
-    tips: ['Prefira foto vertical, com o rosto bem visível e boa luz.', 'Na prévia ao lado, arraste cada texto para mudar de lugar e puxe a bolinha do canto para mudar o tamanho.', 'Ficou estranho? Toque em Restaurar padrão do modelo.'] },
-  { id: 'aparencia', chapter: 'Montar', section: 'aparencia', icon: Palette, title: 'Aparência',
+    tips: ['Prefira foto vertical, com o rosto bem visível e boa luz.', 'Na prévia ao lado, arraste cada texto para mudar de lugar e puxe a bolinha do canto para mudar o tamanho.', 'Ficou estranho? Em Configurações avançadas, toque em Restaurar padrão.'] },
+  { id: 'aparencia', chapter: 'Montar', section: 'aparencia', icon: Palette, title: 'Visual',
     text: 'Defina o estilo do cartão, a cor de destaque e se ele abre claro ou escuro.',
     tips: ['Cada estilo muda as fontes e o clima: Tinta para barbearia, Clínica para saúde, Glam para unhas.', 'A cor de destaque vai nos botões. Toque no + para usar a cor exata da sua marca.', 'O texto sobre a cor ajusta sozinho para continuar legível.'] },
   { id: 'contato', chapter: 'Montar', section: 'contato', icon: ChatCircleText, title: 'Contato',
     text: 'É o que faz o cliente falar com você. O botão de WhatsApp já abre a conversa com uma mensagem pronta.',
-    tips: ['WhatsApp só com números, com 55 e DDD. Ex: 5511987654321.', 'Escreva a mensagem pronta como o cliente falaria: "Oi! Vi seu cartão e quero agendar."', 'E-mail, site e disponibilidade são opcionais. Vazios, não aparecem.'] },
+    tips: ['Digite o WhatsApp com DDD, do jeito que quiser. Ex: (11) 98765-4321.', 'Escreva a mensagem pronta como o cliente falaria: "Oi! Vi seu cartão e quero agendar."', 'E-mail, site e disponibilidade são opcionais. Vazios, não aparecem.'] },
   { id: 'redes', chapter: 'Montar', section: 'redes', icon: LinkSimple, title: 'Redes e links',
-    text: 'Toque em Adicionar rede para cada perfil: Instagram, TikTok, YouTube, Pinterest, Spotify, X ou site.',
-    tips: ['Escolha a rede, escreva o @ e cole o link completo do perfil (começando com https://).', 'Para remover, toque na lixeira ao lado.'] },
+    text: 'Toque na rede que quer adicionar: Instagram, TikTok, YouTube, Pinterest, Spotify, X ou site.',
+    tips: ['Escreva só o @ ou cole o link do perfil. O resto a gente monta.', 'Para remover, toque na lixeira ao lado.'] },
 
   // Extras (todos opcionais)
   { id: 'local', chapter: 'Extras', section: 'local', icon: MapPin, title: 'Endereço e avaliações',

@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowSquareOut, Globe, Check, Info, LinkSimple, MagnifyingGlass, PencilSimple, Plus, Trash, X } from '@phosphor-icons/react'
+import { ArrowLeft, ArrowRight, ArrowSquareOut, Globe, Check, Info, LinkSimple, MagnifyingGlass, PencilSimple, Plus, Target, Trash, X } from '@phosphor-icons/react'
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import { api, ApiError, type Card, type Template } from './api'
 import { Errors, Field, ask, errorText, useCopyLink, iconBtn, primary, secondary, thumb, transition } from './ui'
@@ -61,6 +61,11 @@ function CardTile({ card, i, onEdit, onDelete }: { card: Card; i: number; onEdit
           <button type="button" onClick={onEdit} className="press inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-full bg-accent text-[14px] font-semibold text-accent-fg hover:brightness-110">
             <PencilSimple size={16} weight="bold" aria-hidden="true" /> Editar
           </button>
+          {card.config.connect && (
+            <a href={`/painel/estatisticas/${card.id}#conecta`} className={`${tileBtn} text-accent`} aria-label="Ver contatos do VorenMe Conecta" title="Ver contatos do Conecta">
+              <Target size={17} weight="bold" />
+            </a>
+          )}
           <a href={`/${card.slug}`} target="_blank" rel="noreferrer" className={tileBtn} aria-label="Abrir cartão" title="Abrir cartão">
             <ArrowSquareOut size={17} />
           </a>
@@ -258,7 +263,43 @@ function NewCardDialog({ templates, name, dialog, onCreated, fail }: {
   )
 }
 
-export function Cards({ name, verified, onEdit, onAuthLost }: { name?: string | null; verified: boolean; onEdit: (c: Card, isNew?: boolean) => void; onAuthLost: () => void }) {
+const PROMO_KEY = 'vorenme-conecta-promo'
+
+/** Destaque do Conecta para quem ainda tem cartão sem ele. Um toque abre o editor já na seção. Fechar lembra no navegador. */
+function ConectaPromo({ cards, onActivate }: { cards: Card[]; onActivate: (c: Card) => void }) {
+  const [hidden, setHidden] = useState(() => { try { return localStorage.getItem(PROMO_KEY) === 'off' } catch { return false } })
+  const off = cards.filter((c) => !c.config.connect)
+  if (hidden || !off.length) return null
+  const close = () => { try { localStorage.setItem(PROMO_KEY, 'off') } catch { /* sem storage: some só agora */ } setHidden(true) }
+  return (
+    <section aria-labelledby="promo-title" className="rise relative mt-6 grid gap-5 overflow-hidden rounded-[24px] bg-accent/8 p-5 pr-14 sm:p-7 sm:pr-16 md:grid-cols-[auto_1fr_auto] md:items-center" style={{ '--i': 1 } as CSSProperties}>
+      <span className="grid size-14 place-items-center rounded-[18px] bg-accent text-accent-fg shadow-[0_14px_30px_-14px_var(--accent)]">
+        <Target size={28} weight="bold" aria-hidden="true" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-[13px] font-semibold text-accent">Novo: VorenMe Conecta</p>
+        <h2 id="promo-title" className="mt-1 text-[24px] leading-[1.1] font-semibold tracking-[-0.03em] sm:text-[28px]">Transforme visitas em clientes.</h2>
+        <p className="mt-2 max-w-[56ch] text-[15px] text-muted">
+          Escolha o que o visitante deve fazer, como agendar ou pedir orçamento. O WhatsApp já abre com a mensagem certa e você vê quem clicou.
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-2 md:max-w-[260px] md:flex-col">
+        {off.map((c, i) => (
+          <button key={c.id} type="button" onClick={() => onActivate(c)} className={`${i === 0 ? primary : `${secondary} bg-surface`} h-11 justify-between`}>
+            <span className="truncate">{off.length === 1 ? 'Ativar no meu cartão' : `Ativar em /${c.slug}`}</span>
+            <ArrowRight size={16} weight="bold" aria-hidden="true" className="shrink-0" />
+          </button>
+        ))}
+      </div>
+      <button type="button" onClick={close} aria-label="Fechar aviso do VorenMe Conecta" title="Fechar"
+        className="press absolute top-3 right-3 grid size-9 place-items-center rounded-full text-muted hover:bg-black/5 hover:text-ink">
+        <X size={16} weight="bold" aria-hidden="true" />
+      </button>
+    </section>
+  )
+}
+
+export function Cards({ name, verified, onEdit, onAuthLost }: { name?: string | null; verified: boolean; onEdit: (c: Card, isNew?: boolean, section?: string) => void; onAuthLost: () => void }) {
   const [cards, setCards] = useState<Card[] | null>(null)
   const [templates, setTemplates] = useState<Template[]>([])
   const [error, setError] = useState('')
@@ -326,6 +367,8 @@ export function Cards({ name, verified, onEdit, onAuthLost }: { name?: string | 
           </p>
         </div>
       )}
+
+      {!!cards?.length && <ConectaPromo cards={cards} onActivate={(c) => onEdit(c, false, 'conecta')} />}
 
       <div className="mt-6"><Errors text={error} /></div>
 
