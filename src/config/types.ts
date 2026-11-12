@@ -19,6 +19,10 @@ export interface Photo {
   alt: string
   /** CSS object-position, e.g. "50% 30%". Controls the crop focus. */
   focal?: string
+  /** Aproximação sobre o enquadramento (1 = preenche a área, até 3). */
+  zoom?: number
+  /** 'contain' = mostra a foto inteira, sem cortar. */
+  fit?: 'contain'
   /** Posição e tamanho de cada texto sobre a foto. Vazio = padrão do modelo. */
   layout?: Partial<Record<TextId, TextLayout>>
 }

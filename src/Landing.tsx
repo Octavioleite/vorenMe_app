@@ -1,4 +1,4 @@
-import { ArrowRight, CaretLeft, CaretRight, ChartLineUp, Check, DeviceMobile, Eye, Lightbulb, Target, List, PaintBrush, Plus, ShareNetwork, UserPlus, WhatsappLogo, X } from '@phosphor-icons/react'
+import { ArrowRight, CaretLeft, CaretRight, Check, DeviceMobile, Eye, Lightbulb, Target, List, PaintBrush, Plus, ShareNetwork, UserPlus, WhatsappLogo, X } from '@phosphor-icons/react'
 import { StrictMode, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QrCode } from './components/QrCode'
@@ -38,11 +38,12 @@ const STEPS = [
   { Icon: ShareNetwork, title: 'Compartilhe o link', text: 'No WhatsApp, na bio e no QR code impresso.' },
 ]
 
-/* VorenMe Conecta: os 3 passos do que ele faz de verdade (ConnectTile no cartão, Conecta.tsx no painel). */
-const CONECTA_STEPS = [
-  { Icon: Target, title: 'Um próximo passo claro', text: 'Agendar, pedir orçamento ou fazer pedido. A ação principal fica em destaque no cartão.' },
-  { Icon: WhatsappLogo, title: 'WhatsApp com a mensagem pronta', text: 'A conversa já começa dizendo o serviço escolhido. Quem não usa WhatsApp deixa o contato no formulário.' },
-  { Icon: ChartLineUp, title: 'Você vê o que funciona', text: 'Cliques por ação, contatos recebidos, vendas anotadas e dicas do que ajustar.' },
+/** Uma visita do começo ao fim, alternando quem age. Sem número fixo de visitas: o mínimo é MIN_VISITORS da API (utils/conecta.js) e pode mudar. */
+const CONECTA_STORY = [
+  { you: false, Icon: DeviceMobile, title: 'Abre o seu cartão', text: 'Pelo link da bio, por uma conversa no WhatsApp ou pelo QR code no balcão.' },
+  { you: false, Icon: WhatsappLogo, title: 'Toca em "Corte + barba"', text: 'O WhatsApp abre com a mensagem pronta. É só enviar. Sem WhatsApp, ele deixa o contato num formulário.' },
+  { you: true, Icon: Check, title: 'Recebe o pedido já sabendo o serviço', text: 'Sem pergunta de ida e volta. Você marca o horário e anota a venda no painel.' },
+  { you: true, Icon: Lightbulb, title: 'Descobre o que funciona', text: 'Quando chegam visitas suficientes para comparar, o painel mostra o serviço mais procurado e sugere colocar em primeiro. Um toque e pronto.' },
 ]
 /** Conecta ligado no modelo de barbearia, para o exemplo "Ver o Conecta em ação". */
 const CONECTA_DEMO: ConnectConfig = {
@@ -63,10 +64,10 @@ const CONECTA_STATS = [['412', 'Visitantes únicos'], ['87', 'Cliques nas açõe
 const CONECTA_ACTIONS = [['Agendar pelo WhatsApp', '64 cliques'], ['Deixar meu contato', '23 cliques']]
 
 const INCLUDED = [
+  'VorenMe Conecta: o cliente chama no WhatsApp e você vê o que funciona',
   '3 cartões virtuais por conta',
   'Links ilimitados em cada cartão',
   'Personalização de cada cartão',
-  'VorenMe Conecta: ações, contatos e estatísticas',
   'Todos os modelos e estilos',
   'Botão de salvar contato na agenda',
   'QR code pronto para imprimir',
@@ -349,7 +350,7 @@ function Landing() {
               <span className="word"><span className="text-accent" style={i(3)}>link.</span></span>
             </h1>
             <p className="rise mx-auto mt-6 max-w-[40ch] text-[18px] leading-relaxed text-muted md:text-[20px]" style={i(4)}>
-              WhatsApp, redes e serviços num cartão bonito, pronto em minutos. 3 dias grátis, depois R$ 9,99/mês ou R$ 99,90/ano.
+              Um cartão bonito que leva o cliente direto ao seu WhatsApp e mostra o que traz resultado. 3 dias grátis, depois R$ 9,99/mês ou R$ 99,90/ano.
             </p>
             <div className="rise mt-8 flex flex-wrap justify-center gap-3" style={i(5)}>
               <CtaButton />
@@ -360,6 +361,71 @@ function Landing() {
             </div>
           </div>
           <div className="mt-14 px-4 md:mt-20"><Devices templates={templates} active={active} setActive={setActive} onOpen={() => setExample(active)} /></div>
+        </section>
+
+        {/* VorenMe Conecta, o diferencial: único bloco escuro da página (o cartão deixa de ser só vitrine).
+            Logo depois do hero: é o motivo de escolher o VorenMe. Esquerda: a promessa. Direita: o painel do dono com dados de exemplo. Embaixo: uma visita contada. */}
+        <section id="conecta" className={`${WRAP} scroll-mt-20 pt-20 sm:pt-28 md:pt-32`}>
+          <div data-reveal className="conecta grid gap-12 overflow-hidden rounded-[32px] bg-ink p-6 text-white sm:p-10 lg:grid-cols-[1fr_1.05fr] lg:items-center lg:gap-14 lg:p-14">
+            <div>
+              <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[13px] font-semibold"><Target size={16} weight="bold" aria-hidden="true" /> VorenMe Conecta</p>
+              <h2 className={`${H2} mt-6 max-w-[15ch]`}>Seu cliente chama no WhatsApp. Você vê o que funciona.</h2>
+              <p className="mt-4 max-w-[44ch] text-[18px] leading-relaxed text-white/70">Outros cartões só mostram seus links. O seu leva cada visita direto à conversa e conta o que traz cliente.</p>
+              <button type="button" onClick={() => setConecta(true)} disabled={!conectaDemo}
+                className="press mt-10 inline-flex h-12 items-center gap-2 rounded-full bg-white px-6 text-[15px] font-semibold whitespace-nowrap text-ink hover:brightness-95 disabled:opacity-60">
+                <Eye size={18} weight="bold" aria-hidden="true" /> Ver o Conecta em ação
+              </button>
+            </div>
+
+            <div className="relative pt-12 sm:pl-6">
+              <p className="conecta-bubble absolute top-0 left-0 z-10 flex max-w-[270px] items-start gap-2.5 rounded-[20px] rounded-bl-[6px] bg-[#f5f5f7] p-3.5 text-[14px] leading-snug text-ink shadow-[0_18px_40px_-18px_rgb(0_0_0/0.6)]">
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-ink text-bg"><WhatsappLogo size={17} weight="fill" aria-hidden="true" /></span>
+                Olá! Vi seu cartão e quero agendar Corte + barba.
+              </p>
+              <div className="rounded-[24px] bg-white p-5 text-ink sm:p-6">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="flex items-center gap-2 text-[16px] font-semibold whitespace-nowrap"><Target size={18} weight="bold" className="text-accent" aria-hidden="true" /> Painel do Conecta</p>
+                  <span className="rounded-full bg-[#f2f2f4] px-2.5 py-1 text-[12px] font-medium whitespace-nowrap text-muted">Dados de exemplo</span>
+                </div>
+                <dl className="mt-5 grid grid-cols-2 gap-2">
+                  {CONECTA_STATS.map(([n, label], k) => (
+                    <div key={label} className="conecta-stat rounded-[16px] bg-[#f5f5f7] p-4" style={i(k)}>
+                      <dd className="text-[30px] leading-none font-semibold tracking-[-0.04em] tabular-nums">{n}</dd>
+                      <dt className="mt-1.5 text-[13px] text-muted">{label}</dt>
+                    </div>
+                  ))}
+                </dl>
+                <ul className="mt-4 grid gap-1 text-[14px]">
+                  {CONECTA_ACTIONS.map(([label, n]) => (
+                    <li key={label} className="flex justify-between gap-3 py-1.5"><span className="font-medium">{label}</span><span className="text-muted tabular-nums">{n}</span></li>
+                  ))}
+                </ul>
+                <div className="mt-4 rounded-[16px] bg-accent/8 p-4">
+                  <p className="flex items-start gap-2 text-[15px] font-semibold"><Lightbulb size={18} weight="fill" className="mt-0.5 shrink-0 text-accent" aria-hidden="true" /> Corte + barba concentra o interesse</p>
+                  <p className="mt-1 pl-[26px] text-[13px] text-muted">31 visitantes escolheram Corte + barba; o segundo teve 12.</p>
+                  <span className="mt-3 ml-[26px] inline-flex rounded-full bg-accent px-3 py-1.5 text-[13px] font-semibold text-accent-fg">Colocar em primeiro</span>
+                </div>
+              </div>
+            </div>
+
+            {/* A dor de cada lado e como o painel chega na dica (regras reais: vorenMe_api/src/utils/conecta.js). */}
+            {/* Uma visita contada do começo ao fim: dois passos do cliente, dois seus. A cor do selo diz de quem é a vez. */}
+            <div className="border-t border-white/10 pt-10 lg:col-span-2">
+              <h3 className="text-[24px] font-semibold tracking-[-0.025em]">Na prática, uma visita fica assim</h3>
+              <ol className="mt-8 grid gap-4 md:grid-cols-2">
+                {CONECTA_STORY.map(({ you, Icon, title, text }, n) => (
+                  <li key={title} className={`conecta-step flex gap-4 rounded-[20px] p-5 ${you ? 'bg-accent/12' : 'bg-white/[0.06]'}`} style={i(n)}>
+                    <span className={`grid size-11 shrink-0 place-items-center rounded-full ${you ? 'bg-accent text-accent-fg' : 'bg-white/15 text-white'}`}><Icon size={20} weight="bold" aria-hidden="true" /></span>
+                    <span>
+                      <span className={`text-[13px] font-semibold ${you ? 'text-accent' : 'text-white/55'}`}>{you ? 'Você' : 'Seu cliente'}</span>
+                      <span className="mt-0.5 block text-[17px] font-semibold tracking-[-0.015em]">{title}</span>
+                      <span className="mt-1 block text-[15px] leading-relaxed text-white/65">{text}</span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
         </section>
 
         {/* Papel x VorenMe: os problemas do papel são riscados, os benefícios entram com check */}
@@ -440,64 +506,6 @@ function Landing() {
                 <p className="mt-2 text-[13px] font-medium text-muted">QR code pronto</p>
               </div>
             </article>
-          </div>
-        </section>
-
-        {/* VorenMe Conecta, o diferencial: único bloco escuro da página (o cartão deixa de ser só vitrine).
-            Esquerda: o que ele faz em 3 passos. Direita: o painel do dono com dados de exemplo, onde a mensagem do cliente "chega". */}
-        <section id="conecta" className={`${WRAP} scroll-mt-20 pt-20 sm:pt-28 md:pt-32`}>
-          <div data-reveal className="conecta grid gap-12 overflow-hidden rounded-[32px] bg-ink p-6 text-white sm:p-10 lg:grid-cols-[1fr_1.05fr] lg:items-center lg:gap-14 lg:p-14">
-            <div>
-              <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[13px] font-semibold"><Target size={16} weight="bold" aria-hidden="true" /> VorenMe Conecta</p>
-              <h2 className={`${H2} mt-6 max-w-[12ch]`}>Visita vira cliente.</h2>
-              <p className="mt-4 max-w-[44ch] text-[18px] leading-relaxed text-white/70">Seu cartão mostra ao visitante o próximo passo, abre o WhatsApp com a mensagem pronta e conta para você o que trouxe resultado.</p>
-              <ol className="mt-10 grid gap-7">
-                {CONECTA_STEPS.map(({ Icon, title, text }, n) => (
-                  <li key={title} className="conecta-step flex gap-4" style={i(n)}>
-                    <span className="grid size-11 shrink-0 place-items-center rounded-full bg-accent text-accent-fg"><Icon size={20} weight="bold" aria-hidden="true" /></span>
-                    <span>
-                      <span className="block text-[18px] font-semibold tracking-[-0.02em]">{title}</span>
-                      <span className="mt-1 block max-w-[40ch] text-[15px] leading-relaxed text-white/65">{text}</span>
-                    </span>
-                  </li>
-                ))}
-              </ol>
-              <button type="button" onClick={() => setConecta(true)} disabled={!conectaDemo}
-                className="press mt-10 inline-flex h-12 items-center gap-2 rounded-full bg-white px-6 text-[15px] font-semibold whitespace-nowrap text-ink hover:brightness-95 disabled:opacity-60">
-                <Eye size={18} weight="bold" aria-hidden="true" /> Ver o Conecta em ação
-              </button>
-            </div>
-
-            <div className="relative pt-12 sm:pl-6">
-              <p className="conecta-bubble absolute top-0 left-0 z-10 flex max-w-[270px] items-start gap-2.5 rounded-[20px] rounded-bl-[6px] bg-[#f5f5f7] p-3.5 text-[14px] leading-snug text-ink shadow-[0_18px_40px_-18px_rgb(0_0_0/0.6)]">
-                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-ink text-bg"><WhatsappLogo size={17} weight="fill" aria-hidden="true" /></span>
-                Olá! Vi seu cartão e quero agendar Corte + barba.
-              </p>
-              <div className="rounded-[24px] bg-white p-5 text-ink sm:p-6">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="flex items-center gap-2 text-[16px] font-semibold whitespace-nowrap"><Target size={18} weight="bold" className="text-accent" aria-hidden="true" /> Painel do Conecta</p>
-                  <span className="rounded-full bg-[#f2f2f4] px-2.5 py-1 text-[12px] font-medium whitespace-nowrap text-muted">Dados de exemplo</span>
-                </div>
-                <dl className="mt-5 grid grid-cols-2 gap-2">
-                  {CONECTA_STATS.map(([n, label], k) => (
-                    <div key={label} className="conecta-stat rounded-[16px] bg-[#f5f5f7] p-4" style={i(k)}>
-                      <dd className="text-[30px] leading-none font-semibold tracking-[-0.04em] tabular-nums">{n}</dd>
-                      <dt className="mt-1.5 text-[13px] text-muted">{label}</dt>
-                    </div>
-                  ))}
-                </dl>
-                <ul className="mt-4 grid gap-1 text-[14px]">
-                  {CONECTA_ACTIONS.map(([label, n]) => (
-                    <li key={label} className="flex justify-between gap-3 py-1.5"><span className="font-medium">{label}</span><span className="text-muted tabular-nums">{n}</span></li>
-                  ))}
-                </ul>
-                <div className="mt-4 rounded-[16px] bg-accent/8 p-4">
-                  <p className="flex items-start gap-2 text-[15px] font-semibold"><Lightbulb size={18} weight="fill" className="mt-0.5 shrink-0 text-accent" aria-hidden="true" /> Corte + barba concentra o interesse</p>
-                  <p className="mt-1 pl-[26px] text-[13px] text-muted">31 visitantes escolheram Corte + barba; o segundo teve 12.</p>
-                  <span className="mt-3 ml-[26px] inline-flex rounded-full bg-accent px-3 py-1.5 text-[13px] font-semibold text-accent-fg">Colocar em primeiro</span>
-                </div>
-              </div>
-            </div>
           </div>
         </section>
 

@@ -1,5 +1,6 @@
-import { CaretDown, CircleNotch, UploadSimple, WarningCircle, X } from '@phosphor-icons/react'
-import { useState, type ReactNode } from 'react'
+import { ArrowsOutCardinal, CaretDown, CircleNotch, UploadSimple, WarningCircle, X } from '@phosphor-icons/react'
+import { useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
+import { photoStyle } from '../lib/img'
 import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import { ApiError, uploadImage } from './api'
@@ -134,6 +135,63 @@ export function Tags({ label, hint, value, onChange, placeholder }: {
 }
 
 /** Foto: enviar do aparelho (clique ou arrastar) ou colar um link. */
+type Frame = { focal?: string; zoom?: number; fit?: 'contain' }
+const clamp = (n: number) => Math.round(Math.min(100, Math.max(0, n)))
+
+/** Enquadrar a foto: arrastar move, o controle de tamanho aproxima, "Foto inteira" não corta nada.
+    Mesma proporção e o mesmo photoStyle do cartão, então o que se vê aqui é o que vai ao ar. */
+export function PhotoFrame({ src, value, onChange, aspect, fallback = '50% 50%' }: {
+  src: string; value: Frame; onChange: (f: Frame) => void; aspect: string; fallback?: string
+}) {
+  const [x, y] = (value.focal ?? fallback).split(' ').map(parseFloat)
+  const zoom = value.zoom ?? 1
+  const whole = value.fit === 'contain'
+  const drag = useRef<{ px: number; py: number; x: number; y: number } | null>(null)
+  const move = (nx: number, ny: number) => onChange({ ...value, focal: `${clamp(nx)}% ${clamp(ny)}%` })
+  // Arrastar a foto para a direita revela a esquerda (focal diminui); na foto inteira ela anda junto com o dedo.
+  // ponytail: sensibilidade aproximada pela largura da área, sem medir a imagem; basta para enquadrar.
+  const dir = whole ? 1 : -1
+  const onMove = (e: PointerEvent<HTMLDivElement>) => {
+    const d = drag.current
+    if (!d) return
+    const r = e.currentTarget.getBoundingClientRect()
+    move(d.x + (dir * (e.clientX - d.px) * 100) / r.width / zoom, d.y + (dir * (e.clientY - d.py) * 100) / r.height / zoom)
+  }
+  const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    const k = { ArrowLeft: [-2, 0], ArrowRight: [2, 0], ArrowUp: [0, -2], ArrowDown: [0, 2] }[e.key]
+    if (!k) return
+    e.preventDefault()
+    move(x - dir * k[0], y - dir * k[1])
+  }
+  return (
+    <div className="grid gap-3">
+      <div role="slider" tabIndex={0} aria-label="Posição da foto. Use as setas para mover." aria-valuetext={`${x}% horizontal, ${y}% vertical`}
+        className={`relative w-full max-w-[260px] cursor-grab touch-none overflow-hidden rounded-[14px] bg-surface-2 select-none active:cursor-grabbing focus-visible:outline-2 focus-visible:outline-accent ${aspect}`}
+        onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); drag.current = { px: e.clientX, py: e.clientY, x, y } }}
+        onPointerMove={onMove} onPointerUp={() => (drag.current = null)} onPointerCancel={() => (drag.current = null)} onKeyDown={onKey}>
+        <img src={thumb(src, 640)} alt="" draggable={false} className="pointer-events-none absolute inset-0 h-full w-full" style={photoStyle(value, fallback)} />
+        <span className="pointer-events-none absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-1 text-[11px] font-medium text-white">
+          <ArrowsOutCardinal size={12} weight="bold" aria-hidden="true" /> Arraste para ajustar
+        </span>
+      </div>
+      <label className="grid max-w-[260px] gap-1.5 text-[13px] font-medium">
+        <span className="flex justify-between">Tamanho <span className="text-muted tabular-nums">{Math.round(zoom * 100)}%</span></span>
+        <input type="range" min={1} max={3} step={0.05} value={zoom} disabled={whole} className="accent-accent disabled:opacity-40"
+          onChange={(e) => onChange({ ...value, zoom: Number(e.target.value) === 1 ? undefined : Number(e.target.value) })} />
+      </label>
+      <div className="flex flex-wrap gap-2">
+        <label className={`${secondary} cursor-pointer py-2 text-[13px]`}>
+          <input type="checkbox" className="accent-accent" checked={whole}
+            onChange={(e) => onChange({ ...value, fit: e.target.checked ? 'contain' : undefined, zoom: undefined })} />
+          Foto inteira, sem cortar
+        </label>
+        <button type="button" className={`${secondary} py-2 text-[13px]`} disabled={!value.focal && !value.zoom && !whole}
+          onClick={() => onChange({ focal: undefined, zoom: undefined, fit: undefined })}>Centralizar</button>
+      </div>
+    </div>
+  )
+}
+
 export function ImagePicker({ value, onChange, onError, thumbClass, fallback, max }: {
   value: string; onChange: (url: string) => void; onError: (msg: string) => void
   thumbClass: string; fallback: ReactNode; max?: number

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Photo } from '../../config/types'
-import { responsive } from '../../lib/img'
+import { photoStyle, responsive } from '../../lib/img'
 
 interface Props {
   photo: Photo
@@ -44,8 +44,8 @@ export function SmartImage({ photo, widths, sizes, priority, fallback, className
           fetchpriority={priority ? 'high' : 'auto'}
           onLoad={() => setState('loaded')}
           onError={() => setState('error')}
-          className={`h-full w-full object-cover ${state === 'loaded' ? 'opacity-100' : 'opacity-0'}`}
-          style={{ objectPosition: photo.focal ?? '50% 50%' }}
+          className={`h-full w-full ${state === 'loaded' ? 'opacity-100' : 'opacity-0'}`}
+          style={photoStyle(photo)}
         />
       )}
     </div>

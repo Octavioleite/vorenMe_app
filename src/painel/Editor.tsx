@@ -11,7 +11,7 @@ import { DevicePreview } from './DevicePreview'
 import { GuideButton } from './Guide'
 import { confetti } from './confetti'
 import { SLUG, forSave, socialFrom, socialText, toSlug, waNumber } from './forSave'
-import { Errors, Field, ImagePicker, ask, useCopyLink, Section, Tags, Thumb, errorText, iconBtn, input, primary, secondary } from './ui'
+import { Errors, Field, ImagePicker, PhotoFrame, ask, useCopyLink, Section, Tags, Thumb, errorText, iconBtn, input, primary, secondary } from './ui'
 
 const PLATFORMS = Object.keys(platformMeta) as Platform[]
 const NAV = [['identidade', 'Você'], ['aparencia', 'Visual'], ['contato', 'Contato'], ['blocos', 'Blocos']] as const
@@ -460,9 +460,11 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
           <Section icon={<IdentificationCard size={17} weight="bold" />} title="Sobre você" id="identidade" hidden={hide('identidade')} description="Foto, nome e bio">
             <div className="grid gap-4 @md:grid-cols-2">
               <div className="@md:col-span-2">
-                <ImagePicker value={c.photo.src} onChange={(v) => set((x) => { x.photo.src = v })} onError={setError}
+                <ImagePicker value={c.photo.src} onChange={(v) => set((x) => { x.photo = { ...x.photo, src: v, focal: undefined, zoom: undefined, fit: undefined } })} onError={setError}
                   thumbClass="size-20 rounded-full" fallback={<User size={24} aria-hidden="true" />} />
                 <p className="mt-1.5 text-[12px] text-muted">Foto vertical, com o rosto bem visível.</p>
+                {c.photo.src && <div className="mt-3"><PhotoFrame src={c.photo.src} value={c.photo} aspect="aspect-[4/5]"
+                  onChange={(f) => set((x) => { x.photo = { ...x.photo, ...f } })} /></div>}
               </div>
               <Field label="Nome"><input className={input} value={c.name.first} onChange={(e) => set((x) => { x.name.first = e.target.value })} /></Field>
               <Field label="Sobrenome (opcional)"><input className={input} value={c.name.last} onChange={(e) => set((x) => { x.name.last = e.target.value })} /></Field>
@@ -744,8 +746,10 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
                   </Field>
                   <div className="grid content-start gap-2 @md:col-span-2">
                     <span className="text-[13px] font-medium">Imagem</span>
-                    <ImagePicker value={c.featured.image.src} onChange={(v) => set((x) => { x.featured!.image.src = v })} onError={setError}
+                    <ImagePicker value={c.featured.image.src} onChange={(v) => set((x) => { x.featured!.image = { ...x.featured!.image, src: v, focal: undefined, zoom: undefined, fit: undefined } })} onError={setError}
                       thumbClass="h-14 w-[100px] rounded-[8px]" fallback={<ImageIcon size={20} aria-hidden="true" />} />
+                    {c.featured.image.src && <PhotoFrame src={c.featured.image.src} value={c.featured.image} aspect="aspect-video"
+                      onChange={(f) => set((x) => { x.featured!.image = { ...x.featured!.image, ...f } })} />}
                   </div>
                   <fieldset className="grid gap-2 @md:col-span-2">
                     <legend className="mb-2 text-[13px] font-medium">Tipo</legend>
