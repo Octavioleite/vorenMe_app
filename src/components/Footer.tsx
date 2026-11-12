@@ -4,12 +4,13 @@ import { ArrowUpRight } from '@phosphor-icons/react'
 import { ExternalLink } from './ui/ExternalLink'
 
 // Selo da plataforma: é o canal de aquisição da VorenMe, por isso não sai da config do cartão (não dá para esconder ou trocar o texto).
-// VITE_VOREN_URL = landing page quando existir; sem ela, vai direto para o cadastro do painel.
+// Vai para a página inicial (/), não para o cadastro: quem chega por um cartão primeiro entende o produto, depois se cadastra.
+// VITE_VOREN_URL = landing em outro domínio, se um dia houver.
 // ponytail: o slug vai só na UTM; gravar "indicado por" no usuário quando houver programa de indicação.
 export const vorenHref = (medium: 'selo' | 'topo' = 'selo') => {
-  const base = import.meta.env.VITE_VOREN_URL || `${location.origin}/painel`
+  const base = import.meta.env.VITE_VOREN_URL || `${location.origin}/`
   const slug = location.pathname.split('/').filter(Boolean)[0] ?? 'cartao'
-  return `${base}?cadastro=1&utm_source=cartao&utm_medium=${medium}&utm_campaign=${encodeURIComponent(slug)}`
+  return `${base}?utm_source=cartao&utm_medium=${medium}&utm_campaign=${encodeURIComponent(slug)}`
 }
 
 export function Footer() {
