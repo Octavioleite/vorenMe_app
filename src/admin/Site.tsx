@@ -14,7 +14,7 @@ interface SiteData {
   byDevice: { device: string; views: number }[]
 }
 
-const PRESETS = [7, 30, 90]
+const PRESETS = [1, 7, 30, 90] // 1 = hoje
 const pct = (n: number, of: number) => (of ? `${Math.round((n / of) * 100)}%` : '—')
 
 function Table({ title, note, rows, label }: { title: string; note: string; rows: (Counts & { key: string })[]; label: string }) {
@@ -81,7 +81,7 @@ export function Site({ fail }: { fail: Fail }) {
         <div className="flex max-w-full gap-1 overflow-x-auto rounded-full bg-[#f5f5f7] p-1 [scrollbar-width:none]" role="group" aria-label="Período">
           {[...PRESETS, 0].map((n) => (
             <button key={n} type="button" aria-pressed={preset === n} onClick={() => pick(n)}
-              className={`press shrink-0 rounded-full px-3.5 py-1.5 text-[14px] font-medium sm:px-4 ${preset === n ? 'bg-white text-ink shadow-sm' : 'text-muted hover:text-ink'}`}>{n ? `${n} dias` : 'Personalizado'}</button>
+              className={`press shrink-0 rounded-full px-3.5 py-1.5 text-[14px] font-medium sm:px-4 ${preset === n ? 'bg-white text-ink shadow-sm' : 'text-muted hover:text-ink'}`}>{n === 1 ? 'Hoje' : n ? `${n} dias` : 'Personalizado'}</button>
           ))}
         </div>
       </div>
