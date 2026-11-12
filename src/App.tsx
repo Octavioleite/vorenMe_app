@@ -25,7 +25,7 @@ import { useReveal } from './lib/motion'
  *            featured · socials 2×2 · partnership · now | QR
  */
 export default function App() {
-  useReveal()
+  useReveal(creator) // a prévia troca o cartão sem remontar: blocos novos também precisam entrar
   if (creator.style === 'simples') return <SimpleCard />
   const hasNow = !!creator.now
 

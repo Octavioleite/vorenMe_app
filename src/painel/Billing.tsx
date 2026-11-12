@@ -5,9 +5,16 @@ import { api } from './api'
 import { Errors, ask, errorText, input, primary, secondary } from './ui'
 
 interface Status {
-  activeUntil: string; offlineAt: string; active: boolean; subscribed: boolean; invoiceUrl: string | null
+  activeUntil: string; offlineAt: string; active: boolean; subscribed: boolean; plan: Plan | null; invoiceUrl: string | null
   referral: { code: string | null; total: number; paid: number; freeMonths: number }
 }
+
+type Plan = 'mensal' | 'anual'
+/** Anual = 10 mensalidades por 12 meses de uso (mesmo valor da API: ANNUAL_PRICE). */
+const PLANS = {
+  mensal: { label: 'Mensal', price: 'R$ 9,99', per: 'por mês', note: 'Cancele quando quiser.' },
+  anual: { label: 'Anual', price: 'R$ 99,90', per: 'por ano', note: 'Pague 10 meses, use 12. De R$ 119,88 por R$ 99,90 (≈ R$ 8,33/mês). Cancelar só impede a renovação, sem reembolso proporcional.' },
+} as const
 
 const date = (iso: string, year = false) =>
   new Date(iso).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', ...(year && { year: 'numeric' }) })
@@ -81,6 +88,7 @@ function Referral({ r }: { r: Status['referral'] }) {
 export function Billing() {
   const [s, setS] = useState<Status | null>(null)
   const [doc, setDoc] = useState('')
+  const [plan, setPlan] = useState<Plan>('mensal')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -92,9 +100,29 @@ export function Billing() {
     setBusy(true)
     setError('')
     try {
-      const { invoiceUrl } = await api<{ invoiceUrl: string | null }>('/billing/subscribe', 'POST', { cpfCnpj: doc })
+      const { invoiceUrl } = await api<{ invoiceUrl: string | null }>('/billing/subscribe', 'POST', { cpfCnpj: doc, plan })
       await load()
       if (invoiceUrl) location.href = invoiceUrl
+    } catch (err) {
+      setError(errorText(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const switchPlan = async () => {
+    if (!s?.plan) return
+    const to: Plan = s.plan === 'anual' ? 'mensal' : 'anual'
+    const when = s.active ? `quando o período já pago acabar, em ${date(s.activeUntil)}` : 'hoje, na nova fatura'
+    const text = to === 'anual'
+      ? `Você passa a pagar R$ 99,90 por ano: paga 10 meses e usa 12. A primeira cobrança anual vence ${when}. Cancelar depois só impede a renovação, sem reembolso proporcional.`
+      : `Você passa a pagar R$ 9,99 por mês. A primeira mensalidade vence ${when}. O período já pago continua valendo.`
+    if (!(await ask({ title: `Trocar para o plano ${PLANS[to].label.toLowerCase()}?`, text, confirm: 'Trocar plano', cancel: 'Manter plano atual' }))) return
+    setBusy(true)
+    setError('')
+    try {
+      await api('/billing/plan', 'POST', { plan: to })
+      await load()
     } catch (err) {
       setError(errorText(err))
     } finally {
@@ -118,12 +146,13 @@ export function Billing() {
   const justPaid = new URLSearchParams(location.search).has('pago')
   const h = s && headline(s, justPaid)
   const digits = doc.replace(/\D/g, '').length
+  const p = PLANS[s?.plan ?? plan]
 
   return (
     <div className="rise grid max-w-[1040px] gap-6">
       <header>
         <h1 className="text-[40px] leading-[1.05] font-semibold tracking-[-0.045em]">Assinatura</h1>
-        <p className="mt-1 text-[17px] text-muted">Um plano, tudo incluso. Sem letra miúda.</p>
+        <p className="mt-1 text-[17px] text-muted">Mensal ou anual, tudo incluso. Sem letra miúda.</p>
       </header>
 
       {!s && !error && (
@@ -153,27 +182,48 @@ export function Billing() {
 
             <div className="grid content-start gap-5 border-t border-line bg-[#fafafb] p-6 sm:p-8 lg:border-t-0 lg:border-l">
               <div>
-                <p className="text-[14px] font-medium text-muted">Plano VorenMe</p>
+                <p className="text-[14px] font-medium text-muted">Plano VorenMe {p.label}</p>
                 <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
-                  <span className="text-[48px] leading-none font-semibold tracking-[-0.04em] tabular-nums">R$ 9,99</span>
-                  <span className="text-[15px] text-muted">por mês</span>
+                  <span className="text-[48px] leading-none font-semibold tracking-[-0.04em] tabular-nums">{p.price}</span>
+                  <span className="text-[15px] text-muted">{p.per}</span>
                 </p>
+                <p className="mt-2 text-[13px] text-muted">{p.note}</p>
               </div>
 
               {s.subscribed ? (
                 <div className="grid gap-2">
                   {s.invoiceUrl && <a className={primary} href={s.invoiceUrl}>Pagar fatura</a>}
                   <p className="text-[13px] text-muted">{s.active ? `Próxima cobrança perto de ${date(s.activeUntil)}.` : 'Pague com Pix e a liberação é na hora.'}</p>
+                  {s.plan === 'mensal' && (
+                    <button type="button" className={`${secondary} relative mt-2 justify-between text-left`} disabled={busy} onClick={switchPlan}>
+                      <span>Trocar para o anual<span className="block text-[12px] font-normal text-muted">R$ 99,90/ano: paga 10 meses, usa 12</span></span>
+                      <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-accent-fg">2 meses grátis</span>
+                    </button>
+                  )}
+                  {s.plan === 'anual' && (
+                    <button type="button" className={`${secondary} mt-2`} disabled={busy} onClick={switchPlan}>Trocar para o mensal (R$ 9,99/mês)</button>
+                  )}
                 </div>
               ) : (
                 <form onSubmit={subscribe} className="grid gap-3">
+                  <div role="radiogroup" aria-label="Plano" className="grid grid-cols-2 gap-2">
+                    {(['mensal', 'anual'] as const).map((k) => (
+                      <button key={k} type="button" role="radio" aria-checked={plan === k} onClick={() => setPlan(k)}
+                        className={`press relative grid rounded-[16px] border-2 bg-white p-3 text-left ${plan === k ? 'border-accent' : 'border-line'}`}>
+                        {k === 'anual' && <span className="absolute -top-2.5 right-2 rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-accent-fg">2 meses grátis</span>}
+                        <span className="text-[13px] font-semibold">{PLANS[k].label}</span>
+                        <span className="text-[15px] font-semibold tabular-nums">{PLANS[k].price}<span className="text-[12px] font-normal text-muted"> {PLANS[k].per}</span></span>
+                        {k === 'anual' && <span className="text-[12px] text-muted">paga 10, usa 12</span>}
+                      </button>
+                    ))}
+                  </div>
                   <label className="grid gap-1.5">
                     <span className="text-[13px] font-semibold">CPF ou CNPJ</span>
                     <input className={`${input} bg-white`} inputMode="numeric" autoComplete="off" placeholder="000.000.000-00"
                       value={doc} onChange={(e) => setDoc(maskDoc(e.target.value))} required aria-describedby="doc-hint" />
                     <span id="doc-hint" className="text-[12px] text-muted">Exigido pelo banco para emitir a cobrança.</span>
                   </label>
-                  <button className={primary} disabled={busy || (digits !== 11 && digits !== 14)}>{busy ? 'Abrindo fatura...' : 'Assinar'}</button>
+                  <button className={primary} disabled={busy || (digits !== 11 && digits !== 14)}>{busy ? 'Abrindo fatura...' : `Assinar plano ${p.label.toLowerCase()}`}</button>
                 </form>
               )}
 

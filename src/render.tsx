@@ -24,6 +24,8 @@ function Preview() {
       refreshDerived()
       applyHead(next, keepTheme)
       rerender((n) => n + 1)
+      // Landing: "Ver o Conecta em ação" abre o exemplo já no bloco pedido.
+      if (typeof e.data.scroll === 'string') setTimeout(() => document.getElementById(e.data.scroll)?.scrollIntoView({ block: 'start' }), 300)
     }
     addEventListener('message', onMessage)
     parent.postMessage({ type: 'vorenme:ready' }, location.origin) // avisa o painel que já pode mandar

@@ -11,7 +11,7 @@ const step = (i: number) => ({ '--i': i }) as CSSProperties
 const AUTOPLAY = 3200
 // Mesma linguagem da página inicial: campos cinza-claro sem borda, botões em pílula.
 const field = 'h-12 w-full rounded-[14px] bg-[#f2f2f4] px-4 text-[16px] text-ink outline-none ring-accent/40 transition-shadow placeholder:text-[#8e8e93] focus:bg-white focus:ring-2'
-const PERKS = ['3 dias grátis, depois R$ 9,99/mês', 'Até 3 cartões e links ilimitados', 'Cancele quando quiser']
+const PERKS = ['3 dias grátis, depois R$ 9,99/mês ou R$ 99,90/ano', 'Até 3 cartões e links ilimitados', 'Cancele quando quiser']
 
 /** Cartão-modelo. O ativo inclina seguindo o ponteiro (CSS vars, sem re-render) e,
  *  se a pessoa digitou o nome no cadastro, mostra o nome dela no lugar do exemplo. */

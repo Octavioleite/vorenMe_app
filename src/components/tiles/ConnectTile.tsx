@@ -35,10 +35,12 @@ function ActionButton({ action, service, className, children, onForm }: {
 export function ConnectTile({ className = '' }: { className?: string }) {
   const k = creator.connect
   const [form, setForm] = useState<{ action: ConnectAction; service?: ConnectService } | null>(null)
-  if (!k || !k.actions.length) return null
-  const [main, ...rest] = k.actions
-  const byId = new Map(k.actions.map((a) => [a.id, a]))
-  const services = (k.services ?? []).filter((s) => byId.has(s.action))
+  // Só ações que levam a algum lugar: WhatsApp/e-mail sem contato cadastrado ficariam como botão vazio.
+  const usable = (k?.actions ?? []).filter((a) => a.channel === 'form' || actionHref(a, creator))
+  if (!k || !usable.length) return null
+  const [main, ...rest] = usable
+  const byId = new Map(usable.map((a) => [a.id, a]))
+  const services = (k.services ?? []).filter((s) => { const a = byId.get(s.action); return a && (a.channel === 'form' || actionHref(a, creator, s)) })
   const onForm = (action: ConnectAction, service?: ConnectService) => setForm({ action, service })
   const MainIcon = CHANNEL_ICON[main.channel]
 
@@ -129,7 +131,7 @@ function LeadDialog({ action, service, onClose }: { action: ConnectAction; servi
       })
       if (res.ok) return setStatus({ state: 'sent' })
       const json = await res.json().catch(() => ({}))
-      setStatus({ state: 'error', message: json.errors?.join(' ') ?? json.message ?? 'Não foi possível enviar. Tente novamente.' })
+      setStatus({ state: 'error', message: (Array.isArray(json.errors) && json.errors.length ? json.errors.join(' ') : typeof json.message === 'string' ? json.message : 'Não foi possível enviar. Tente novamente.') })
     } catch {
       setStatus({ state: 'error', message: 'Sem conexão. Confira sua internet e tente de novo.' })
     }

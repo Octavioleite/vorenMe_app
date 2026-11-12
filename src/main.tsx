@@ -21,8 +21,9 @@ const load = slug
     })
   : Promise.resolve(undefined)
 
-// Sem slug = página inicial do VorenMe (propaganda + entrar).
-if (!slug) import('./Landing')
+// Sem slug = página inicial do VorenMe (propaganda + entrar). Sem slug com ?preview = cartão de exemplo
+// dentro do iframe da landing (render.tsx recebe o modelo por postMessage).
+if (!slug && !new URLSearchParams(location.search).has('preview')) import('./Landing')
 else load
   .then(async (card) => {
     if (card === null) {

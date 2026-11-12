@@ -1,8 +1,8 @@
-import { ArrowRight, CaretLeft, CaretRight, Check, DeviceMobile, List, PaintBrush, Plus, ShareNetwork, UserPlus, WhatsappLogo, X } from '@phosphor-icons/react'
+import { ArrowRight, CaretLeft, CaretRight, ChartLineUp, Check, DeviceMobile, Eye, Lightbulb, Target, List, PaintBrush, Plus, ShareNetwork, UserPlus, WhatsappLogo, X } from '@phosphor-icons/react'
 import { StrictMode, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QrCode } from './components/QrCode'
-import type { CreatorConfig } from './config/types'
+import type { ConnectConfig, CreatorConfig } from './config/types'
 import { responsive } from './lib/img'
 import { trackSite } from './lib/track'
 import { useReveal } from './lib/motion'
@@ -38,10 +38,35 @@ const STEPS = [
   { Icon: ShareNetwork, title: 'Compartilhe o link', text: 'No WhatsApp, na bio e no QR code impresso.' },
 ]
 
+/* VorenMe Conecta: os 3 passos do que ele faz de verdade (ConnectTile no cartão, Conecta.tsx no painel). */
+const CONECTA_STEPS = [
+  { Icon: Target, title: 'Um próximo passo claro', text: 'Agendar, pedir orçamento ou fazer pedido. A ação principal fica em destaque no cartão.' },
+  { Icon: WhatsappLogo, title: 'WhatsApp com a mensagem pronta', text: 'A conversa já começa dizendo o serviço escolhido. Quem não usa WhatsApp deixa o contato no formulário.' },
+  { Icon: ChartLineUp, title: 'Você vê o que funciona', text: 'Cliques por ação, contatos recebidos, vendas anotadas e dicas do que ajustar.' },
+]
+/** Conecta ligado no modelo de barbearia, para o exemplo "Ver o Conecta em ação". */
+const CONECTA_DEMO: ConnectConfig = {
+  goal: 'agendamento',
+  title: 'Agende seu horário',
+  actions: [
+    { id: 'agendar', label: 'Agendar pelo WhatsApp', channel: 'whatsapp', message: 'Olá! Vi seu cartão e quero agendar {servico}.' },
+    { id: 'contato', label: 'Deixar meu contato', channel: 'form' },
+  ],
+  services: [
+    { id: 'corte', name: 'Corte', action: 'agendar' },
+    { id: 'barba', name: 'Barba', action: 'agendar' },
+    { id: 'combo', name: 'Corte + barba', action: 'agendar' },
+  ],
+}
+/** Painel com dados de exemplo; a recomendação segue a regra "servico-destaque" da API (utils/conecta.js). */
+const CONECTA_STATS = [['412', 'Visitantes únicos'], ['87', 'Cliques nas ações'], ['23', 'Contatos recebidos'], ['9', 'Vendas anotadas']]
+const CONECTA_ACTIONS = [['Agendar pelo WhatsApp', '64 cliques'], ['Deixar meu contato', '23 cliques']]
+
 const INCLUDED = [
   '3 cartões virtuais por conta',
   'Links ilimitados em cada cartão',
   'Personalização de cada cartão',
+  'VorenMe Conecta: ações, contatos e estatísticas',
   'Todos os modelos e estilos',
   'Botão de salvar contato na agenda',
   'QR code pronto para imprimir',
@@ -51,7 +76,9 @@ const LINKS = ['WhatsApp', 'Instagram', 'Agendamento', 'Cardápio', 'Localizaç�
 
 const FAQ = [
   { q: 'Como funcionam os 3 dias grátis?', a: 'Você cria a conta e usa tudo liberado por 3 dias. Se não gostar, é só cancelar antes do fim do teste e nada é cobrado.' },
-  { q: 'Tem fidelidade ou multa?', a: 'Não. O plano é mensal e você cancela quando quiser pelo próprio painel.' },
+  { q: 'Tem fidelidade ou multa?', a: 'Não. No plano mensal você cancela quando quiser pelo próprio painel. No anual você paga 10 meses e usa 12; cancelar só impede a renovação, sem reembolso proporcional.' },
+  { q: 'Como funciona o plano anual?', a: 'Você paga R$ 99,90 uma vez por ano, o equivalente a 10 mensalidades, e usa os 12 meses. São 2 meses grátis (R$ 19,98 de economia) em relação ao mensal.' },
+  { q: 'O que é o VorenMe Conecta?', a: 'É o bloco que transforma visita em cliente: você escolhe o próximo passo (agendar, pedir orçamento, comprar), o WhatsApp abre com a mensagem pronta e o painel mostra cliques, contatos e o que ajustar. Já vem no plano.' },
   { q: 'Preciso instalar algum aplicativo?', a: 'Não. Seu cartão abre no navegador de qualquer celular, e quem recebe também não precisa instalar nada.' },
   { q: 'Consigo mudar o cartão depois?', a: 'Sim. Troque foto, textos, links e até o modelo inteiro a qualquer momento. O link continua o mesmo.' },
   { q: 'Serve para o meu tipo de negócio?', a: 'Se você atende clientes e quer ser encontrado com facilidade, serve. Autônomos, lojas, clínicas e prestadores de serviço usam.' },
@@ -95,15 +122,15 @@ function Screen({ t, device, on }: { t: Template; device: Device; on: boolean })
   )
 }
 
-/** Computador, iPad e celular trocando de modelo juntos: o mesmo link abre bem em qualquer tela. */
-function Devices({ templates }: { templates: Template[] }) {
+/** Computador, iPad e celular trocando de modelo juntos: o mesmo link abre bem em qualquer tela.
+ *  Clicar abre o cartão de exemplo do modelo que está nas telas. */
+function Devices({ templates, active, setActive, onOpen }: { templates: Template[]; active: number; setActive: (f: (a: number) => number) => void; onOpen: () => void }) {
   const shown = templates.slice(0, 6)
-  const [active, setActive] = useState(0)
   useEffect(() => {
     if (shown.length < 2 || reduced()) return
     const id = setInterval(() => setActive((a) => (a + 1) % shown.length), 3600)
     return () => clearInterval(id)
-  }, [shown.length])
+  }, [shown.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const screen = (device: Device) => (
     <div className="dev-screen">
@@ -113,11 +140,14 @@ function Devices({ templates }: { templates: Template[] }) {
   )
 
   return (
-    <div className="devices relative mx-auto aspect-[4/3] w-full max-w-[1040px] sm:aspect-[16/9]" aria-hidden="true">
-      <div className="dev dev-desktop">{screen('desktop')}</div>
-      <div className="dev dev-tablet">{screen('tablet')}</div>
-      <div className="dev dev-phone">{screen('phone')}</div>
-    </div>
+    <button type="button" onClick={onOpen} disabled={!shown.length} aria-label="Abrir o cartão de exemplo deste modelo"
+      className="devices relative mx-auto block aspect-[4/3] w-full max-w-[1040px] cursor-pointer sm:aspect-[16/9]">
+      <span aria-hidden="true">
+        <span className="dev dev-desktop">{screen('desktop')}</span>
+        <span className="dev dev-tablet">{screen('tablet')}</span>
+        <span className="dev dev-phone">{screen('phone')}</span>
+      </span>
+    </button>
   )
 }
 
@@ -187,6 +217,59 @@ function useCoverflow(count: number) {
 
 /* ── Peças ─────────────────────────────────────────────────────────── */
 
+/** Cartão de exemplo: o modelo renderizado de verdade num iframe (/?preview), recebido pelo mesmo
+ *  postMessage da prévia do editor (render.tsx). Anterior/próximo troca o modelo sem recarregar o iframe.
+ *  Dialog nativo: foco preso, Esc e clique fora fecham. */
+function ExampleDialog({ templates, index, onIndex, onClose, scroll }: { templates: Template[]; index: number | null; onIndex: (n: number) => void; onClose: () => void; scroll?: string }) {
+  const dialog = useRef<HTMLDialogElement>(null)
+  const frame = useRef<HTMLIFrameElement>(null)
+  const ready = useRef(false)
+  const t = index === null ? null : templates[index]
+
+  useEffect(() => {
+    const d = dialog.current
+    if (t && !d?.open) d?.showModal()
+    if (!t) { ready.current = false; if (d?.open) d.close(); return }
+    const send = () => frame.current?.contentWindow?.postMessage({ type: 'vorenme:preview', config: t.config, scroll }, location.origin)
+    if (ready.current) send()
+    const onReady = (e: MessageEvent) => {
+      if (e.origin !== location.origin || e.source !== frame.current?.contentWindow || e.data?.type !== 'vorenme:ready') return
+      ready.current = true
+      send()
+    }
+    addEventListener('message', onReady)
+    return () => removeEventListener('message', onReady)
+  }, [t]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const many = templates.length > 1
+  const go = (dir: number) => index !== null && onIndex((index + dir + templates.length) % templates.length)
+  const arrow = 'press grid size-12 shrink-0 place-items-center rounded-full bg-white text-ink hover:brightness-95'
+
+  return (
+    <dialog ref={dialog} className="example-dialog" aria-labelledby="example-title" onClose={onClose} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      {t && (
+        <div className="grid w-[min(390px,calc(100vw-24px))] gap-2.5 py-3">
+          <div className="flex items-center justify-between gap-3 rounded-[22px] bg-white px-4 py-3">
+            <div className="min-w-0">
+              <p id="example-title" className="flex items-center gap-1.5 text-[15px] font-semibold"><Eye size={16} weight="bold" className="shrink-0 text-accent" aria-hidden="true" /> Cartão de exemplo: {t.name}</p>
+              <p className="text-[13px] text-muted">Dados fictícios, só para você ver como fica.</p>
+            </div>
+            <button type="button" onClick={onClose} aria-label="Fechar exemplo" className="press grid size-10 shrink-0 place-items-center rounded-full hover:bg-[#f2f2f4]"><X size={18} weight="bold" /></button>
+          </div>
+          <iframe ref={frame} src="/?preview" title={`Cartão de exemplo do modelo ${t.name}`} className="example-frame block h-[min(800px,calc(100dvh-200px))] w-full rounded-[22px] bg-[#e9e9ec]" />
+          <div className="flex items-center gap-2">
+            {many && <button type="button" onClick={() => go(-1)} aria-label="Exemplo anterior" className={arrow}><CaretLeft size={18} weight="bold" /></button>}
+            <a href={SIGNUP} className="cta press inline-flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-full bg-accent px-4 text-[15px] font-semibold whitespace-nowrap text-accent-fg hover:brightness-110">
+              Usar este modelo <ArrowRight size={18} weight="bold" className="cta-arrow" aria-hidden="true" />
+            </a>
+            {many && <button type="button" onClick={() => go(1)} aria-label="Próximo exemplo" className={arrow}><CaretRight size={18} weight="bold" /></button>}
+          </div>
+        </div>
+      )}
+    </dialog>
+  )
+}
+
 function CtaButton({ big = false }: { big?: boolean }) {
   return (
     <a href={SIGNUP} className={`cta press inline-flex items-center justify-center gap-2 rounded-full bg-accent font-semibold whitespace-nowrap text-accent-fg hover:brightness-110 ${big ? 'h-14 px-8 text-base' : 'h-12 px-6 text-[15px]'}`}>
@@ -206,6 +289,12 @@ function Landing() {
   const { ref: focusRef, step, go } = useCoverflow(templates.length)
   useReveal(templates.length)
   const pick = (n: number) => templates[n % Math.max(templates.length, 1)]
+  const [example, setExample] = useState<number | null>(null)
+  const [active, setActive] = useState(0) // modelo nas telas do hero
+  const [conecta, setConecta] = useState(false)
+  const barber = templates.find((t) => t.id === 'barbearia') ?? templates[0]
+  const conectaDemo = barber && [{ ...barber, name: `${barber.name} com Conecta`, config: { ...barber.config, connect: CONECTA_DEMO } }]
+  const [annual, setAnnual] = useState(false)
 
   return (
     <>
@@ -217,6 +306,7 @@ function Landing() {
           </a>
           <nav className="hidden items-center gap-8 text-[14px] text-muted md:flex">
             <a href="#recursos" className="transition-colors hover:text-ink">Recursos</a>
+            <a href="#conecta" className="font-semibold text-accent transition-colors hover:text-ink">Conecta</a>
             <a href="#modelos" className="transition-colors hover:text-ink">Modelos</a>
             <a href="#preco" className="transition-colors hover:text-ink">Preço</a>
             <a href="#duvidas" className="transition-colors hover:text-ink">Dúvidas</a>
@@ -235,6 +325,7 @@ function Landing() {
               <nav className="absolute top-12 right-0 grid w-52 gap-1 rounded-[20px] bg-white p-2 text-[15px] font-medium shadow-[0_18px_40px_-16px_rgb(18_18_20/0.35)]"
                 onClick={(e) => (e.target as HTMLElement).closest('a') && e.currentTarget.parentElement?.removeAttribute('open')}>
                 <a href="#recursos" className="rounded-xl px-3 py-2.5 hover:bg-[#f2f2f4]">Recursos</a>
+                <a href="#conecta" className="rounded-xl px-3 py-2.5 font-semibold text-accent hover:bg-[#f2f2f4]">Conecta</a>
                 <a href="#modelos" className="rounded-xl px-3 py-2.5 hover:bg-[#f2f2f4]">Modelos</a>
                 <a href="#preco" className="rounded-xl px-3 py-2.5 hover:bg-[#f2f2f4]">Preço</a>
                 <a href="#duvidas" className="rounded-xl px-3 py-2.5 hover:bg-[#f2f2f4]">Dúvidas</a>
@@ -258,16 +349,17 @@ function Landing() {
               <span className="word"><span className="text-accent" style={i(3)}>link.</span></span>
             </h1>
             <p className="rise mx-auto mt-6 max-w-[40ch] text-[18px] leading-relaxed text-muted md:text-[20px]" style={i(4)}>
-              WhatsApp, redes e serviços num cartão bonito, pronto em minutos. 3 dias grátis, depois R$ 9,99/mês.
+              WhatsApp, redes e serviços num cartão bonito, pronto em minutos. 3 dias grátis, depois R$ 9,99/mês ou R$ 99,90/ano.
             </p>
             <div className="rise mt-8 flex flex-wrap justify-center gap-3" style={i(5)}>
               <CtaButton />
-              <a href="#modelos" className="press inline-flex h-12 items-center rounded-full px-6 text-[15px] font-semibold text-accent hover:bg-accent/8">
-                Ver modelos
+              <a href="#modelos" onClick={(e) => { if (templates.length) { e.preventDefault(); setExample(active) } }}
+                className="press inline-flex h-12 items-center gap-2 rounded-full px-6 text-[15px] font-semibold text-accent hover:bg-accent/8">
+                <Eye size={18} weight="bold" aria-hidden="true" /> Ver um exemplo
               </a>
             </div>
           </div>
-          <div className="mt-14 px-4 md:mt-20"><Devices templates={templates} /></div>
+          <div className="mt-14 px-4 md:mt-20"><Devices templates={templates} active={active} setActive={setActive} onOpen={() => setExample(active)} /></div>
         </section>
 
         {/* Papel x VorenMe: os problemas do papel são riscados, os benefícios entram com check */}
@@ -351,6 +443,64 @@ function Landing() {
           </div>
         </section>
 
+        {/* VorenMe Conecta, o diferencial: único bloco escuro da página (o cartão deixa de ser só vitrine).
+            Esquerda: o que ele faz em 3 passos. Direita: o painel do dono com dados de exemplo, onde a mensagem do cliente "chega". */}
+        <section id="conecta" className={`${WRAP} scroll-mt-20 pt-20 sm:pt-28 md:pt-32`}>
+          <div data-reveal className="conecta grid gap-12 overflow-hidden rounded-[32px] bg-ink p-6 text-white sm:p-10 lg:grid-cols-[1fr_1.05fr] lg:items-center lg:gap-14 lg:p-14">
+            <div>
+              <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[13px] font-semibold"><Target size={16} weight="bold" aria-hidden="true" /> VorenMe Conecta</p>
+              <h2 className={`${H2} mt-6 max-w-[12ch]`}>Visita vira cliente.</h2>
+              <p className="mt-4 max-w-[44ch] text-[18px] leading-relaxed text-white/70">Seu cartão mostra ao visitante o próximo passo, abre o WhatsApp com a mensagem pronta e conta para você o que trouxe resultado.</p>
+              <ol className="mt-10 grid gap-7">
+                {CONECTA_STEPS.map(({ Icon, title, text }, n) => (
+                  <li key={title} className="conecta-step flex gap-4" style={i(n)}>
+                    <span className="grid size-11 shrink-0 place-items-center rounded-full bg-accent text-accent-fg"><Icon size={20} weight="bold" aria-hidden="true" /></span>
+                    <span>
+                      <span className="block text-[18px] font-semibold tracking-[-0.02em]">{title}</span>
+                      <span className="mt-1 block max-w-[40ch] text-[15px] leading-relaxed text-white/65">{text}</span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+              <button type="button" onClick={() => setConecta(true)} disabled={!conectaDemo}
+                className="press mt-10 inline-flex h-12 items-center gap-2 rounded-full bg-white px-6 text-[15px] font-semibold whitespace-nowrap text-ink hover:brightness-95 disabled:opacity-60">
+                <Eye size={18} weight="bold" aria-hidden="true" /> Ver o Conecta em ação
+              </button>
+            </div>
+
+            <div className="relative pt-12 sm:pl-6">
+              <p className="conecta-bubble absolute top-0 left-0 z-10 flex max-w-[270px] items-start gap-2.5 rounded-[20px] rounded-bl-[6px] bg-[#f5f5f7] p-3.5 text-[14px] leading-snug text-ink shadow-[0_18px_40px_-18px_rgb(0_0_0/0.6)]">
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-ink text-bg"><WhatsappLogo size={17} weight="fill" aria-hidden="true" /></span>
+                Olá! Vi seu cartão e quero agendar Corte + barba.
+              </p>
+              <div className="rounded-[24px] bg-white p-5 text-ink sm:p-6">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="flex items-center gap-2 text-[16px] font-semibold whitespace-nowrap"><Target size={18} weight="bold" className="text-accent" aria-hidden="true" /> Painel do Conecta</p>
+                  <span className="rounded-full bg-[#f2f2f4] px-2.5 py-1 text-[12px] font-medium whitespace-nowrap text-muted">Dados de exemplo</span>
+                </div>
+                <dl className="mt-5 grid grid-cols-2 gap-2">
+                  {CONECTA_STATS.map(([n, label], k) => (
+                    <div key={label} className="conecta-stat rounded-[16px] bg-[#f5f5f7] p-4" style={i(k)}>
+                      <dd className="text-[30px] leading-none font-semibold tracking-[-0.04em] tabular-nums">{n}</dd>
+                      <dt className="mt-1.5 text-[13px] text-muted">{label}</dt>
+                    </div>
+                  ))}
+                </dl>
+                <ul className="mt-4 grid gap-1 text-[14px]">
+                  {CONECTA_ACTIONS.map(([label, n]) => (
+                    <li key={label} className="flex justify-between gap-3 py-1.5"><span className="font-medium">{label}</span><span className="text-muted tabular-nums">{n}</span></li>
+                  ))}
+                </ul>
+                <div className="mt-4 rounded-[16px] bg-accent/8 p-4">
+                  <p className="flex items-start gap-2 text-[15px] font-semibold"><Lightbulb size={18} weight="fill" className="mt-0.5 shrink-0 text-accent" aria-hidden="true" /> Corte + barba concentra o interesse</p>
+                  <p className="mt-1 pl-[26px] text-[13px] text-muted">31 visitantes escolheram Corte + barba; o segundo teve 12.</p>
+                  <span className="mt-3 ml-[26px] inline-flex rounded-full bg-accent px-3 py-1.5 text-[13px] font-semibold text-accent-fg">Colocar em primeiro</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Como funciona: a linha se desenha com a rolagem e liga os 3 passos */}
         <section className={`${WRAP} steps py-20 sm:py-28 md:py-40`}>
           <h2 className={`${H2} max-w-[16ch]`} data-reveal>Pronto em poucos minutos.</h2>
@@ -373,20 +523,22 @@ function Landing() {
           <section id="modelos" className="scroll-mt-20 bg-[#f5f5f7] py-20 md:py-32">
             <div className={WRAP}>
               <h2 className={H2} data-reveal>Um modelo para cada negócio.</h2>
+              <p className="mt-4 max-w-[52ch] text-[18px] text-muted" data-reveal>Toque em um modelo para abrir um cartão de exemplo. Os dados são fictícios; o seu fica com sua foto, textos e links.</p>
             </div>
             {/* Coverflow: o modelo do meio em destaque, os vizinhos desfocados. Para em cada card (scroll-snap) e avança sozinho. */}
             <div className="relative mt-12" data-reveal>
               <div ref={focusRef} className="cover" tabIndex={0} aria-label="Modelos" role="region">
-                {templates.map((t) => (
-                  <div key={t.id} className="cover-item model">
-                    <div className="aspect-[3/4] overflow-hidden rounded-[22px] bg-white">
-                      <img src={responsive(t.config.photo.src, [500]).src} alt={`Modelo ${t.name}`} loading="lazy" className="h-full w-full object-cover" style={focal(t)} />
+                {templates.map((t, n) => (
+                  <button key={t.id} type="button" onClick={() => setExample(n)} aria-label={`Ver cartão de exemplo do modelo ${t.name}`} className="cover-item model cursor-pointer text-left">
+                    <div className="relative aspect-[3/4] overflow-hidden rounded-[22px] bg-white">
+                      <img src={responsive(t.config.photo.src, [500]).src} alt="" loading="lazy" className="h-full w-full object-cover" style={focal(t)} />
+                      <span className="cover-cta"><Eye size={16} weight="bold" aria-hidden="true" /> Ver exemplo</span>
                     </div>
                     <span className="cover-name mt-5 block text-center">
                       <span className="block text-[17px] font-semibold tracking-[-0.02em]">{t.name}</span>
                       <span className="block text-[14px] text-muted">{t.config.niche}</span>
                     </span>
-                  </div>
+                  </button>
                 ))}
               </div>
               <div className="relative mt-4 flex items-center justify-center gap-5">
@@ -401,12 +553,22 @@ function Landing() {
             <div className="mt-12 text-center"><CtaButton /></div>
           </section>
         )}
+        <ExampleDialog templates={templates} index={example} onIndex={setExample} onClose={() => setExample(null)} />
+        {conectaDemo && <ExampleDialog templates={conectaDemo} index={conecta ? 0 : null} onIndex={() => {}} onClose={() => setConecta(false)} scroll="conecta" />}
 
         {/* Preço */}
         <section id="preco" className={`${WRAP} scroll-mt-20 py-20 text-center sm:py-28 md:py-40`}>
-          <h2 className={H2} data-reveal>Um plano. Tudo incluso.</h2>
+          <h2 className={H2} data-reveal>Mensal ou anual. Tudo incluso.</h2>
           <p className="mx-auto mt-4 max-w-[44ch] text-[18px] text-muted" data-reveal>Menos de R$ 0,34 por dia. Sem taxa de adesão e sem fidelidade.</p>
-          <div className="price mx-auto mt-14 max-w-[560px] rounded-[32px] bg-[#f5f5f7] p-6 text-left sm:p-8 md:p-12" data-reveal>
+          <div role="radiogroup" aria-label="Plano" className="mx-auto mt-10 flex w-fit gap-1 rounded-full bg-[#f2f2f4] p-1" data-reveal>
+            {[['Mensal', false], ['Anual · 2 meses grátis', true]].map(([label, on]) => (
+              <button key={String(on)} type="button" role="radio" aria-checked={annual === on} onClick={() => setAnnual(on as boolean)}
+                className={`press rounded-full px-4 py-2 text-[14px] font-semibold ${annual === on ? 'bg-white text-ink shadow-[0_1px_3px_rgb(17_17_19/0.12)]' : 'text-muted hover:text-ink'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="price mx-auto mt-8 max-w-[560px] rounded-[32px] bg-[#f5f5f7] p-6 text-left sm:p-8 md:p-12" data-reveal>
             <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
               <div>
                 <p className="text-[15px] font-semibold text-accent">3 dias grátis</p>
@@ -414,10 +576,16 @@ function Landing() {
               </div>
               <p className="flex items-baseline gap-1">
                 <span className="text-xl font-semibold">R$</span>
-                <span className="text-[clamp(56px,17vw,80px)] leading-none font-semibold tracking-[-0.06em]">9,99</span>
-                <span className="text-muted">/mês</span>
+                <span className="text-[clamp(56px,17vw,80px)] leading-none font-semibold tracking-[-0.06em]">{annual ? '99,90' : '9,99'}</span>
+                <span className="text-muted">{annual ? '/ano' : '/mês'}</span>
               </p>
             </div>
+            {annual && (
+              <div className="mt-6 rounded-[20px] bg-accent/10 p-4">
+                <p className="text-[16px] font-semibold">Pague 10 meses, use 12.</p>
+                <p className="mt-1 text-[15px] text-muted">De <s>R$ 119,88</s> por R$ 99,90 por ano: 2 meses grátis (≈ R$ 8,33/mês). Cobrado uma vez por ano.</p>
+              </div>
+            )}
             <ul className="mt-10 grid gap-3.5">
               {INCLUDED.map((item, n) => (
                 <li key={item} data-reveal style={i(n)} className="flex items-center gap-3 text-[16px]">
@@ -428,7 +596,7 @@ function Landing() {
             </ul>
             <div className="mt-10 grid gap-3 text-center">
               <CtaButton big />
-              <span className="text-sm text-muted">Cancele quando quiser.</span>
+              <span className="text-sm text-muted">{annual ? 'Cancelar só impede a renovação, sem reembolso proporcional.' : 'Cancele quando quiser.'}</span>
             </div>
           </div>
         </section>
@@ -464,6 +632,7 @@ function Landing() {
         {/* Jakob: o rodapé repete a navegação, onde o usuário procura por hábito (e é a única nav no mobile) */}
         <nav className="flex flex-wrap items-center gap-5">
           <a href="#recursos" className="hover:text-ink">Recursos</a>
+          <a href="#conecta" className="hover:text-ink">Conecta</a>
           <a href="#modelos" className="hover:text-ink">Modelos</a>
           <a href="#preco" className="hover:text-ink">Preço</a>
           <a href="#duvidas" className="hover:text-ink">Dúvidas</a>

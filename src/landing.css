@@ -44,6 +44,10 @@
     .dev-phone { right: 0; width: 33%; padding: 1.1%; border-radius: 18px; }
     .dev-phone .dev-screen { border-radius: 14px; }
   }
+  /* Os aparelhos abrem o exemplo: no hover sobem um pouco (feedback de que é clicável). */
+  .devices > span { position: absolute; inset: 0; transition: transform 0.5s var(--ease); }
+  @media (hover: hover) { .devices:hover > span { transform: translateY(-6px); } }
+  .devices:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 8px; border-radius: 24px; }
   .dev-phone .dev-screen::before { content: ''; position: absolute; top: 2.6%; left: 50%; z-index: 3; width: 30%; height: 2.8%; border-radius: 99px; background: #111113; transform: translateX(-50%); }
 
   /* Entrada única ao carregar: o computador chega e o iPad e o celular encostam nele (sempre termina opaco e reto) */
@@ -107,6 +111,13 @@
   }
   @keyframes qr-scan { 0% { top: 8px; opacity: 0; } 15%, 85% { opacity: 1; } 100% { top: calc(100% - 10px); opacity: 0; } }
 
+  /* ── Conecta: os passos entram em sequência e a mensagem do cliente "chega" por último (a história do Conecta) ── */
+  .conecta-step, .conecta-stat { transition: opacity 0.5s var(--ease), transform 0.6s var(--ease); transition-delay: calc(var(--i) * 120ms + 250ms); }
+  .conecta-bubble { transition: opacity 0.5s var(--ease), transform 0.6s var(--ease); transition-delay: 0.9s; transform-origin: bottom left; }
+  .reveal-ready [data-reveal]:not([data-shown]) .conecta-step,
+  .reveal-ready [data-reveal]:not([data-shown]) .conecta-stat { opacity: 0; transform: translateY(10px); }
+  .reveal-ready [data-reveal]:not([data-shown]) .conecta-bubble { opacity: 0; transform: translateY(12px) scale(0.94); }
+
   /* ── Passos: linha desenhada pela rolagem ── */
   .steps-line { position: absolute; inset: 0; background: var(--accent); transform-origin: left; }
   @supports (animation-timeline: view()) {
@@ -138,6 +149,12 @@
     .cover { gap: 20px; padding-inline: calc(50% - 160px); }
     .cover-item { flex-basis: 320px; }
   }
+  /* Uma chamada só, no card do centro: aparece com --p, então cada card que chega ao meio (o carrossel anda sozinho) acende o "Ver exemplo". */
+  .cover-cta { position: absolute; left: 50%; bottom: 16px; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding-inline: 16px;
+    border-radius: 999px; background: var(--color-accent); color: var(--color-accent-fg); font-size: 14px; font-weight: 600; white-space: nowrap;
+    box-shadow: 0 10px 24px -10px rgb(106 69 245 / 0.6); opacity: var(--p); pointer-events: none;
+    transform: translate(-50%, calc((1 - var(--p)) * 10px)) scale(calc(0.92 + 0.08 * var(--p))); transition: scale 0.3s var(--ease); }
+  @media (hover: hover) { .model:hover .cover-cta { scale: 1.05; } }
   .model img { transition: transform 0.9s var(--ease); }
   @media (hover: hover) { .model:hover img { transform: scale(1.05); } }
 
@@ -145,3 +162,7 @@
     details[open] .faq-a { animation: rise 0.45s var(--ease); }
   }
 }
+
+/* Cartão de exemplo (Landing.tsx) */
+dialog.example-dialog { margin: auto; padding: 0; border: 0; background: transparent; max-width: none; max-height: none; overflow: visible; }
+dialog.example-dialog::backdrop { background: rgb(18 18 20 / 0.6); backdrop-filter: blur(6px); }
