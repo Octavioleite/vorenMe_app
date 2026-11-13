@@ -309,7 +309,7 @@ function ConectaPromo({ cards, onActivate }: { cards: Card[]; onActivate: (c: Ca
   )
 }
 
-export function Cards({ name, published, onEdit, onAuthLost }: { name?: string | null; published: boolean; onEdit: (c: Card, isNew?: boolean, section?: string) => void; onAuthLost: () => void }) {
+export function Cards({ name, admin, published, onEdit, onAuthLost }: { name?: string | null; admin?: boolean; published: boolean; onEdit: (c: Card, isNew?: boolean, section?: string) => void; onAuthLost: () => void }) {
   const [cards, setCards] = useState<Card[] | null>(null)
   const [templates, setTemplates] = useState<Template[]>([])
   const [error, setError] = useState('')
@@ -341,7 +341,7 @@ export function Cards({ name, published, onEdit, onAuthLost }: { name?: string |
 
   const openNew = () => dialog.current?.showModal()
 
-  const full = !!cards && cards.length >= MAX_CARDS
+  const full = !admin && !!cards && cards.length >= MAX_CARDS
   const canCreate = !full // criar é livre; ir ao ar pede e-mail confirmado (published)
   const first = (name || '').trim().split(/\s+/)[0]
   return (

@@ -165,7 +165,7 @@ export function Painel() {
             : <CardPicker title="Kit de impressão" text="Escolha o cartão para gerar o QR code do balcão, da mesa e do cartão de visita." onPick={(id) => goTab(tab, id)} onAuthLost={logout} />)
           : tab === '/painel/assinatura' ? <Billing />
           : tab === '/painel/perfil' ? <Profile user={user} onChange={setSessionUser} onDeleted={logout} />
-          : <Cards name={user.name} published={user.published ?? !!user.emailVerified} onEdit={open} onAuthLost={logout} />
+          : <Cards name={user.name} admin={user.admin} published={user.published ?? !!user.emailVerified} onEdit={open} onAuthLost={logout} />
         )}
         </Suspense>
       </div>

@@ -3,7 +3,7 @@ import type { CreatorConfig } from '../config/types'
 const BASE = `${import.meta.env.VITE_API_URL ?? ''}/api/v1`
 const KEY = 'vorenme-session'
 
-export interface User { id: string; name: string | null; email: string; createAt?: string; emailVerified?: boolean; published?: boolean }
+export interface User { id: string; name: string | null; email: string; createAt?: string; emailVerified?: boolean; published?: boolean; admin?: boolean }
 export interface Session { user: User; accessToken: string; refreshToken: string; support?: { by: string; expiresAt: string } }
 export interface Card { id: string; slug: string; template: string; config: CreatorConfig; updateAt: string; disabled?: boolean }
 export interface Template { id: string; name: string; category: string; config: CreatorConfig }
