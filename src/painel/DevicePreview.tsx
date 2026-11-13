@@ -1,5 +1,5 @@
 import { DesktopTower, DeviceMobile, DeviceTablet } from '@phosphor-icons/react'
-import { useEffect, useRef, useState, type RefObject } from 'react'
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 
 /* Resoluções reais (CSS px). O iframe é renderizado nesse tamanho e reduzido com transform,
    então os breakpoints do cartão (md, lg) respondem como no aparelho de verdade. */
@@ -12,7 +12,8 @@ type Device = keyof typeof DEVICES
 
 const KEY = 'vorenme-preview-device'
 
-export function DevicePreview({ frame, src, pulse, onDevice }: { frame: RefObject<HTMLIFrameElement>; src: string; pulse: number; onDevice?: (d: Device) => void }) {
+/** toolbar: barra do texto selecionado (Editor.tsx), entre o seletor de aparelho e a tela; a tela encolhe para caber. */
+export function DevicePreview({ frame, src, pulse, onDevice, toolbar }: { frame: RefObject<HTMLIFrameElement>; src: string; pulse: number; onDevice?: (d: Device) => void; toolbar?: ReactNode }) {
   const [device, setDevice] = useState<Device>(() => {
     try {
       const d = localStorage.getItem(KEY)
@@ -34,6 +35,14 @@ export function DevicePreview({ frame, src, pulse, onDevice }: { frame: RefObjec
     el.dataset.pulse = ''
   }, [pulse])
   const [space, setSpace] = useState({ w: 360, h: 700 })
+  const bar = useRef<HTMLDivElement>(null)
+  const [barH, setBarH] = useState(0)
+  useEffect(() => {
+    if (!bar.current) return setBarH(0)
+    const ro = new ResizeObserver(([e]) => setBarH(e.borderBoxSize[0].blockSize))
+    ro.observe(bar.current)
+    return () => ro.disconnect()
+  }, [!!toolbar])
 
   // Espaço disponível: largura da coluna e altura da janela (o preview fica fixo ao rolar).
   useEffect(() => {
@@ -52,7 +61,7 @@ export function DevicePreview({ frame, src, pulse, onDevice }: { frame: RefObjec
   const d = DEVICES[device]
   const outerW = d.w + d.bezel * 2
   const outerH = d.h + d.bezel * 2
-  const scale = Math.min(1, space.w / outerW, space.h / outerH)
+  const scale = Math.min(1, space.w / outerW, (space.h - barH) / outerH)
 
   const pick = (next: Device) => {
     setDevice(next)
@@ -81,9 +90,11 @@ export function DevicePreview({ frame, src, pulse, onDevice }: { frame: RefObjec
       </div>
 
       {/* Os textos sobre a foto têm um ajuste no celular e outro no tablet/computador (photo.layoutMobile x photo.layout). */}
-      <p className="-mt-3 mb-4 text-center text-[12px] text-muted">
-        Arrastando os textos, você ajusta só o {device === 'celular' ? 'celular' : 'tablet e computador'}.
-      </p>
+      {toolbar ? <div ref={bar} className="pb-4">{toolbar}</div> : (
+        <p className="-mt-3 mb-4 text-center text-[12px] text-muted">
+          Toque num texto para mudar fonte e cor. Arraste textos e blocos para mudar de lugar.
+        </p>
+      )}
       <div ref={box} className="grid justify-items-center">
         {/* Caixa no tamanho já reduzido, para o layout em volta não reservar o tamanho real */}
         <div style={{ width: outerW * scale, height: outerH * scale }}>

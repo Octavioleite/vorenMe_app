@@ -1,8 +1,8 @@
 import { ArrowRight, Check, Eye, EyeSlash } from '@phosphor-icons/react'
-import { useEffect, useState, type CSSProperties, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import { api, type Session, type Template } from './api'
 import { Errors, errorText, thumb, transition } from './ui'
-import { captureOrigin } from '../lib/track'
+import { captureOrigin, siteEvent } from '../lib/track'
 
 const MODES = { login: 'Entrar', register: 'Criar conta' } as const
 type Mode = keyof typeof MODES
@@ -11,7 +11,7 @@ const step = (i: number) => ({ '--i': i }) as CSSProperties
 const AUTOPLAY = 3200
 // Mesma linguagem da página inicial: campos cinza-claro sem borda, botões em pílula.
 const field = 'h-12 w-full rounded-[14px] bg-[#f2f2f4] px-4 text-[16px] text-ink outline-none ring-accent/40 transition-shadow placeholder:text-[#8e8e93] focus:bg-white focus:ring-2'
-const PERKS = ['3 dias grátis, depois R$ 9,99/mês ou R$ 99,90/ano', 'Até 3 cartões e links ilimitados', 'Cancele quando quiser']
+const PERKS = ['3 dias grátis, sem cartão de crédito','Até 3 cartões e links ilimitados', 'Cancele quando quiser']
 
 /** Cartão-modelo. O ativo inclina seguindo o ponteiro (CSS vars, sem re-render) e,
  *  se a pessoa digitou o nome no cadastro, mostra o nome dela no lugar do exemplo. */
@@ -54,19 +54,16 @@ function MiniCard({ t, offset, name }: { t: Template; offset: number; name?: str
 }
 
 /** Vitrine dos modelos reais (GET /templates é público) em coverflow. Pausa no hover e enquanto a pessoa
- *  digita o nome (o cartão ativo vira o dela). Só busca no desktop, onde a coluna aparece. */
-function Showcase({ name }: { name: string }) {
-  const [templates, setTemplates] = useState<Template[] | null>(null)
-  const [active, setActive] = useState(0)
+ *  digita o nome (o cartão ativo vira o dela). Começa no modelo escolhido na landing (`start`). */
+function Showcase({ name, templates, start }: { name: string; templates: Template[] | null; start: number }) {
+  const [picked, setActive] = useState<number | null>(null)
+  const active = picked ?? start
   const [hover, setHover] = useState(false)
   const paused = hover || !!name
-  useEffect(() => {
-    if (matchMedia('(min-width: 1024px)').matches) api<Template[]>('/templates').then(setTemplates, () => setTemplates([]))
-  }, [])
   const n = templates?.length ?? 0
   useEffect(() => {
     if (n < 2 || paused || matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const id = setInterval(() => setActive((a) => (a + 1) % n), AUTOPLAY)
+    const id = setInterval(() => setActive((a) => ((a ?? start) + 1) % n), AUTOPLAY)
     return () => clearInterval(id)
   }, [n, paused, active])
 
@@ -102,6 +99,35 @@ const referral = () => {
   } catch {
     return fromUrl || undefined
   }
+}
+
+// Modelo escolhido na landing ("Usar este modelo" manda ?modelo=<id>). Fica guardado para o 1º cartão já abrir nele (Cards.tsx).
+export const MODEL_KEY = 'vorenme-modelo'
+const chosenModel = () => {
+  const fromUrl = new URLSearchParams(location.search).get('modelo')
+  try {
+    if (fromUrl) localStorage.setItem(MODEL_KEY, fromUrl)
+  } catch { /* sem storage: só não lembra depois */ }
+  return fromUrl
+}
+
+/** Celular: o cartão da pessoa nascendo ao lado do título. O modelo é o da landing; o nome entra enquanto ela digita. */
+function MobilePreview({ t, name }: { t?: Template | null; name: string }) {
+  const box = 'w-[112px] shrink-0 -rotate-[4deg] aspect-[3/4] rounded-[18px] lg:hidden'
+  if (t === null) return <div aria-hidden="true" className={`${box} animate-pulse bg-[#e9e9ec]`} />
+  if (!t) return null
+  const c = t.config
+  const [first, ...rest] = name ? name.split(/\s+/) : [c.name.first, c.name.last]
+  return (
+    <div aria-hidden="true" className={`${box} relative overflow-hidden bg-white shadow-[0_24px_48px_-24px_rgb(17_17_19/0.55)]`}>
+      <img src={thumb(c.photo.src, 300)} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: c.photo.focal ?? '50% 30%' }} />
+      <div className="absolute inset-0 bg-linear-to-t from-black/85 via-black/10 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 p-2.5 text-[#FAFAF9]">
+        <p key={name ? 'you' : 'demo'} className="rise text-[15px] leading-[0.95] font-semibold tracking-[-0.03em] break-words">{first}<br />{rest.join(' ')}</p>
+        <span className="mt-2 flex h-5 items-center justify-center rounded-full text-[9px] font-semibold" style={{ background: c.accent, color: '#FAFAF9' }}>Salvar contato</span>
+      </div>
+    </div>
+  )
 }
 
 /** Esqueci a senha (pede o e-mail) e Redefinir (link do e-mail: /painel?redefinir=<token>). */
@@ -163,9 +189,21 @@ export function Auth({ onDone }: { onDone: (s: Session) => void }) {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [showPass, setShowPass] = useState(false)
-  const [name, setName] = useState('')
+  // "Monte o seu" da landing manda o nome digitado (?nome=): o cartão do topo já nasce com ele.
+  const [name, setName] = useState(() => (new URLSearchParams(location.search).get('nome') ?? '').slice(0, 60))
   const isLogin = mode === 'login'
   const preview = isLogin ? '' : name.trim()
+  const [model] = useState(chosenModel)
+  const [templates, setTemplates] = useState<Template[] | null>(null)
+  useEffect(() => { api<Template[]>('/templates').then(setTemplates, () => setTemplates([])) }, [])
+  const start = Math.max(0, templates?.findIndex((t) => t.id === model) ?? 0)
+  // Funil (/admin/site): abriu o cadastro e começou a preencher, uma vez cada. Separa "a página não abriu" de "o formulário travou".
+  const seen = useRef({ form: false, start: false })
+  useEffect(() => {
+    if (!isLogin && !recover && !seen.current.form) { seen.current.form = true; siteEvent('form') }
+  }, [isLogin, recover])
+  const started = () => { if (!isLogin && !seen.current.start) { seen.current.start = true; siteEvent('start') } }
+  const toMode = (m: Mode) => mode !== m && transition(() => { setMode(m); setError('') })
 
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -198,29 +236,37 @@ export function Auth({ onDone }: { onDone: (s: Session) => void }) {
           </a>
         </header>
 
-        <div className="mx-auto my-auto w-full max-w-[400px] py-12">
+        <div className="mx-auto my-auto w-full max-w-[400px] py-8 lg:py-12">
           {recover ? <Recover token={resetToken} onDone={onDone} onBack={() => transition(() => { setRecover(false); history.replaceState(null, '', '/painel') })} /> : <>
-          <div role="group" aria-label="Acesso" className="rise inline-grid grid-cols-2 rounded-full bg-[#f2f2f4] p-1">
-            {(Object.keys(MODES) as Mode[]).map((m) => (
-              <button key={m} type="button" aria-pressed={mode === m}
-                onClick={() => mode !== m && transition(() => { setMode(m); setError('') })}
-                style={mode === m ? { viewTransitionName: 'auth-tab' } : undefined}
-                className="press h-9 rounded-full px-5 text-[14px] font-semibold text-muted hover:text-ink aria-pressed:bg-white aria-pressed:text-ink aria-pressed:shadow-[0_1px_3px_rgb(17_17_19/0.12)]">
-                {MODES[m]}
-              </button>
-            ))}
+          {/* Cadastro: quem veio do "Testar grátis" vê uma decisão só; "Entrar" fica no rodapé do formulário. */}
+          {isLogin && (
+            <div role="group" aria-label="Acesso" className="rise mb-8 inline-grid grid-cols-2 rounded-full bg-[#f2f2f4] p-1">
+              {(Object.keys(MODES) as Mode[]).map((m) => (
+                <button key={m} type="button" aria-pressed={mode === m} onClick={() => toMode(m)}
+                  style={mode === m ? { viewTransitionName: 'auth-tab' } : undefined}
+                  className="press h-9 rounded-full px-5 text-[14px] font-semibold text-muted hover:text-ink aria-pressed:bg-white aria-pressed:text-ink aria-pressed:shadow-[0_1px_3px_rgb(17_17_19/0.12)]">
+                  {MODES[m]}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center gap-5">
+            {!isLogin && <MobilePreview t={templates && templates[start]} name={preview} />}
+            <div className="min-w-0">
+              <h1 style={{ ...step(1), viewTransitionName: 'auth-title' }}
+                className={`rise leading-[1.02] font-semibold tracking-[-0.045em] text-ink ${isLogin ? 'text-[40px]' : 'text-[30px] sm:text-[40px]'}`}>
+                {isLogin ? 'Bem-vindo de volta.' : 'Comece seus 3 dias grátis.'}
+              </h1>
+              <p className={`rise mt-3 text-muted ${isLogin ? 'text-[17px]' : 'text-[15px] sm:text-[17px]'}`} style={step(2)}>
+                {isLogin ? 'Entre para gerenciar seus cartões.' : 'Sem cartão de crédito. Seu cartão no ar em poucos minutos.'}
+              </p>
+            </div>
           </div>
 
-          <h1 style={{ ...step(1), viewTransitionName: 'auth-title' }} className="rise mt-8 text-[40px] leading-[1.02] font-semibold tracking-[-0.045em] text-ink">
-            {isLogin ? 'Bem-vindo de volta.' : 'Comece seus 3 dias grátis.'}
-          </h1>
-          <p className="rise mt-3 text-[17px] text-muted" style={step(2)}>
-            {isLogin ? 'Entre para gerenciar seus cartões.' : 'Seu cartão no ar em poucos minutos.'}
-          </p>
-
-          <form onSubmit={submit} aria-busy={busy} className="rise mt-8 grid gap-5" style={step(3)}>
-            {!isLogin && label('Nome', undefined,
-              <input name="name" className={field} autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />)}
+          <form onSubmit={submit} onFocus={started} aria-busy={busy} className="rise mt-8 grid gap-5" style={step(3)}>
+            {!isLogin && label('Seu nome', 'Aparece no seu cartão.',
+              <input name="name" className={field} autoComplete="name" autoCapitalize="words" value={name} onChange={(e) => setName(e.target.value)} />)}
             {label('E-mail', undefined,
               <input name="email" type="email" required className={field} autoComplete="email" inputMode="email" />)}
             {label('Senha', isLogin ? undefined : 'No mínimo 8 caracteres.',
@@ -255,6 +301,11 @@ export function Auth({ onDone }: { onDone: (s: Session) => void }) {
               ))}
             </ul>
           )}
+          {!isLogin && (
+            <p className="rise mt-8 text-[14px] text-muted" style={step(5)}>
+              Já tem conta? <button type="button" onClick={() => toMode('login')} className="font-semibold text-accent hover:underline">Entrar</button>
+            </p>
+          )}
           </>}
         </div>
       </main>
@@ -268,7 +319,7 @@ export function Auth({ onDone }: { onDone: (s: Session) => void }) {
             {preview ? 'Depois é só escolher o modelo e completar com seus dados.' : 'Escolha um modelo, troque foto e textos e compartilhe hoje.'}
           </p>
         </div>
-        <Showcase name={preview} />
+        <Showcase name={preview} templates={templates} start={start} />
       </aside>
     </div>
   )

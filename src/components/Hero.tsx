@@ -1,7 +1,7 @@
 import { Envelope, MapPin, UserPlus, WhatsappLogo } from '@phosphor-icons/react'
 import { useLayoutEffect, useRef, useSyncExternalStore, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { creator } from '../config/creator'
-import { MOBILE_QUERY, TEXT_IDS, TEXT_SIZE, textLayout, type TextId, type TextLayout } from '../config/types'
+import { EXTRA_SIZE, FONTS, MOBILE_QUERY, TEXT_IDS, TEXT_SIZE, textLayout, type Extra, type TextId, type TextLayout } from '../config/types'
 import { connectPrimary, emailHref, initials, whatsappHref } from '../config/derived'
 import { CHANNEL_TARGET } from '../lib/links'
 import { CHANNEL_ICON } from './icons'
@@ -11,14 +11,38 @@ import { SaveContact } from './ui/SaveContact'
 import { SmartImage } from './ui/SmartImage'
 
 // Só dentro da prévia do painel os textos podem ser arrastados/redimensionados; cada mudança volta ao editor por postMessage.
-const editable = window.parent !== window && new URLSearchParams(location.search).has('preview')
+export const editable = window.parent !== window && new URLSearchParams(location.search).has('preview')
 const pct = (v: number) => Math.round(Math.min(100, Math.max(0, v)) * 10) / 10
 const px = (v: number) => Math.round(Math.min(TEXT_SIZE.max, Math.max(TEXT_SIZE.min, v)))
-const send = (id: TextId, patch: TextLayout) =>
+const sendText = (id: TextId, patch: TextLayout) =>
   parent.postMessage({ type: 'vorenme:layout', id, patch, mobile: matchMedia(MOBILE_QUERY).matches }, location.origin)
 /** Celular e telas maiores têm ajustes de texto separados; troca ao vivo se a tela mudar de tamanho. */
 const mq = matchMedia(MOBILE_QUERY)
 const useMobile = () => useSyncExternalStore((cb) => (mq.addEventListener('change', cb), () => mq.removeEventListener('change', cb)), () => mq.matches)
+
+/** Peça selecionada na prévia (como no Canva): o editor mostra fonte, cor e tamanho dela. Texto do modelo = TextId; elemento solto = "e:<id>". */
+let selected: string | null = null
+const subs = new Set<() => void>()
+const pick = (id: string | null, el?: HTMLElement) => {
+  selected = id
+  subs.forEach((f) => f())
+  parent.postMessage({ type: 'vorenme:select', id, size: el && parseFloat(getComputedStyle(el).fontSize) }, location.origin)
+}
+const useSelected = () => useSyncExternalStore((cb) => (subs.add(cb), () => subs.delete(cb)), () => selected)
+if (editable) {
+  // Tocar fora de um texto desmarca; o editor também pode desmarcar (botão fechar, texto oculto).
+  addEventListener('pointerdown', (e) => { if (selected && !(e.target as Element).closest?.('.drag-text')) pick(null) })
+  addEventListener('message', (e) => {
+    if (e.origin === location.origin && e.data?.type === 'vorenme:select' && e.data.id !== selected) { selected = e.data.id; subs.forEach((f) => f()) }
+  })
+  // Desfazer/refazer também com o foco dentro da prévia (o atalho não chega ao editor sozinho).
+  addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase()
+    if (!(e.metaKey || e.ctrlKey) || (k !== 'z' && k !== 'y')) return
+    e.preventDefault()
+    parent.postMessage({ type: 'vorenme:undo', redo: k === 'y' || e.shiftKey }, location.origin)
+  })
+}
 
 /** Posição atual do elemento em % do espaço livre do cartão (translate(-x%,-y%) mantém tudo dentro da foto). */
 function posOf(el: HTMLElement) {
@@ -28,17 +52,41 @@ function posOf(el: HTMLElement) {
   return { x: ((r.left - box.left) / free.w) * 100, y: ((r.top - box.top) / free.h) * 100, free }
 }
 
-/** Uma peça de texto: no lugar padrão (dentro do bloco de baixo) ou solta, onde a pessoa deixou. */
-function Piece({ id, label, l, className = '', children }: { id: TextId; label: string; l?: TextLayout; className?: string; children: ReactNode }) {
+const rel = (v: number) => Math.round(Math.min(EXTRA_SIZE.max, Math.max(EXTRA_SIZE.min, v)) * 10) / 10
+const at = (x: number, y: number): CSSProperties => ({ position: 'absolute', left: `${x}%`, top: `${y}%`, translate: `-${x}% -${y}%` })
+
+/** Uma peça sobre a foto: texto do modelo (no lugar padrão ou solto) ou elemento solto (extra).
+ *  Texto do modelo: tamanho em px, por tela. Extra: tamanho em % da largura do cartão (cqw), igual em toda tela. */
+function Piece({ id, label, l, extra, className = '', children }: { id: string; label: string; l?: TextLayout; extra?: Extra; className?: string; children: ReactNode }) {
   const ref = useRef<HTMLSpanElement>(null)
   // O arrasto usa transform; some quando a nova posição chega do editor (próximo render).
   useLayoutEffect(() => { if (ref.current) ref.current.style.transform = '' })
 
-  const style: CSSProperties = {
+  const key = extra ? `e:${extra.id}` : id
+  const on = useSelected() === key
+  const box = !!extra && extra.kind !== 'text'
+  const font = (extra ?? l)?.font
+  const style: CSSProperties = extra ? {
+    ...at(extra.x, extra.y),
+    ...(box ? { width: `${extra.size}cqw`, aspectRatio: String(extra.ratio ?? 1) } : { fontSize: `${extra.size}cqw`, color: extra.color ?? '#FAFAF9', maxWidth: '100%' }),
+    ...(font && FONTS[font] && { fontFamily: FONTS[font][1] }),
+  } : {
     ...(l?.size && { fontSize: px(l.size) }),
-    ...(l?.x !== undefined && l?.y !== undefined && { position: 'absolute', left: `${l.x}%`, top: `${l.y}%`, translate: `-${l.x}% -${l.y}%` }),
+    ...(font && FONTS[font] && { fontFamily: FONTS[font][1] }),
+    ...(l?.color && { color: l.color }),
+    ...(l?.x !== undefined && l?.y !== undefined && at(l.x, l.y)),
   }
-  if (!editable) return <span aria-hidden="true" className={className} style={style}>{children}</span>
+  if (!editable) return <span aria-hidden={extra?.kind === 'text' ? undefined : true} className={className} style={style}>{children}</span>
+
+  const send = (patch: TextLayout) => extra
+    ? parent.postMessage({ type: 'vorenme:extra', id: extra.id, patch }, location.origin)
+    : sendText(id as TextId, patch)
+  /** Tamanho atual na unidade da peça, e como aplicar um novo durante o arrasto. */
+  const cardW = (el: HTMLElement) => el.closest('.id-card')!.getBoundingClientRect().width
+  const sizeOf = (el: HTMLElement) => !extra ? parseFloat(getComputedStyle(el).fontSize)
+    : ((box ? el.getBoundingClientRect().width : parseFloat(getComputedStyle(el).fontSize)) / cardW(el)) * 100
+  const clamp = extra ? rel : px
+  const apply = (el: HTMLElement, v: number) => { el.style[box ? 'width' : 'fontSize'] = extra ? `${v}cqw` : `${v}px` }
 
   const drag = (e: ReactPointerEvent<HTMLSpanElement>) => {
     if (e.button !== 0) return
@@ -57,8 +105,8 @@ function Piece({ id, label, l, className = '', children }: { id: TextId; label: 
     const up = () => {
       delete el.dataset.dragging
       off.abort()
-      if (Math.abs(dx) + Math.abs(dy) < 2) return (el.style.transform = '')
-      send(id, { x: pct(start.x + (dx / start.free.w) * 100), y: pct(start.y + (dy / start.free.h) * 100) })
+      if (Math.abs(dx) + Math.abs(dy) < 2) return (el.style.transform = '', pick(key, el)) // toque sem arrastar = selecionar
+      send({ x: pct(start.x + (dx / start.free.w) * 100), y: pct(start.y + (dy / start.free.h) * 100) })
     }
     el.addEventListener('pointermove', move, { signal: off.signal })
     el.addEventListener('pointerup', up, { signal: off.signal })
@@ -69,19 +117,20 @@ function Piece({ id, label, l, className = '', children }: { id: TextId; label: 
     e.stopPropagation()
     const el = ref.current!
     const handle = e.currentTarget
-    const start = { size: parseFloat(getComputedStyle(el).fontSize), w: el.getBoundingClientRect().width, cx: e.clientX, cy: e.clientY }
-    let size = px(start.size)
+    const start = { size: sizeOf(el), w: el.getBoundingClientRect().width, cx: e.clientX, cy: e.clientY }
+    let size = clamp(start.size)
     const off = new AbortController()
     handle.setPointerCapture(e.pointerId)
     el.dataset.dragging = ''
     const move = (ev: PointerEvent) => {
-      size = px(start.size * (1 + (ev.clientX - start.cx + ev.clientY - start.cy) / 2 / start.w))
-      el.style.fontSize = `${size}px`
+      size = clamp(start.size * (1 + (ev.clientX - start.cx + ev.clientY - start.cy) / 2 / start.w))
+      apply(el, size)
     }
     const up = () => {
       delete el.dataset.dragging
       off.abort()
-      send(id, { size })
+      send({ size })
+      pick(key, el)
     }
     handle.addEventListener('pointermove', move, { signal: off.signal })
     handle.addEventListener('pointerup', up, { signal: off.signal })
@@ -96,18 +145,24 @@ function Piece({ id, label, l, className = '', children }: { id: TextId; label: 
     if (d) {
       e.preventDefault()
       const { x, y } = posOf(el)
-      send(id, { x: pct(x + d[0] * step), y: pct(y + d[1] * step) })
+      send({ x: pct(x + d[0] * step), y: pct(y + d[1] * step) })
     } else if (e.key === '+' || e.key === '=' || e.key === '-') {
       e.preventDefault()
-      send(id, { size: px(parseFloat(getComputedStyle(el).fontSize) + (e.key === '-' ? -2 : 2)) })
+      send({ size: clamp(sizeOf(el) + (e.key === '-' ? -1 : 1) * (extra ? 1 : 2)) })
+    } else if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.preventDefault()
+      send({ hidden: true })
     }
   }
 
   return (
-    <span ref={ref} tabIndex={0} role="group" aria-label={`${label}: arraste para mover; setas movem, + e - mudam o tamanho`}
-      title="Arraste para mover" onPointerDown={drag} onKeyDown={keys} className={`drag-text ${className}`} style={style}>
+    <span ref={ref} tabIndex={0} role="group" aria-label={`${label}: toque para mudar fonte e cor; arraste para mover; setas movem, + e - mudam o tamanho, Delete tira do cartão`}
+      title="Toque para editar, arraste para mover" onPointerDown={drag} onKeyDown={keys} onFocus={(e) => !on && e.currentTarget.matches(':focus-visible') && pick(key, e.currentTarget)}
+      data-selected={on || undefined} className={`drag-text ${className}`} style={style}>
       {children}
       <span aria-hidden="true" title="Arraste para mudar o tamanho" className="resize-handle" onPointerDown={resize} />
+      <span aria-hidden="true" title="Tirar do cartão" className="remove-handle"
+        onPointerDown={(e) => e.stopPropagation()} onClick={() => send({ hidden: true })}>×</span>
     </span>
   )
 }
@@ -118,12 +173,13 @@ function IdentityCard() {
   const { name, username, photo, niche, location } = creator
   const lay = textLayout(photo, useMobile())
   const free = (id: TextId) => lay[id]?.x !== undefined && lay[id]?.y !== undefined
+  const gone = (id: TextId) => !!lay[id]?.hidden
   const pieces: Record<TextId, { label: string; className: string; content: ReactNode } | null> = {
     // Sem sobrenome (lojas, marcas): o ponto de destaque vai para o fim do nome.
     first: { label: 'Nome', className: 'id-name block w-fit', content: name.last ? name.first : <>{name.first}<span className="text-accent">.</span></> },
     last: name.last ? { label: 'Sobrenome', className: 'id-name block w-fit', content: <>{name.last}<span className="text-accent">.</span></> } : null,
-    niche: { label: 'Especialidade', className: 'block w-fit text-[15px] font-medium text-white/90', content: niche },
-    username: { label: 'Usuário', className: 'block w-fit max-w-full truncate text-[13px] text-white/70', content: `@${username}` },
+    niche: { label: 'Especialidade', className: 'id-niche block w-fit text-[15px] font-medium text-white/90', content: niche },
+    username: { label: 'Usuário', className: 'id-handle block w-fit max-w-full truncate text-[13px] text-white/70', content: `@${username}` },
     location: location
       ? { label: 'Cidade', className: 'flex shrink-0 items-center gap-1 text-[13px] text-white/70', content: <><MapPin size="1em" aria-hidden="true" />{location}</> }
       : null,
@@ -131,13 +187,15 @@ function IdentityCard() {
   // Peça solta deixa o lugar reservado (invisível): senão as outras do bloco se mexem para ocupar o espaço.
   const piece = (id: TextId, wrap = '') => {
     const p = pieces[id]
-    if (!p) return null
+    if (!p || gone(id)) return null
     // O lugar reservado é um span comum: o Piece aplicaria position:absolute do layout e não ocuparia espaço.
     if (free(id)) return <span aria-hidden="true" className={`${p.className} ${wrap} invisible`}>{p.content}</span>
     return <Piece id={id} label={p.label} l={lay[id]} className={`${p.className} ${wrap}`}>{p.content}</Piece>
   }
-  const moved = TEXT_IDS.filter(free)
-  const rowFree = free('username') && (!location || free('location'))
+  const moved = TEXT_IDS.filter((id) => free(id) && !gone(id))
+  const out = (id: TextId) => free(id) || gone(id)
+  const rowFree = out('username') && (!location || out('location'))
+  const rowGone = gone('username') && (!location || gone('location'))
 
   return (
     <div className="deal">
@@ -151,16 +209,29 @@ function IdentityCard() {
           sizes="(min-width: 1200px) 440px, (min-width: 1024px) 38vw, (min-width: 768px) 46vw, 100vw"
           priority
           fallback={initials}
+          className="id-photo"
         />
         {/* legibility scrim for the name */}
-        <div aria-hidden="true" className="absolute inset-0 bg-linear-to-t from-black/85 via-black/15 via-55% to-transparent" />
+        <div aria-hidden="true" className="id-scrim absolute inset-0 bg-linear-to-t from-black/85 via-black/15 via-55% to-transparent" />
         {/* Nome completo para leitores de tela; as peças visíveis são decorativas e podem estar em qualquer lugar. */}
         <h1 id="creator-name" className="sr-only">{name.first} {name.last}</h1>
+        {/* Elementos soltos ficam atrás dos textos do modelo (uma forma vira fundo do nome, por exemplo). */}
+        {(creator.extras ?? []).map((x) => {
+          const radius = x.round ? '999px' : '1.5cqw'
+          return (
+            <Piece key={x.id} id={x.id} extra={x} label={x.kind === 'text' ? 'Texto' : x.kind === 'shape' ? 'Forma' : 'Imagem'}
+              className={`block ${x.kind === 'text' ? 'display leading-[1.05] font-semibold whitespace-pre-line [text-shadow:0_1px_12px_rgb(0_0_0/0.35)]' : ''}`}>
+              {x.kind === 'text' ? x.text
+                : x.kind === 'shape' ? <span className="block size-full" style={{ background: x.color ?? 'var(--accent)', borderRadius: radius }} />
+                : <span className="block size-full overflow-hidden" style={{ borderRadius: radius }}><img src={x.src} alt="" draggable={false} className="size-full object-cover" /></span>}
+            </Piece>
+          )
+        })}
         <div className="id-copy absolute inset-x-0 bottom-0 p-5 text-[#FAFAF9] sm:p-6">
           {piece('first')}
           {piece('last')}
           {piece('niche', 'mt-3')}
-          <div className={`mt-4 flex items-center justify-between gap-3 border-t border-white/15 pt-3 ${rowFree ? 'invisible' : ''}`}>
+          <div className={`mt-4 flex items-center justify-between gap-3 border-t border-white/15 pt-3 ${rowGone ? 'hidden' : rowFree ? 'invisible' : ''}`}>
             {piece('username')}
             {piece('location')}
           </div>

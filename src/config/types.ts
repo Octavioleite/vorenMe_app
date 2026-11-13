@@ -1,9 +1,33 @@
 /** Textos sobre a foto que a pessoa pode mover e redimensionar (photo.layout). */
 export const TEXT_IDS = ['first', 'last', 'niche', 'username', 'location'] as const
 export type TextId = (typeof TEXT_IDS)[number]
-/** x/y em % (0 = esquerda/topo, 100 = direita/base); size em px. Campo vazio = padrão do modelo. */
-export interface TextLayout { x?: number; y?: number; size?: number }
+/** Fontes que a pessoa escolhe por texto (já carregadas em main.tsx/index.css). Espelhado em vorenMe_api/src/dto/card/config.js. */
+export const FONTS = {
+  geist: ['Geist', "'Geist Variable', sans-serif"],
+  oswald: ['Oswald', "'Oswald Variable', sans-serif"],
+  syne: ['Syne', "'Syne Variable', sans-serif"],
+  fredoka: ['Fredoka', "'Fredoka Variable', sans-serif"],
+  playfair: ['Playfair', "'Playfair Display Variable', serif"],
+  dmserif: ['DM Serif', "'DM Serif Display', serif"],
+} as const
+export type FontId = keyof typeof FONTS
+/** x/y em % (0 = esquerda/topo, 100 = direita/base); size em px. Campo vazio = padrão do modelo.
+ *  font/color valem para celular e computador juntos (o editor grava nos dois). */
+export interface TextLayout { x?: number; y?: number; size?: number; hidden?: true; font?: FontId; color?: string }
 export const TEXT_SIZE = { min: 8, max: 200 }
+
+/** Elemento solto sobre a foto (como no Canva): texto, forma ou imagem. x/y em % (como TextLayout);
+ *  size em % da largura do cartão (fonte do texto, largura da forma/imagem), então fica igual em qualquer tela.
+ *  ratio = largura/altura (forma e imagem). Espelhado em vorenMe_api/src/dto/card/config.js. */
+export const EXTRA_KINDS = ['text', 'shape', 'image'] as const
+export interface Extra {
+  id: string
+  kind: (typeof EXTRA_KINDS)[number]
+  x: number; y: number; size: number
+  text?: string; src?: string; font?: FontId; color?: string; round?: true; ratio?: number
+}
+export const EXTRA_SIZE = { min: 2, max: 100 }
+export const MAX_EXTRAS = 12
 /** Abaixo disto o cartão usa o ajuste de textos do celular (mesmo corte do md: do Tailwind). */
 export const MOBILE_QUERY = '(max-width: 767.98px)'
 /** Ajuste de textos que vale na tela atual. */
@@ -15,7 +39,7 @@ export type Platform = 'instagram' | 'tiktok' | 'youtube' | 'pinterest' | 'spoti
 export type Theme = 'dark' | 'light'
 
 /** Personalidade visual do cartão: fonte de destaque, formas, moldura da foto e textura (index.css, [data-style]). */
-export const STYLES = ['criador', 'forte', 'tinta', 'atelie', 'sereno', 'glam', 'clinica', 'leve', 'simples'] as const
+export const STYLES = ['criador', 'forte', 'tinta', 'atelie', 'sereno', 'glam', 'clinica', 'leve', 'sobrio', 'palco', 'oficio', 'galeria', 'simples'] as const
 export type Style = (typeof STYLES)[number]
 
 export interface Photo {
@@ -165,6 +189,10 @@ export interface CreatorConfig {
 
   /** Ordem dos blocos no cartão (arrastada no painel). Sem valor = ordem padrão de cada estilo. */
   order?: BlockId[]
+  /** Largura de cada bloco: 'half' divide a linha com outro, 'full' ocupa a linha toda. Sem valor = a do estilo. */
+  width?: Partial<Record<BlockId, 'half' | 'full'>>
+  /** Elementos soltos sobre a foto, na ordem de camada (o último fica por cima). */
+  extras?: Extra[]
 
   /** Main personal website: footer + saved contact. */
   website?: { label: string; url: string }

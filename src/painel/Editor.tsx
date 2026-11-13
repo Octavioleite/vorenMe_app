@@ -1,11 +1,11 @@
 import {
-  ArrowCounterClockwise, ArrowLeft, CaretDown, CaretUp, DotsSixVertical, Desktop, DeviceMobile, CircleNotch, NavigationArrow, ArrowRight, Target, ArrowSquareOut, ChatCircleText, Check, CloudArrowUp, Confetti, Copy, WarningCircle, Code, Eye, GearSix, IdentificationCard, Image as ImageIcon, User, X, LinkSimple, ListBullets, MapPin, Megaphone, CurrencyDollar, Palette, Plus, ShareNetwork, Sparkle, Ticket, Star, Trash,
+  ArrowCounterClockwise, ArrowLeft, CaretDown, CaretUp, DotsSixVertical, Desktop, DeviceMobile, CircleNotch, NavigationArrow, ArrowRight, Target, ArrowSquareOut, ChatCircleText, Check, CloudArrowUp, Confetti, Copy, WarningCircle, Code, Eye, EyeSlash, GearSix, IdentificationCard, Image as ImageIcon, User, X, LinkSimple, ListBullets, MapPin, Megaphone, CurrencyDollar, Palette, Plus, ShareNetwork, Sparkle, TextT, Ticket, Star, Trash, ArrowUUpLeft, ArrowUUpRight, Square, Circle,
 } from '@phosphor-icons/react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { platformMeta } from '../components/icons'
 import { addressFromCep, addressFromGeo, placeLinks } from '../lib/places'
-import { STYLES, TEXT_IDS, TEXT_SIZE, blockOrder, textLayout, type BlockId, type CreatorConfig, type Style, type TextId, type TextLayout, type Platform, type SocialLink } from '../config/types'
-import { api, ApiError, type Card } from './api'
+import { CARD_BLOCKS, EXTRA_SIZE, FONTS, MAX_EXTRAS, STYLES, TEXT_IDS, TEXT_SIZE, blockOrder, textLayout, type BlockId, type Extra, type FontId, type CreatorConfig, type Style, type TextId, type TextLayout, type Platform, type SocialLink } from '../config/types'
+import { api, ApiError, uploadImage, type Card } from './api'
 import { ConnectEditor } from './ConnectEditor'
 import { DevicePreview } from './DevicePreview'
 import { GuideButton } from './Guide'
@@ -55,11 +55,17 @@ const STYLE_NAMES: Record<Style, [string, string]> = {
   glam: ['Glam', 'Unhas, cílios'],
   clinica: ['Clínica', 'Saúde, odontologia'],
   leve: ['Leve', 'Pet, comida, infantil'],
+  sobrio: ['Sóbrio', 'Advocacia, finanças, imóveis'],
+  palco: ['Palco', 'Música, DJ, eventos'],
+  oficio: ['Ofício', 'Serviços, obra, reforma'],
+  galeria: ['Galeria', 'Foto, arquitetura, design'],
   simples: ['Simples', 'Só o essencial'],
 }
 const SWATCHES = ['#6D3BF5', '#E8552B', '#2A7A8C', '#3B82C4', '#7A8F6B', '#B5838D', '#121214']
 
 const AUTOSAVE_MS = 900
+const UNDO_GAP_MS = 600
+const UNDO_MAX = 100
 
 const PREVIEW_MSG = 'vorenme:preview' // mesmo valor de src/render.tsx
 
@@ -72,6 +78,162 @@ function CopyLink({ url }: { url: string }) {
       <button type="button" onClick={copy} aria-live="polite" className={`${secondary} shrink-0 py-2 text-[13px]`}>
         {copied ? <><Check size={14} weight="bold" className="text-accent" aria-hidden="true" /> Copiado</> : <><Copy size={14} aria-hidden="true" /> Copiar link</>}
       </button>
+    </div>
+  )
+}
+
+/* ── Barra de edição da prévia (estilo Canva). Fica fora do iframe reduzido, em tamanho real. ── */
+const chip = (on: boolean) => `press inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[14px] font-medium ${on ? 'border-ink bg-ink text-bg' : 'border-line bg-bg hover:border-line-strong'}`
+const barBox = 'step-in mx-auto grid max-w-[560px] gap-3 rounded-[20px] bg-surface p-3 text-left shadow-[0_16px_40px_-20px_rgb(17_17_19/0.45)] ring-1 ring-black/5'
+
+function Bar({ label, icon, actions, onClose, children }: { label: string; icon: React.ReactNode; actions: React.ReactNode; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div role="region" aria-label={`Editar ${label}`} className={barBox}>
+      <div className="flex items-center gap-1 pl-1">
+        <span className="mr-1 text-accent" aria-hidden="true">{icon}</span>
+        <p className="min-w-0 flex-1 truncate text-[14px] font-semibold">{label}</p>
+        {actions}
+        <button type="button" className={iconBtn} title="Fechar" aria-label="Fechar edição" onClick={onClose}><X size={15} /></button>
+      </div>
+      {children}
+    </div>
+  )
+}
+const BarBtn = ({ title, onClick, disabled, children }: { title: string; onClick: () => void; disabled?: boolean; children: React.ReactNode }) => (
+  <button type="button" className={`${iconBtn} disabled:opacity-30`} title={title} aria-label={title} onClick={onClick} disabled={disabled}>{children}</button>
+)
+
+function FontRow({ value, onChange }: { value?: FontId; onChange: (f?: FontId) => void }) {
+  return (
+    <div role="group" aria-label="Fonte" className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none]">
+      <button type="button" aria-pressed={!value} className={chip(!value)} onClick={() => onChange(undefined)}>Do estilo</button>
+      {(Object.keys(FONTS) as FontId[]).map((f) => (
+        <button key={f} type="button" aria-pressed={value === f} className={chip(value === f)} style={{ fontFamily: FONTS[f][1] }} onClick={() => onChange(f)}>{FONTS[f][0]}</button>
+      ))}
+    </div>
+  )
+}
+
+/** auto = o botão "sem cor própria" (o que ele significa muda: cor do estilo, branco, cor do cartão). */
+function ColorRow({ value, accent, auto, onChange }: { value?: string; accent: string; auto: [string, string]; onChange: (c?: string) => void }) {
+  const colors = [...new Set(['#FAFAF9', '#121214', accent.toUpperCase(), ...SWATCHES])]
+  const ring = (on: boolean) => `press size-7 rounded-full border-2 ${on ? 'border-ink' : 'border-line-strong'}`
+  return (
+    <div role="group" aria-label="Cor" className="flex flex-wrap items-center gap-1.5">
+      <button type="button" aria-pressed={!value} title={auto[0]} aria-label={auto[0]} className={ring(!value)} style={{ background: auto[1] }} onClick={() => onChange(undefined)} />
+      {colors.map((hex) => (
+        <button key={hex} type="button" aria-pressed={value === hex} aria-label={`Cor ${hex}`} title={hex} className={ring(value === hex)} style={{ background: hex }} onClick={() => onChange(hex)} />
+      ))}
+      <label className="press relative grid size-7 cursor-pointer place-items-center overflow-hidden rounded-full border border-line-strong" title="Outra cor">
+        <span className="sr-only">Outra cor</span>
+        <Plus size={12} weight="bold" aria-hidden="true" />
+        <input type="color" value={value ?? '#FAFAF9'} onChange={(e) => onChange(e.target.value.toUpperCase())} className="absolute inset-0 cursor-pointer opacity-0" />
+      </label>
+    </div>
+  )
+}
+
+function SizeRow({ value, min, max, unit, onChange }: { value: number; min: number; max: number; unit: string; onChange: (n: number) => void }) {
+  return (
+    <label className="flex min-w-[180px] flex-1 items-center gap-2.5 text-[13px] font-medium">
+      Tamanho
+      <input type="range" min={min} max={Math.max(max, value)} value={value} onChange={(e) => onChange(+e.target.value)} className="min-w-0 flex-1 accent-accent" />
+      <span className="w-10 text-right text-[12px] text-muted tabular-nums">{Math.round(value)}{unit}</span>
+    </label>
+  )
+}
+
+function TextInspector({ label, l, size, accent, mobile, onPos, onBoth, onClose }: {
+  label: string; l?: TextLayout; size?: number; accent: string; mobile: boolean
+  onPos: (p: TextLayout) => void; onBoth: (p: TextLayout) => void; onClose: () => void
+}) {
+  return (
+    <Bar label={label} icon={<TextT size={17} weight="bold" />} onClose={onClose} actions={<>
+      <BarBtn title={`Voltar ${label} ao padrão`} onClick={() => { onPos({ x: undefined, y: undefined, size: undefined }); onBoth({ font: undefined, color: undefined }) }}><ArrowCounterClockwise size={15} /></BarBtn>
+      <BarBtn title={`Tirar ${label} do cartão`} onClick={() => onBoth({ hidden: true })}><EyeSlash size={15} /></BarBtn>
+    </>}>
+      <FontRow value={l?.font} onChange={(font) => onBoth({ font })} />
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-3 px-1">
+        <ColorRow value={l?.color} accent={accent} auto={['Cor do estilo', 'linear-gradient(135deg, #FAFAF9 50%, #121214 50%)']} onChange={(color) => onBoth({ color })} />
+        <SizeRow value={l?.size ?? size ?? 32} min={TEXT_SIZE.min} max={120} unit="px" onChange={(n) => onPos({ size: n })} />
+      </div>
+      <p className="px-1 text-[12px] text-muted">Arraste o texto no cartão para mover. Posição e tamanho valem só para o {mobile ? 'celular' : 'tablet e computador'}; fonte e cor, para todas as telas.</p>
+    </Bar>
+  )
+}
+
+const EXTRA_LABEL = { text: 'Texto', shape: 'Forma', image: 'Imagem' } as const
+function ExtraInspector({ x, first, last, accent, onChange, onLayer, onCopy, onRemove, onClose }: {
+  x: Extra; first: boolean; last: boolean; accent: string
+  onChange: (p: Partial<Extra>) => void; onLayer: (d: 1 | -1) => void; onCopy: () => void; onRemove: () => void; onClose: () => void
+}) {
+  const label = EXTRA_LABEL[x.kind]
+  return (
+    <Bar label={label} icon={x.kind === 'text' ? <TextT size={17} weight="bold" /> : x.kind === 'shape' ? <Square size={17} weight="bold" /> : <ImageIcon size={17} weight="bold" />}
+      onClose={onClose} actions={<>
+        <BarBtn title="Trazer para frente" disabled={last} onClick={() => onLayer(1)}><CaretUp size={15} weight="bold" /></BarBtn>
+        <BarBtn title="Enviar para trás" disabled={first} onClick={() => onLayer(-1)}><CaretDown size={15} weight="bold" /></BarBtn>
+        <BarBtn title="Duplicar" onClick={onCopy}><Copy size={15} /></BarBtn>
+        <BarBtn title={`Apagar ${label.toLowerCase()}`} onClick={onRemove}><Trash size={15} /></BarBtn>
+      </>}>
+      {x.kind === 'text' && <>
+        <textarea rows={2} maxLength={120} aria-label="Texto" className={input} value={x.text ?? ''} onChange={(e) => onChange({ text: e.target.value })} />
+        <FontRow value={x.font} onChange={(font) => onChange({ font })} />
+      </>}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-3 px-1">
+        {x.kind !== 'image' && <ColorRow value={x.color} accent={accent}
+          auto={x.kind === 'text' ? ['Branco', '#FAFAF9'] : ['Cor do cartão', 'var(--accent)']} onChange={(color) => onChange({ color })} />}
+        {x.kind !== 'text' && (
+          <div role="group" aria-label="Cantos" className="flex gap-1.5">
+            <button type="button" aria-pressed={!x.round} className={chip(!x.round)} onClick={() => onChange({ round: undefined })}><Square size={14} weight="bold" aria-hidden="true" /> Reto</button>
+            <button type="button" aria-pressed={!!x.round} className={chip(!!x.round)} onClick={() => onChange({ round: true })}><Circle size={14} weight="bold" aria-hidden="true" /> Redondo</button>
+          </div>
+        )}
+        <SizeRow value={x.size} min={EXTRA_SIZE.min} max={x.kind === 'text' ? 40 : EXTRA_SIZE.max} unit="%" onChange={(size) => onChange({ size })} />
+      </div>
+      <p className="px-1 text-[12px] text-muted">Arraste no cartão para mover; a bolinha do canto muda o tamanho. Fica igual no celular e no computador.</p>
+    </Bar>
+  )
+}
+
+/** Sem nada selecionado: adicionar elementos soltos ao cartão. */
+function AddBar({ disabled, full, onAdd, onError }: { disabled: boolean; full: boolean; onAdd: (x: Omit<Extra, 'id'>) => void; onError: (m: string) => void }) {
+  const [busy, setBusy] = useState(false)
+  const off = disabled || full || busy
+  const image = async (file?: File) => {
+    if (!file) return
+    setBusy(true)
+    try {
+      const src = await uploadImage(file, 1200)
+      const img = new Image()
+      img.src = src
+      await img.decode().catch(() => {})
+      onAdd({ kind: 'image', src, x: 50, y: 30, size: 40, ratio: img.naturalWidth && img.naturalHeight ? +(img.naturalWidth / img.naturalHeight).toFixed(3) : 1 })
+    } catch (e) { onError(errorText(e)) } finally { setBusy(false) }
+  }
+  return (
+    <div className={barBox}>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="mr-1 pl-1 text-[13px] font-semibold">Adicionar</span>
+        <button type="button" disabled={off} className={`${chip(false)} disabled:opacity-40`} onClick={() => onAdd({ kind: 'text', text: 'Seu texto', x: 50, y: 20, size: 9 })}>
+          <TextT size={15} weight="bold" aria-hidden="true" /> Texto
+        </button>
+        <button type="button" disabled={off} className={`${chip(false)} disabled:opacity-40`} onClick={() => onAdd({ kind: 'shape', x: 0, y: 100, size: 100, ratio: 3 })}>
+          <Square size={15} weight="bold" aria-hidden="true" /> Faixa
+        </button>
+        <button type="button" disabled={off} className={`${chip(false)} disabled:opacity-40`} onClick={() => onAdd({ kind: 'shape', round: true, x: 90, y: 10, size: 22, ratio: 1 })}>
+          <Circle size={15} weight="bold" aria-hidden="true" /> Círculo
+        </button>
+        <label className={`${chip(false)} cursor-pointer ${off ? 'pointer-events-none opacity-40' : ''}`}>
+          {busy ? <CircleNotch size={15} className="animate-spin" aria-hidden="true" /> : <ImageIcon size={15} weight="bold" aria-hidden="true" />} {busy ? 'Enviando...' : 'Imagem'}
+          <input type="file" accept="image/*" className="sr-only" disabled={off} onChange={(e) => { image(e.target.files?.[0]); e.target.value = '' }} />
+        </label>
+      </div>
+      <p className="px-1 text-[12px] text-muted">
+        {disabled ? 'O estilo Simples não tem a foto grande. Escolha outro estilo para enfeitar o cartão.'
+          : full ? `Limite de ${MAX_EXTRAS} elementos. Apague um para adicionar outro.`
+          : 'Toque em qualquer texto para editar. Arraste textos e blocos para mudar de lugar; no celular, segure o bloco antes de arrastar.'}
+      </p>
     </div>
   )
 }
@@ -153,7 +315,7 @@ function AddressFinder({ value, onChange }: { value: CreatorConfig['address']; o
   )
 }
 
-export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card; wizard?: boolean; focus?: string; onBack: () => void; onAuthLost: () => void }) {
+export function Editor({ card, wizard, focus, published = true, onBack, onAuthLost }: { card: Card; wizard?: boolean; focus?: string; published?: boolean; onBack: () => void; onAuthLost: () => void }) {
   const [step, setStep] = useState(wizard ? 0 : -1) // -1 = editor completo
   const hide = (id: string) => step >= 0 && !STEPS[step][1].includes(id)
   const toStep = (i: number) => {
@@ -173,7 +335,9 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
         <Confetti size={22} weight="bold" aria-hidden="true" />
       </span>,
       title: 'Seu cartão está pronto!',
-      text: 'Ele já está no ar. Mande o link para seus clientes ou volte aqui para ajustar quando quiser.',
+      text: published
+        ? 'Ele já está no ar. Mande o link para seus clientes ou volte aqui para ajustar quando quiser.'
+        : 'Falta só confirmar seu e-mail: abra o link que enviamos e ele vai ao ar. Depois é só mandar o link para seus clientes.',
       extra: <>
         <CopyLink url={url} />
         {!config.connect && (
@@ -227,13 +391,35 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
     return () => removeEventListener('beforeunload', warn)
   }, [dirty])
 
+  /** Desfazer/refazer: cópias do cartão antes de cada mudança. Mudanças seguidas (digitar, arrastar o controle de tamanho)
+   *  viram um passo só a cada UNDO_GAP_MS. */
+  const past = useRef<CreatorConfig[]>([])
+  const future = useRef<CreatorConfig[]>([])
+  const lastPush = useRef(0)
+  const record = () => {
+    future.current = []
+    if (Date.now() - lastPush.current < UNDO_GAP_MS) return
+    lastPush.current = Date.now()
+    past.current = [...past.current.slice(-(UNDO_MAX - 1)), config]
+  }
+  const undo = (redo = false) => {
+    const [from, to] = redo ? [future, past] : [past, future]
+    const prev = from.current.at(-1)
+    if (!prev) return
+    from.current = from.current.slice(0, -1)
+    to.current = [...to.current, config]
+    lastPush.current = 0
+    setConfig(prev)
+  }
   /** Atualiza um campo aninhado: set(c => { c.name.first = v }) */
-  const set = (fn: (c: CreatorConfig) => void) =>
+  const set = (fn: (c: CreatorConfig) => void) => {
+    record()
     setConfig((prev) => {
       const next = structuredClone(prev)
       fn(next)
       return next
     })
+  }
   /** Mescla na posição/tamanho de um texto, no ajuste do celular ou no de tablet/computador; campos undefined voltam ao padrão.
       Cartão de antes da separação (sem layoutMobile): na primeira mudança o celular ganha cópia do ajuste atual,
       e daí em diante um nunca mexe no outro. */
@@ -247,6 +433,41 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
       // O celular guarda {} (padrão próprio) em vez de sumir: sumir faria ele voltar a copiar o computador.
       c.photo[key] = Object.keys(all).length || mobile ? all : undefined
     })
+  /** Tirar/voltar, fonte e cor de um texto valem para celular e computador juntos. */
+  const setBoth = (id: TextId, patch: TextLayout) => {
+    setLayout(id, patch, true)
+    setLayout(id, patch, false)
+    if (patch.hidden) select(null) // texto oculto não tem o que editar
+  }
+  const setHidden = (id: TextId, hidden: boolean) => setBoth(id, { hidden: hidden || undefined })
+  /** Peça selecionada (na prévia ou na lista): texto do modelo (TextId) ou elemento solto ("e:<id>").
+   *  size = tamanho atual medido na prévia (texto do modelo sem tamanho próprio). */
+  const [sel, setSel] = useState<{ key: string; size?: number } | null>(null)
+  const select = (key: string | null) => {
+    setSel(key ? { key } : null)
+    frame.current?.contentWindow?.postMessage({ type: 'vorenme:select', id: key }, location.origin)
+    if (key) setPreview(true) // no celular a prévia abre em tela cheia
+  }
+  const selText = TEXT_IDS.find((id) => id === sel?.key)
+  const selExtra = sel?.key.startsWith('e:') ? config.extras?.find((x) => x.id === sel.key.slice(2)) : undefined
+  /** Elementos soltos: valores undefined somem do objeto (o servidor recebe só o que existe). */
+  const setExtra = (id: string, patch: Partial<Extra>) => set((c) => {
+    const x = c.extras?.find((e) => e.id === id)
+    if (x) Object.entries(patch).forEach(([k, v]) => (v === undefined ? delete x[k as keyof Extra] : Object.assign(x, { [k]: v })))
+  })
+  const removeExtra = (id: string) => {
+    set((c) => { c.extras = c.extras?.filter((e) => e.id !== id); if (!c.extras?.length) delete c.extras })
+    select(null)
+  }
+  const addExtra = (x: Omit<Extra, 'id'>) => {
+    const id = Math.random().toString(36).slice(2, 10)
+    set((c) => { (c.extras ??= []).push({ ...x, id }) })
+    select(`e:${id}`)
+  }
+  const layer = (id: string, d: 1 | -1) => set((c) => {
+    const a = c.extras!, i = a.findIndex((e) => e.id === id)
+    if (a[i + d]) [a[i], a[i + d]] = [a[i + d], a[i]]
+  })
   /** Qual ajuste a lista de textos mostra: segue o aparelho escolhido na prévia (tablet usa o do computador). */
   const [mobileView, setMobileView] = useState(true)
   const setSocial = (i: number, patch: Partial<SocialLink>) => set((c) => Object.assign(c.socials[i], patch))
@@ -328,7 +549,24 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
       if (e.data?.type === 'vorenme:ready') sendPreview()
       // Nome arrastado na prévia (Hero.tsx): a posição vira parte do cartão e é salva como o resto.
       // Texto arrastado/redimensionado na prévia (Hero.tsx): vira parte do cartão e é salvo como o resto.
+      if (e.data?.type === 'vorenme:select') {
+        const key = e.data.id
+        setSel(typeof key === 'string' && (TEXT_IDS.includes(key as TextId) || key.startsWith('e:')) ? { key, size: Number.isFinite(e.data.size) ? e.data.size : undefined } : null)
+      }
+      if (e.data?.type === 'vorenme:undo') undo(e.data.redo === true)
+      // Elemento solto arrastado/redimensionado/apagado na prévia (Hero.tsx).
+      if (e.data?.type === 'vorenme:extra' && typeof e.data.id === 'string') {
+        const { x: px, y: py, size, hidden } = e.data.patch ?? {}
+        if (hidden === true) return removeExtra(e.data.id)
+        setExtra(e.data.id, {
+          ...(Number.isFinite(px) && Number.isFinite(py) && { x: px, y: py }),
+          ...(Number.isFinite(size) && { size }),
+        })
+      }
+      // Bloco arrastado e solto na prévia (App.tsx).
+      if (e.data?.type === 'vorenme:move' && e.data.from in CARD_BLOCKS && e.data.to in CARD_BLOCKS) move(e.data.from, e.data.to)
       if (e.data?.type === 'vorenme:layout' && TEXT_IDS.includes(e.data.id)) {
+        if (e.data.patch?.hidden === true) return setHidden(e.data.id, true)
         const { x: px, y: py, size } = e.data.patch ?? {}
         setLayout(e.data.id, {
           ...(Number.isFinite(px) && Number.isFinite(py) && { x: px, y: py }),
@@ -354,6 +592,12 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
         e.preventDefault()
         save()
       }
+      // Desfazer do cartão. Dentro de um campo de texto, quem desfaz é o próprio campo.
+      const k = e.key.toLowerCase()
+      if ((e.metaKey || e.ctrlKey) && (k === 'z' || k === 'y') && !(e.target as Element).closest?.('input, textarea, select')) {
+        e.preventDefault()
+        undo(k === 'y' || e.shiftKey)
+      }
     }
     addEventListener('keydown', onKey)
     return () => removeEventListener('keydown', onKey)
@@ -368,6 +612,7 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
       const next = JSON.parse(json)
       // Sem esses campos a tela do editor quebraria; o resto o servidor valida ao salvar.
       if (!next?.name || !next.photo || !Array.isArray(next.socials) || !next.partnership || !next.seo || !next.labels) throw 0
+      record()
       setConfig(next)
       setError('')
     } catch {
@@ -403,6 +648,14 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
           <div className="min-w-0 flex-1">
             <p className="truncate font-semibold">{c.name.first} {c.name.last}</p>
             <p className="truncate text-[13px] text-muted">{location.host}/{saved.slug}</p>
+          </div>
+          <div className="flex">
+            <button type="button" onClick={() => undo()} disabled={!past.current.length} className={`${iconBtn} disabled:opacity-30`} aria-label="Desfazer" title="Desfazer (Ctrl+Z)">
+              <ArrowUUpLeft size={17} />
+            </button>
+            <button type="button" onClick={() => undo(true)} disabled={!future.current.length} className={`${iconBtn} disabled:opacity-30 max-sm:hidden`} aria-label="Refazer" title="Refazer (Ctrl+Shift+Z)">
+              <ArrowUUpRight size={17} />
+            </button>
           </div>
           <span aria-live="polite" className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium ${locked ? 'bg-amber-500/12 text-amber-700' : error || slugPending ? 'bg-red-500/10 text-red-500' : busy || configDirty ? 'bg-surface-2 text-muted' : 'bg-accent/10 text-accent'}`}>
             {locked ? <><WarningCircle size={15} weight="bold" aria-hidden="true" /> Plano vencido</>
@@ -551,6 +804,59 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
                   ))}
                 </div>
               </fieldset>
+              <div className="grid gap-3 border-t border-line pt-5 @md:col-span-2">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="text-[13px] font-medium">Textos sobre a foto</p>
+                    <p className="max-w-[56ch] text-[12px] text-muted">Toque num texto, aqui ou na prévia, para trocar fonte, cor e tamanho. Na prévia, arraste para mover.
+                      O celular tem um ajuste de posição e o computador outro. O tablet usa o do computador.</p>
+                  </div>
+                  <button type="button" disabled={!Object.keys(lay).length} className={`${secondary} py-2 text-[13px] whitespace-normal`}
+                    onClick={() => set((x) => { x.photo.layoutMobile ??= structuredClone(x.photo.layout ?? {}); if (mobileView) x.photo.layoutMobile = {}; else delete x.photo.layout })}>
+                    <ArrowCounterClockwise size={14} weight="bold" aria-hidden="true" /> Restaurar {mobileView ? 'celular' : 'computador'}
+                  </button>
+                </div>
+                <p className="flex items-center gap-1.5 rounded-[10px] bg-accent/8 px-3 py-2 text-[12px] font-medium text-accent">
+                  {mobileView ? <DeviceMobile size={15} weight="bold" aria-hidden="true" /> : <Desktop size={15} weight="bold" aria-hidden="true" />}
+                  Mostrando o ajuste do {mobileView ? 'celular' : 'tablet e computador'}. Troque o aparelho na prévia para ajustar o outro.
+                </p>
+                <div className="grid gap-2 @xl:grid-cols-2">
+                  {TEXT_LABELS.filter(([id]) => (id !== 'location' || c.location) && (id !== 'last' || c.name.last)).map(([id, label]) => {
+                    const l = lay[id]
+                    const moved = l?.x !== undefined
+                    const off = !!l?.hidden
+                    return (
+                      <div key={id} className="flex items-center gap-2 rounded-[12px] bg-surface-2/60 py-1.5 pr-1.5 pl-3">
+                        <button type="button" disabled={off} onClick={() => select(id)} aria-pressed={sel?.key === id} title={`Editar ${label}`}
+                          className={`min-w-0 flex-1 truncate text-left text-[13px] font-medium underline-offset-2 enabled:hover:underline ${off ? 'text-muted line-through' : sel?.key === id ? 'text-accent' : ''}`}
+                          style={l?.font && FONTS[l.font] ? { fontFamily: FONTS[l.font][1] } : undefined}>{label}</button>
+                        {l?.color && !off && <span aria-hidden="true" className="size-3 shrink-0 rounded-full ring-1 ring-black/10" style={{ background: l.color }} />}
+                        <span className={`text-[11px] ${(moved || l?.font || l?.color) && !off ? 'text-accent' : 'text-muted'}`}>{off ? 'Oculto' : moved ? 'Movido' : l?.font || l?.color ? 'Editado' : 'Padrão'}</span>
+                        <button type="button" title={off ? `Mostrar ${label}` : `Tirar ${label} do cartão`} aria-label={off ? `Mostrar ${label}` : `Tirar ${label} do cartão`}
+                          aria-pressed={off}
+                          className="press grid size-8 shrink-0 place-items-center rounded-full text-muted hover:bg-surface hover:text-ink pointer-coarse:size-10"
+                          onClick={() => setHidden(id, !off)}>
+                          {off ? <EyeSlash size={14} aria-hidden="true" /> : <Eye size={14} aria-hidden="true" />}
+                        </button>
+                        <div className="flex w-[84px] items-center rounded-[10px] border border-line bg-bg focus-within:border-accent">
+                          <input type="number" inputMode="numeric" min={TEXT_SIZE.min} max={TEXT_SIZE.max} placeholder="Auto"
+                            aria-label={`Tamanho de ${label} em px`} value={l?.size ?? ''}
+                            className="min-w-0 flex-1 bg-transparent py-1.5 pl-2.5 text-[16px] text-ink outline-none sm:text-[14px]"
+                            onChange={(e) => setLayout(id, { size: e.target.value ? +e.target.value : undefined }, mobileView)}
+                            onBlur={() => l?.size && setLayout(id, { size: Math.min(TEXT_SIZE.max, Math.max(TEXT_SIZE.min, l.size)) }, mobileView)} />
+                          <span className="pr-2 text-[12px] text-muted">px</span>
+                        </div>
+                        <button type="button" disabled={!l} title={`Voltar ${label} ao padrão`} aria-label={`Voltar ${label} ao padrão`}
+                          className="press grid size-8 shrink-0 place-items-center rounded-full text-muted hover:bg-surface hover:text-ink disabled:opacity-30 pointer-coarse:size-10"
+                          onClick={() => setLayout(id, { x: undefined, y: undefined, size: undefined }, mobileView)}>
+                          <ArrowCounterClockwise size={14} aria-hidden="true" />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
             </div>
           </Section>
 
@@ -651,7 +957,7 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
                 <div className="mt-3 grid gap-2">
                   <div className="px-1">
                     <h3 className="text-[15px] font-semibold tracking-tight">Ordem no cartão</h3>
-                    <p className="text-[13px] text-muted">Arraste ou use as setas.</p>
+                    <p className="text-[13px] text-muted">Arraste aqui, use as setas ou arraste os blocos direto na prévia. A largura escolhida vale para todas as telas.</p>
                   </div>
                   <ol className="grid gap-1.5">
                     {rows.map(({ id, title, Icon }, i) => (
@@ -664,6 +970,18 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
                         <DotsSixVertical size={16} weight="bold" className="text-muted" aria-hidden="true" />
                         <Icon size={16} weight="bold" className="text-accent" aria-hidden="true" />
                         <span className="flex-1 text-[14px] font-medium">{title}</span>
+                        <select aria-label={`Largura de ${title}`} title="Largura no cartão" value={c.width?.[id] ?? ''}
+                          onPointerDown={(e) => e.stopPropagation()} draggable={false} onDragStart={(e) => e.preventDefault()}
+                          onChange={(e) => set((x) => {
+                            const w = { ...x.width, [id]: (e.target.value || undefined) as 'half' | 'full' | undefined }
+                            if (!w[id]) delete w[id]
+                            x.width = Object.keys(w).length ? w : undefined
+                          })}
+                          className="rounded-[10px] border border-line bg-bg py-1.5 pr-2 pl-2.5 text-[16px] text-ink sm:text-[13px]">
+                          <option value="">Largura do estilo</option>
+                          <option value="half">Metade</option>
+                          <option value="full">Inteira</option>
+                        </select>
                         <button type="button" className={`${iconBtn} disabled:opacity-30`} disabled={i === 0} onClick={() => move(id, rows[i - 1].id)} aria-label={`Subir ${title}`} title="Subir">
                           <CaretUp size={15} weight="bold" />
                         </button>
@@ -890,7 +1208,7 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
             <summary className="flex cursor-pointer list-none items-center gap-2.5 [&::-webkit-details-marker]:hidden">
               <GearSix size={16} className="text-muted" aria-hidden="true" />
               <span className="text-sm font-medium text-muted">Configurações avançadas</span>
-              <span className="ml-auto text-[12px] text-muted group-open:hidden">Link, @, textos da foto, Google</span>
+              <span className="ml-auto text-[12px] text-muted group-open:hidden">Link, @, Google</span>
             </summary>
             <div className="@container mt-5 grid gap-6">
               <div className="grid gap-4 @md:grid-cols-2">
@@ -918,49 +1236,6 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
                 )}
               </div>
 
-              <div className="grid gap-3">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <p className="text-[13px] font-medium">Textos sobre a foto</p>
-                    <p className="max-w-[56ch] text-[12px] text-muted">Na prévia, arraste cada texto para mover e a bolinha do canto para mudar o tamanho.
-                      O celular tem um ajuste e o computador outro: o que você muda num não mexe no outro. O tablet usa o do computador.</p>
-                  </div>
-                  <button type="button" disabled={!Object.keys(lay).length} className={`${secondary} py-2 text-[13px] whitespace-normal`}
-                    onClick={() => set((x) => { x.photo.layoutMobile ??= structuredClone(x.photo.layout ?? {}); if (mobileView) x.photo.layoutMobile = {}; else delete x.photo.layout })}>
-                    <ArrowCounterClockwise size={14} weight="bold" aria-hidden="true" /> Restaurar {mobileView ? 'celular' : 'computador'}
-                  </button>
-                </div>
-                <p className="flex items-center gap-1.5 rounded-[10px] bg-accent/8 px-3 py-2 text-[12px] font-medium text-accent">
-                  {mobileView ? <DeviceMobile size={15} weight="bold" aria-hidden="true" /> : <Desktop size={15} weight="bold" aria-hidden="true" />}
-                  Mostrando o ajuste do {mobileView ? 'celular' : 'tablet e computador'}. Troque o aparelho na prévia para ajustar o outro.
-                </p>
-                <div className="grid gap-2 @xl:grid-cols-2">
-                  {TEXT_LABELS.filter(([id]) => (id !== 'location' || c.location) && (id !== 'last' || c.name.last)).map(([id, label]) => {
-                    const l = lay[id]
-                    const moved = l?.x !== undefined
-                    return (
-                      <div key={id} className="flex items-center gap-2 rounded-[12px] bg-surface-2/60 py-1.5 pr-1.5 pl-3">
-                        <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{label}</span>
-                        <span className={`text-[11px] ${moved ? 'text-accent' : 'text-muted'}`}>{moved ? 'Movido' : 'Padrão'}</span>
-                        <div className="flex w-[84px] items-center rounded-[10px] border border-line bg-bg focus-within:border-accent">
-                          <input type="number" inputMode="numeric" min={TEXT_SIZE.min} max={TEXT_SIZE.max} placeholder="Auto"
-                            aria-label={`Tamanho de ${label} em px`} value={l?.size ?? ''}
-                            className="min-w-0 flex-1 bg-transparent py-1.5 pl-2.5 text-[16px] text-ink outline-none sm:text-[14px]"
-                            onChange={(e) => setLayout(id, { size: e.target.value ? +e.target.value : undefined }, mobileView)}
-                            onBlur={() => l?.size && setLayout(id, { size: Math.min(TEXT_SIZE.max, Math.max(TEXT_SIZE.min, l.size)) }, mobileView)} />
-                          <span className="pr-2 text-[12px] text-muted">px</span>
-                        </div>
-                        <button type="button" disabled={!l} title={`Voltar ${label} ao padrão`} aria-label={`Voltar ${label} ao padrão`}
-                          className="press grid size-8 shrink-0 place-items-center rounded-full text-muted hover:bg-surface hover:text-ink disabled:opacity-30 pointer-coarse:size-10"
-                          onClick={() => setLayout(id, { x: undefined, y: undefined, size: undefined }, mobileView)}>
-                          <ArrowCounterClockwise size={14} aria-hidden="true" />
-                        </button>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-
               <div id="compartilhar" className="grid scroll-mt-36 gap-4">
                 <p className="flex items-center gap-2 text-[13px] font-medium"><ShareNetwork size={15} aria-hidden="true" /> Como o link aparece no Google e no WhatsApp</p>
                 <Field label="Título da página"><input className={input} value={c.seo.title} onChange={(e) => set((x) => { x.seo.title = e.target.value })} /></Field>
@@ -985,7 +1260,13 @@ export function Editor({ card, wizard, focus, onBack, onAuthLost }: { card: Card
               <X size={17} />
             </button>
           )}
-          <DevicePreview frame={frame} src={`/${saved.slug}?preview`} pulse={pulse} onDevice={(d) => setMobileView(d === 'celular')} />
+          <DevicePreview frame={frame} src={`/${saved.slug}?preview`} pulse={pulse} onDevice={(d) => setMobileView(d === 'celular')}
+            toolbar={selText ? <TextInspector label={TEXT_LABELS.find(([id]) => id === selText)![1]} l={lay[selText]} size={sel?.size} accent={c.accent} mobile={mobileView}
+                onPos={(p) => setLayout(selText, p, mobileView)} onBoth={(p) => setBoth(selText, p)} onClose={() => select(null)} />
+              : selExtra ? <ExtraInspector x={selExtra} accent={c.accent} first={c.extras![0] === selExtra} last={c.extras!.at(-1) === selExtra}
+                onChange={(p) => setExtra(selExtra.id, p)} onLayer={(d) => layer(selExtra.id, d)} onRemove={() => removeExtra(selExtra.id)} onClose={() => select(null)}
+                onCopy={() => { const { id: _, ...rest } = selExtra; addExtra({ ...rest, x: Math.min(100, rest.x + 5), y: Math.min(100, rest.y + 5) }) }} />
+              : <AddBar disabled={c.style === 'simples'} full={(c.extras?.length ?? 0) >= MAX_EXTRAS} onAdd={addExtra} onError={setError} />} />
         </aside>
         {!preview && (
           <button type="button" onClick={() => setPreview(true)}

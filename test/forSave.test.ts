@@ -71,3 +71,15 @@ test('WhatsApp e redes num campo só', () => {
   assert.equal(socialText({ platform: 'instagram', ...socialFrom('instagram', 'fulana') }), '@fulana')
   assert.equal(socialText({ platform: 'instagram', ...socialFrom('instagram', 'instagram.com/fulana') }), 'instagram.com/fulana')
 })
+
+test('elemento solto ainda vazio (texto apagado, imagem enviando) não trava o salvamento', () => {
+  const c = structuredClone(templates[0].config)
+  c.extras = [
+    { id: 'a1', kind: 'text', text: '  ', x: 50, y: 20, size: 9 },
+    { id: 'b2', kind: 'image', src: '', x: 10, y: 10, size: 30 },
+    { id: 'c3', kind: 'shape', x: 0, y: 100, size: 100, ratio: 3 },
+  ]
+  const out = forSave(c)
+  assert.deepEqual(out.extras?.map((x) => x.id), ['c3'])
+  assert.deepEqual(validateCardConfig(out), [])
+})

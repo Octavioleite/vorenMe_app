@@ -144,7 +144,7 @@ export function Painel() {
         {!editingId && tab !== '/painel/assinatura' && <PlanBanner onSubscribe={() => goTab('/painel/assinatura')} />}
         <Suspense fallback={<p className="pt-4 text-sm text-muted">Carregando...</p>}>
         {editing ? (
-          <Editor key={editing.id} card={editing} wizard={fresh} focus={focus} onBack={() => open(null)} onAuthLost={logout} />
+          <Editor key={editing.id} card={editing} wizard={fresh} focus={focus} published={user.published ?? !!user.emailVerified} onBack={() => open(null)} onAuthLost={logout} />
         ) : editingId ? (
           <div className="grid justify-items-start gap-4 pt-10">
             {loadError ? (
@@ -165,7 +165,7 @@ export function Painel() {
             : <CardPicker title="Kit de impressão" text="Escolha o cartão para gerar o QR code do balcão, da mesa e do cartão de visita." onPick={(id) => goTab(tab, id)} onAuthLost={logout} />)
           : tab === '/painel/assinatura' ? <Billing />
           : tab === '/painel/perfil' ? <Profile user={user} onChange={setSessionUser} onDeleted={logout} />
-          : <Cards name={user.name} verified={!!user.emailVerified} onEdit={open} onAuthLost={logout} />
+          : <Cards name={user.name} published={user.published ?? !!user.emailVerified} onEdit={open} onAuthLost={logout} />
         )}
         </Suspense>
       </div>

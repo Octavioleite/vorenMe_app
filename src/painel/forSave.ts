@@ -31,6 +31,8 @@ export const forSave = (c: CreatorConfig): CreatorConfig => fixUrls({
   brands: c.brands?.filter((b) => filled(b.name)),
   coupons: c.coupons?.filter((k) => filled(k.brand) && filled(k.code)),
   connect: c.connect && connectForSave(c.connect),
+  // Texto vazio e imagem sem link não vão (o servidor recusaria).
+  extras: c.extras?.filter((x) => x.kind === 'shape' || (x.kind === 'text' ? filled(x.text) : filled(x.src))),
 }) as CreatorConfig
 export const SLUG = /^[a-z0-9][a-z0-9._-]{2,30}$/
 /** "Dra. Inês Côrtes" -> "dra.inescortes" (tira acentos e o que o endereço não aceita). */

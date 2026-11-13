@@ -96,15 +96,18 @@ export function captureOrigin(): { origin: Origin; isNew: boolean } {
   }
 }
 
+/** Um evento do funil da página inicial (view, cta, form = abriu o cadastro, start = começou a preencher), com a origem do lead. */
+export function siteEvent(kind: 'view' | 'cta' | 'form' | 'start', extra: object = {}) {
+  const { origin } = captureOrigin()
+  const blob = new Blob([JSON.stringify({ ...extra, kind, source: origin.source, medium: origin.medium, campaign: origin.campaign })], { type: 'text/plain' })
+  const url = `${import.meta.env.VITE_API_URL ?? ''}/api/v1/public/site/events`
+  if (!navigator.sendBeacon?.(url, blob)) fetch(url, { method: 'POST', body: blob, keepalive: true }).catch(() => {})
+}
+
 /** Estatísticas da página inicial: 1 visita ao abrir + 1 clique por botão "Testar grátis". */
 export function trackSite() {
-  const { origin, isNew } = captureOrigin()
-  const send = (body: object) => {
-    const blob = new Blob([JSON.stringify({ ...body, source: origin.source, medium: origin.medium, campaign: origin.campaign })], { type: 'text/plain' })
-    const url = `${import.meta.env.VITE_API_URL ?? ''}/api/v1/public/site/events`
-    if (!navigator.sendBeacon?.(url, blob)) fetch(url, { method: 'POST', body: blob, keepalive: true }).catch(() => {})
-  }
-  send({ kind: 'view', new: isNew })
+  const send = (body: { kind: 'view' | 'cta'; new?: boolean }) => siteEvent(body.kind, body)
+  send({ kind: 'view', new: captureOrigin().isNew })
   document.addEventListener('click', (e) => {
     if ((e.target as Element | null)?.closest('a[href^="/painel?cadastro"]')) send({ kind: 'cta' })
   }, { capture: true })

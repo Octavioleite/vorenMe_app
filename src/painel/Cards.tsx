@@ -5,6 +5,7 @@ import { Errors, Field, ask, errorText, useCopyLink, iconBtn, primary, secondary
 import { SUPPORT_EMAIL, SUPPORT_PHONE } from './Support'
 import { GuideButton } from './Guide'
 import { SLUG, toSlug } from './forSave'
+import { MODEL_KEY } from './Auth'
 
 const MAX_CARDS = 3 // espelha vorenMe_api/src/utils/plan.js
 
@@ -119,10 +120,18 @@ function NewCardDialog({ templates, name, dialog, onCreated, fail }: {
   // que escolhe o mesmo modelo e daria "já está em uso"). A pessoa ajusta.
   // A foto do modelo escolhido "voa" da grade para o passo 2 (View Transitions, nativo); o resto entra em sequência.
   const [last, setLast] = useState('')
-  const pick = (t: Template) => transition(() => {
+  const choose = (t: Template) => {
     setTemplate(t.id); setLast(t.id); setError('')
     setSlug(SLUG.test(toSlug(name ?? '')) ? toSlug(name!) : toSlug(t.config.username))
-  })
+  }
+  const pick = (t: Template) => transition(() => choose(t))
+  // Modelo escolhido na landing ("Usar este modelo"): o diálogo já abre no passo 2 com ele. A chave só sai quando o cartão é criado.
+  useEffect(() => {
+    let id: string | null = null
+    try { id = localStorage.getItem(MODEL_KEY) } catch { /* sem storage */ }
+    const t = id && templates.find((x) => x.id === id)
+    if (t) choose(t)
+  }, [templates]) // eslint-disable-line react-hooks/exhaustive-deps
   const back = () => transition(() => setTemplate(''))
   const cats = ['Todos', ...new Set(templates.map((t) => t.category))]
   const q = query.trim().toLowerCase()
@@ -138,6 +147,7 @@ function NewCardDialog({ templates, name, dialog, onCreated, fail }: {
     const me = ++pending.current
     try {
       const card = await api<Card>('/cards', 'POST', { slug, template: selected })
+      try { localStorage.removeItem(MODEL_KEY) } catch { /* sem storage */ }
       if (me === pending.current) onCreated(card)
     } catch (err) {
       if (me === pending.current && !fail(err)) setError(errorText(err))
@@ -299,7 +309,7 @@ function ConectaPromo({ cards, onActivate }: { cards: Card[]; onActivate: (c: Ca
   )
 }
 
-export function Cards({ name, verified, onEdit, onAuthLost }: { name?: string | null; verified: boolean; onEdit: (c: Card, isNew?: boolean, section?: string) => void; onAuthLost: () => void }) {
+export function Cards({ name, published, onEdit, onAuthLost }: { name?: string | null; published: boolean; onEdit: (c: Card, isNew?: boolean, section?: string) => void; onAuthLost: () => void }) {
   const [cards, setCards] = useState<Card[] | null>(null)
   const [templates, setTemplates] = useState<Template[]>([])
   const [error, setError] = useState('')
@@ -332,7 +342,7 @@ export function Cards({ name, verified, onEdit, onAuthLost }: { name?: string | 
   const openNew = () => dialog.current?.showModal()
 
   const full = !!cards && cards.length >= MAX_CARDS
-  const canCreate = verified && !full // a API exige as duas coisas
+  const canCreate = !full // criar é livre; ir ao ar pede e-mail confirmado (published)
   const first = (name || '').trim().split(/\s+/)[0]
   return (
     <>
@@ -340,12 +350,14 @@ export function Cards({ name, verified, onEdit, onAuthLost }: { name?: string | 
         <div>
           <h1 className="text-[34px] leading-[1.02] font-semibold tracking-[-0.045em] sm:text-[40px] md:text-[52px]">{first ? `Olá, ${first}.` : 'Seus cartões'}</h1>
           <p className="mt-2 text-[17px] text-muted">
-            {cards === null ? 'Carregando seus cartões...' : cards.length === 0 ? 'Vamos colocar seu primeiro cartão no ar.' : cards.length === 1 ? '1 cartão no ar.' : `${cards.length} cartões no ar.`}
+            {cards === null ? 'Carregando seus cartões...' : cards.length === 0 ? 'Vamos colocar seu primeiro cartão no ar.'
+              : !published ? (cards.length === 1 ? '1 cartão pronto para ir ao ar.' : `${cards.length} cartões prontos para ir ao ar.`)
+              : cards.length === 1 ? '1 cartão no ar.' : `${cards.length} cartões no ar.`}
           </p>
         </div>
         {!!cards?.length && (
           <div className="flex items-center gap-2">
-            <GuideButton compact onStart={canCreate ? openNew : undefined} verified={verified} />
+            <GuideButton compact onStart={canCreate ? openNew : undefined} verified={published} />
             {canCreate && (
               <button type="button" onClick={openNew} className={`${primary} h-11`}>
                 <Plus size={16} weight="bold" aria-hidden="true" /> Novo cartão
@@ -355,12 +367,12 @@ export function Cards({ name, verified, onEdit, onAuthLost }: { name?: string | 
         )}
       </div>
 
-      {cards && !canCreate && (
+      {cards && (!published || full) && (
         <div role="status" className="rise mt-6 flex items-center gap-3 rounded-[16px] bg-accent/8 px-4 py-3">
           <Info size={20} className="shrink-0 text-accent" aria-hidden="true" />
           <p className="text-[14px]">
-            {!verified
-              ? <><span className="font-semibold">Para criar um cartão, confirme seu e-mail.</span> Abra o link que enviamos para sua caixa de entrada. Não chegou? Fale com o suporte pelo{' '}
+            {!published
+              ? <><span className="font-semibold">Monte seu cartão à vontade. Ele vai ao ar quando você confirmar seu e-mail.</span> Abra o link que enviamos para sua caixa de entrada. Não chegou? Fale com o suporte pelo{' '}
                 <a href={`https://wa.me/${SUPPORT_PHONE}`} target="_blank" rel="noreferrer" className="font-semibold text-accent underline">WhatsApp</a> ou{' '}
                 <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold text-accent underline">{SUPPORT_EMAIL}</a>.</>
               : <><span className="font-semibold">Você chegou ao limite de {MAX_CARDS} cartões.</span> Exclua um para criar um novo.</>}
@@ -387,12 +399,10 @@ export function Cards({ name, verified, onEdit, onAuthLost }: { name?: string | 
             <h2 className="text-[32px] leading-[1.05] font-semibold tracking-[-0.04em]">Crie seu primeiro cartão.</h2>
             <p className="mt-3 text-[17px] text-muted">Escolha um modelo pronto para o seu ramo, troque foto e textos e compartilhe o link.</p>
             <div className="mt-7 flex flex-wrap gap-2">
-              {verified && (
-                <button type="button" onClick={openNew} className={`${primary} h-12 px-6 text-[15px]`}>
-                  <Plus size={16} weight="bold" aria-hidden="true" /> Novo cartão
-                </button>
-              )}
-              <GuideButton onStart={openNew} verified={verified} autoOpen />
+              <button type="button" onClick={openNew} className={`${primary} h-12 px-6 text-[15px]`}>
+                <Plus size={16} weight="bold" aria-hidden="true" /> Novo cartão
+              </button>
+              <GuideButton onStart={openNew} verified={published} autoOpen />
             </div>
           </div>
           <div className="empty-fan relative hidden h-[260px] w-[300px] md:block" aria-hidden="true">

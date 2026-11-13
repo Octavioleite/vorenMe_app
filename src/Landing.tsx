@@ -75,8 +75,18 @@ const INCLUDED = [
 
 const LINKS = ['WhatsApp', 'Instagram', 'Agendamento', 'Cardápio', 'Localização']
 
+/** Prova social. Só depoimentos reais, com autorização de quem falou (print do WhatsApp, e-mail): depoimento inventado
+ *  é publicidade enganosa (CDC art. 37) e, descoberto, custa a confiança na marca inteira. Vazio = a seção não aparece.
+ *  `slug` liga ao cartão de verdade da pessoa ("ver o cartão"), a prova mais forte que existe aqui. */
+type Testimonial = { quote: string; name: string; role: string; photo?: string; slug?: string }
+const TESTIMONIALS: Testimonial[] = [
+  // { quote: 'Texto real, até 3 linhas.', name: 'Nome Sobrenome', role: 'Profissão, Cidade', photo: 'https://...', slug: 'seucartao' },
+]
+/** O contador de cartões criados (GET /public/site/stats, número real) só aparece a partir daqui: número pequeno afasta. */
+const MIN_CARDS_PROOF = 100
+
 const FAQ = [
-  { q: 'Como funcionam os 3 dias grátis?', a: 'Você cria a conta e usa tudo liberado por 3 dias. Se não gostar, é só cancelar antes do fim do teste e nada é cobrado.' },
+  { q: 'Como funcionam os 3 dias grátis?', a: 'Você cria a conta só com e-mail e senha, sem cartão de crédito, e usa tudo liberado por 3 dias. Se gostar, escolhe mensal ou anual no painel. Se não, nada é cobrado.' },
   { q: 'Tem fidelidade ou multa?', a: 'Não. No plano mensal você cancela quando quiser pelo próprio painel. No anual você paga 10 meses e usa 12; cancelar só impede a renovação, sem reembolso proporcional.' },
   { q: 'Como funciona o plano anual?', a: 'Você paga R$ 99,90 uma vez por ano, o equivalente a 10 mensalidades, e usa os 12 meses. São 2 meses grátis (R$ 19,98 de economia) em relação ao mensal.' },
   { q: 'O que é o VorenMe Conecta?', a: 'É o bloco que transforma visita em cliente: você escolhe o próximo passo (agendar, pedir orçamento, comprar), o WhatsApp abre com a mensagem pronta e o painel mostra cliques, contatos e o que ajustar. Já vem no plano.' },
@@ -274,12 +284,17 @@ function ExampleDialog({ templates, index, onIndex, onClose, scroll }: { templat
   const frame = useRef<HTMLIFrameElement>(null)
   const ready = useRef(false)
   const t = index === null ? null : templates[index]
+  // "Monte o seu": o nome digitado entra no cartão de exemplo e segue para o cadastro (?nome=). Vale para todos os modelos.
+  const [mine, setMine] = useState('')
+  const nome = mine.trim()
 
   useEffect(() => {
     const d = dialog.current
     if (t && !d?.open) d?.showModal()
     if (!t) { ready.current = false; if (d?.open) d.close(); return }
-    const send = () => frame.current?.contentWindow?.postMessage({ type: 'vorenme:preview', config: t.config, scroll }, location.origin)
+    const [first, ...rest] = nome.split(/\s+/)
+    const config = nome ? { ...t.config, name: { first, last: rest.join(' ') } } : t.config
+    const send = () => frame.current?.contentWindow?.postMessage({ type: 'vorenme:preview', config, scroll }, location.origin)
     if (ready.current) send()
     const onReady = (e: MessageEvent) => {
       if (e.origin !== location.origin || e.source !== frame.current?.contentWindow || e.data?.type !== 'vorenme:ready') return
@@ -288,7 +303,7 @@ function ExampleDialog({ templates, index, onIndex, onClose, scroll }: { templat
     }
     addEventListener('message', onReady)
     return () => removeEventListener('message', onReady)
-  }, [t]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [t, nome]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const many = templates.length > 1
   const go = (dir: number) => index !== null && onIndex((index + dir + templates.length) % templates.length)
@@ -298,18 +313,22 @@ function ExampleDialog({ templates, index, onIndex, onClose, scroll }: { templat
     <dialog ref={dialog} className="example-dialog" aria-labelledby="example-title" onClose={onClose} onClick={(e) => e.target === e.currentTarget && onClose()}>
       {t && (
         <div className="grid w-[min(390px,calc(100vw-24px))] gap-2.5 py-3">
-          <div className="flex items-center justify-between gap-3 rounded-[22px] bg-white px-4 py-3">
-            <div className="min-w-0">
-              <p id="example-title" className="flex items-center gap-1.5 text-[15px] font-semibold"><Eye size={16} weight="bold" className="shrink-0 text-accent" aria-hidden="true" /> Cartão de exemplo: {t.name}</p>
-              <p className="text-[13px] text-muted">Dados fictícios, só para você ver como fica.</p>
+          <div className="rounded-[22px] bg-white px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <p id="example-title" className="flex min-w-0 items-center gap-1.5 text-[15px] font-semibold"><Eye size={16} weight="bold" className="shrink-0 text-accent" aria-hidden="true" /> <span className="truncate">Cartão de exemplo: {t.name}</span></p>
+              <button type="button" onClick={onClose} aria-label="Fechar exemplo" className="press -mr-1 grid size-10 shrink-0 place-items-center rounded-full hover:bg-[#f2f2f4]"><X size={18} weight="bold" /></button>
             </div>
-            <button type="button" onClick={onClose} aria-label="Fechar exemplo" className="press grid size-10 shrink-0 place-items-center rounded-full hover:bg-[#f2f2f4]"><X size={18} weight="bold" /></button>
+            <label className="mt-1 grid gap-1.5">
+              <span className="text-[13px] text-muted">Dados fictícios. Veja como fica com o seu nome:</span>
+              <input value={mine} onChange={(e) => setMine(e.target.value.slice(0, 60))} autoComplete="name" autoCapitalize="words" enterKeyHint="done"
+                className="h-10 w-full rounded-full bg-[#f2f2f4] px-4 text-[16px] text-ink outline-none ring-accent/40 focus:bg-white focus:ring-2" />
+            </label>
           </div>
-          <iframe ref={frame} src="/?preview" title={`Cartão de exemplo do modelo ${t.name}`} className="example-frame block h-[min(800px,calc(100dvh-200px))] w-full rounded-[22px] bg-[#e9e9ec]" />
+          <iframe ref={frame} src="/?preview" title={`Cartão de exemplo do modelo ${t.name}`} className="example-frame block h-[min(800px,calc(100dvh-260px))] w-full rounded-[22px] bg-[#e9e9ec]" />
           <div className="flex items-center gap-2">
             {many && <button type="button" onClick={() => go(-1)} aria-label="Exemplo anterior" className={arrow}><CaretLeft size={18} weight="bold" /></button>}
-            <a href={SIGNUP} className="cta press inline-flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-full bg-accent px-4 text-[15px] font-semibold whitespace-nowrap text-accent-fg hover:brightness-110">
-              Usar este modelo <ArrowRight size={18} weight="bold" className="cta-arrow" aria-hidden="true" />
+            <a href={`${SIGNUP}&modelo=${encodeURIComponent(t.id)}${nome ? `&nome=${encodeURIComponent(nome)}` : ''}`} className="cta press inline-flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-full bg-accent px-4 text-[15px] font-semibold whitespace-nowrap text-accent-fg hover:brightness-110">
+              {nome ? 'Criar meu cartão' : 'Usar este modelo'} <ArrowRight size={18} weight="bold" className="cta-arrow" aria-hidden="true" />
             </a>
             {many && <button type="button" onClick={() => go(1)} aria-label="Próximo exemplo" className={arrow}><CaretRight size={18} weight="bold" /></button>}
           </div>
@@ -345,6 +364,11 @@ function Landing() {
   const barber = templates.find((t) => t.id === 'barbearia') ?? templates[0]
   const conectaDemo = barber && [{ ...barber, name: `${barber.name} com Conecta`, config: { ...barber.config, connect: CONECTA_DEMO } }]
   const [annual, setAnnual] = useState(false)
+  const [created, setCreated] = useState(0)
+  useEffect(() => {
+    fetch(`${API}/public/site/stats`).then((r) => (r.ok ? r.json() : null)).then((j) => j && setCreated(j.cards ?? 0), () => {})
+  }, [])
+  const showCount = created >= MIN_CARDS_PROOF
 
   return (
     <>
@@ -401,7 +425,7 @@ function Landing() {
                 <span className="word"><span className="text-accent" style={i(3)}>link.</span></span>
               </h1>
               <p className="rise mx-auto mt-6 max-w-[38ch] text-[18px] leading-relaxed text-muted md:text-[20px] lg:mx-0" style={i(4)}>
-                Um cartão bonito que leva o cliente direto ao seu WhatsApp. 3 dias grátis, depois R$ 9,99/mês.
+                Um cartão bonito que leva o cliente direto ao seu WhatsApp. Teste 3 dias grátis, sem cartão de crédito.
               </p>
               <div className="rise mt-8 flex flex-wrap justify-center gap-3 lg:justify-start" style={i(5)}>
                 <CtaButton />
@@ -637,6 +661,35 @@ function Landing() {
         <ExampleDialog templates={templates} index={example} onIndex={setExample} onClose={() => setExample(null)} />
         {conectaDemo && <ExampleDialog templates={conectaDemo} index={conecta ? 0 : null} onIndex={() => {}} onClose={() => setConecta(false)} scroll="conecta" />}
 
+        {/* Prova social: só aparece com conteúdo real (TESTIMONIALS e o contador da API). Logo antes do preço, onde a dúvida pesa. */}
+        {(showCount || TESTIMONIALS.length > 0) && (
+          <section aria-label="Quem usa o VorenMe" className="pt-20 sm:pt-28 md:pt-40">
+            {showCount && (
+              <p className={`${WRAP} text-center`} data-reveal>
+                <span className="block text-[clamp(3.5rem,14vw,6rem)] leading-none font-semibold tracking-[-0.06em] tabular-nums"><CountUp value={String(created)} /></span>
+                <span className="mt-3 block text-[18px] text-muted">cartões já criados no VorenMe</span>
+              </p>
+            )}
+            {TESTIMONIALS.length > 0 && (
+              <ul className={`proof mx-auto flex max-w-[1180px] snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 sm:px-6 lg:px-10 ${showCount ? 'mt-14' : ''}`}>
+                {TESTIMONIALS.map((q, n) => (
+                  <li key={q.name} data-reveal style={i(n)} className="grid w-[min(340px,82vw)] shrink-0 snap-center content-between gap-6 rounded-[28px] bg-[#f5f5f7] p-6 sm:p-7">
+                    <blockquote className="text-[17px] leading-relaxed text-ink">“{q.quote}”</blockquote>
+                    <div className="flex items-center gap-3">
+                      {q.photo && <img src={responsive(q.photo, [96]).src} alt="" loading="lazy" className="size-11 shrink-0 rounded-full object-cover" />}
+                      <p className="min-w-0 flex-1 text-[14px] leading-snug">
+                        <span className="block font-semibold">{q.name}</span>
+                        <span className="block text-muted">{q.role}</span>
+                      </p>
+                      {q.slug && <a href={`/${q.slug}`} target="_blank" rel="noreferrer" className="press shrink-0 rounded-full bg-white px-3 py-1.5 text-[13px] font-semibold text-accent hover:brightness-95">Ver o cartão</a>}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+
         {/* Preço */}
         <section id="preco" className={`${WRAP} scroll-mt-20 py-20 text-center sm:py-28 md:py-40`}>
           <h2 className={H2} data-reveal>Mensal ou anual. Tudo incluso.</h2>
@@ -677,7 +730,7 @@ function Landing() {
             </ul>
             <div className="mt-10 grid gap-3 text-center">
               <CtaButton big />
-              <span className="text-sm text-muted">{annual ? 'Cancelar só impede a renovação, sem reembolso proporcional.' : 'Cancele quando quiser.'}</span>
+              <span className="text-sm text-muted">{annual ? 'Sem cartão de crédito no teste. Cancelar só impede a renovação, sem reembolso proporcional.' : 'Sem cartão de crédito no teste. Cancele quando quiser.'}</span>
             </div>
           </div>
         </section>
@@ -702,7 +755,7 @@ function Landing() {
         <section className="bg-[#f5f5f7] py-20 text-center sm:py-28 md:py-40">
           <div className={WRAP} data-reveal>
             <h2 className="text-[clamp(2.75rem,13vw,6rem)] leading-[0.95] font-semibold tracking-[-0.06em]">Seu mundo.<br /><span className="text-accent">Um link.</span></h2>
-            <p className="mx-auto mt-6 max-w-[38ch] text-[18px] text-muted">Crie seu cartão agora e use tudo liberado por 3 dias.</p>
+            <p className="mx-auto mt-6 max-w-[38ch] text-[18px] text-muted">Crie seu cartão agora e use tudo liberado por 3 dias. Sem cartão de crédito.</p>
             <div className="mt-9"><CtaButton big /></div>
           </div>
         </section>

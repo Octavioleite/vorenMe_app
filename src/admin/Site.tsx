@@ -4,7 +4,7 @@ import { Errors, input, secondary } from '../painel/ui'
 import { Bars, Kpi, dayLabel, fmt, ymd, type Fail } from './Admin'
 
 /** /admin/site — página inicial (/): de onde vêm as visitas e os cadastros. */
-type Counts = { views: number; visitors: number; cta: number; signups: number; paid: number }
+type Counts = { views: number; visitors: number; cta: number; form: number; start: number; signups: number; paid: number }
 interface SiteData {
   from: string; to: string; days: number
   totals: Counts
@@ -102,10 +102,13 @@ export function Site({ fail }: { fail: Fail }) {
       <Errors text={error} />
       {!d || !t ? !error && <p className="text-sm text-muted">Carregando...</p> : (
         <>
-          <section className="grid grid-cols-2 gap-3 lg:grid-cols-5" aria-label="Indicadores">
+          <section className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7" aria-label="Indicadores">
             <Kpi label="Visitantes" value={fmt(t.visitors)} sub={`${fmt(t.views)} visitas`} />
             <Kpi label="Cliques em testar" value={fmt(t.cta)} sub={`${pct(t.cta, t.views)} das visitas`} />
-            <Kpi label="Cadastros" value={fmt(t.signups)} sub="Todas as origens, inclusive direto no painel" />
+            {/* Funil do cadastro: só existe desde que o evento foi criado; dias antigos ficam em 0. */}
+            <Kpi label="Abriram o cadastro" value={fmt(t.form)} sub={`${pct(t.form, t.cta)} de quem clicou`} />
+            <Kpi label="Começaram a preencher" value={fmt(t.start)} sub={`${pct(t.start, t.form)} de quem abriu`} />
+            <Kpi label="Cadastros" value={fmt(t.signups)} sub={`${pct(t.signups, t.start)} de quem começou`} />
             <Kpi label="Conversão" value={pct(t.signups, t.visitors)} sub="Cadastros por visitante" />
             <Kpi label="Pagaram" value={fmt(t.paid)} sub={`${pct(t.paid, t.signups)} dos cadastros do período`} />
           </section>

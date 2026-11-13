@@ -139,12 +139,15 @@ export function Tags({ label, hint, value, onChange, placeholder }: {
 type Frame = { focal?: string; zoom?: number; fit?: 'contain' }
 
 /** Formato em que cada estilo mostra a foto. Espelha o aspect-ratio do .id-card em index.css
-    (padrão 4:5; tinta/clinica 1:1; forte 21:9 só no computador; simples é o círculo do SimpleCard). Mudou lá, muda aqui. */
+    (padrão 4:5; tinta/clinica 1:1; leve 4:3; sereno 10:11; forte 21:9 só no computador; simples é o círculo do SimpleCard). Mudou lá, muda aqui. */
 export interface PhotoSpec { aspect: string; ratio: number; shape: string; px: string; note?: string; round?: boolean }
 const VERTICAL: PhotoSpec = { aspect: 'aspect-[4/5]', ratio: 4 / 5, shape: 'vertical (4:5)', px: '1080 × 1350 px' }
 const SQUARE: PhotoSpec = { aspect: 'aspect-square', ratio: 1, shape: 'quadrada (1:1)', px: '1080 × 1080 px' }
 export const PHOTO_SPEC: Record<Style, PhotoSpec> = {
-  criador: VERTICAL, atelie: VERTICAL, sereno: VERTICAL, glam: VERTICAL, leve: VERTICAL,
+  criador: VERTICAL, atelie: VERTICAL, glam: VERTICAL, sobrio: VERTICAL, oficio: VERTICAL, galeria: VERTICAL,
+  palco: { ...VERTICAL, note: 'Ela fica em duas cores (preto e a cor do cartão): foto com bastante contraste fica melhor.' },
+  leve: { aspect: 'aspect-[4/3]', ratio: 4 / 3, shape: 'horizontal (4:3)', px: '1440 × 1080 px', note: 'O nome fica numa faixa na cor do cartão, abaixo da foto.' },
+  sereno: { aspect: 'aspect-[10/11]', ratio: 10 / 11, shape: 'quase quadrada (10:11)', px: '1080 × 1188 px', note: 'Aparece em arco, com o nome abaixo da foto.' },
   tinta: SQUARE, clinica: SQUARE,
   forte: { ...VERTICAL, note: 'No computador ela vira uma faixa larga e baixa: deixe o rosto no centro da foto.' },
   simples: { ...SQUARE, round: true, note: 'Aparece pequena e redonda: use um close do rosto.' },

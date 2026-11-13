@@ -50,7 +50,9 @@ export function VerifyBanner({ user }: { user: User }) {
     <div className="rise mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[16px] bg-accent/8 px-4 py-3">
       <EnvelopeSimple size={20} className="shrink-0 text-accent" aria-hidden="true" />
       <p className="min-w-0 flex-1 text-[14px]">
-        <span className="font-semibold">Confirme seu e-mail.</span> Enviamos um link para <span className="font-medium">{user.email}</span>. É por ele que você recupera a senha.
+        {user.published === false
+          ? <><span className="font-semibold">Confirme seu e-mail para colocar seu cartão no ar.</span> Enviamos um link para <span className="font-medium">{user.email}</span>.</>
+          : <><span className="font-semibold">Confirme seu e-mail.</span> Enviamos um link para <span className="font-medium">{user.email}</span>. É por ele que você recupera a senha.</>}
       </p>
       {state === 'sent' ? (
         <span className="text-[13px] font-semibold">Enviado! Confira também o spam.</span>

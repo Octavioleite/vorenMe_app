@@ -12,8 +12,8 @@ type Step = { id: string; chapter: string; icon: Icon; title: string; text: stri
 const STEPS: Step[] = [
   // Começar
   { id: 'email', chapter: 'Começar', icon: EnvelopeSimple, title: 'Confirme seu e-mail',
-    text: 'Logo depois do cadastro, enviamos um link para o seu e-mail. Abra esse link para liberar a criação de cartões.',
-    tips: ['Enquanto o e-mail não for confirmado, o botão Novo cartão não aparece.', 'Não chegou? Olhe a caixa de spam ou toque em Suporte, no topo da tela.'] },
+    text: 'Logo depois do cadastro, enviamos um link para o seu e-mail. Abra esse link para colocar seus cartões no ar.',
+    tips: ['Você já pode montar o cartão agora. Ele só abre para os clientes depois da confirmação.', 'Não chegou? Olhe a caixa de spam ou toque em Suporte, no topo da tela.'] },
   { id: 'modelo', chapter: 'Começar', icon: SquaresFour, title: 'Escolha um modelo',
     text: 'Na tela Cartões, toque em Novo cartão. Aparece uma grade de modelos prontos, cada um pensado para um tipo de negócio.',
     tips: ['Use a busca (barbearia, unhas, dentista...) ou os filtros por categoria.', 'Escolha o mais parecido com você. Foto, cores e textos você troca depois.', 'Escolheu errado? Toque em Trocar modelo antes de criar.'] },
@@ -98,7 +98,7 @@ export function GuideButton({ onStart, onSection, verified = true, autoOpen, com
   const step = steps[Math.min(i, steps.length - 1)]
   const last = i >= steps.length - 1
   // Quem ainda não tem cartão pode criar logo depois de aprender a criar; o resto do guia continua acessível.
-  const createNow = !!onStart && verified && step.id === 'endereco'
+  const createNow = !!onStart && step.id === 'endereco'
 
   const open = () => { setI(startAt); dialog.current?.showModal(); next.current?.focus(); markSeen() }
   // showModal() focaria o X; o foco fica sempre na ação principal.
