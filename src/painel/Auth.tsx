@@ -2,7 +2,7 @@ import { ArrowRight, Check, Eye, EyeSlash } from '@phosphor-icons/react'
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import { api, type Session, type Template } from './api'
 import { Errors, errorText, thumb, transition } from './ui'
-import { captureOrigin, siteEvent } from '../lib/track'
+import { captureOrigin, inAppBrowser, siteEvent } from '../lib/track'
 
 const MODES = { login: 'Entrar', register: 'Criar conta' } as const
 type Mode = keyof typeof MODES
@@ -130,6 +130,49 @@ function MobilePreview({ t, name }: { t?: Template | null; name: string }) {
   )
 }
 
+// Continuar com Google (Google Identity Services, script oficial, sem biblioteca). O Client ID vem da API
+// (GET /auth/google): sem GOOGLE_CLIENT_ID lá, ou num navegador de app (onde o Google bloqueia), o botão não aparece.
+declare global {
+  interface Window { google?: { accounts: { id: { initialize(o: object): void; renderButton(el: HTMLElement, o: object): void } } } }
+}
+let gsi: Promise<void> | undefined
+const loadGsi = () => (gsi ??= new Promise<void>((ok, fail) => {
+  const s = Object.assign(document.createElement('script'), { src: 'https://accounts.google.com/gsi/client', async: true })
+  s.onload = () => ok()
+  s.onerror = () => { gsi = undefined; fail() }
+  document.head.append(s)
+}))
+
+function GoogleButton({ signup, onCredential }: { signup: boolean; onCredential: (credential: string) => void }) {
+  const box = useRef<HTMLDivElement>(null)
+  const latest = useRef(onCredential)
+  latest.current = onCredential // o Google guarda o callback do initialize; o ref entrega sempre o nome digitado mais recente
+  const [clientId, setClientId] = useState<string | null>(null)
+  useEffect(() => {
+    if (!inAppBrowser(navigator.userAgent)) api<{ clientId: string | null }>('/auth/google').then((c) => setClientId(c.clientId), () => {})
+  }, [])
+  useEffect(() => {
+    const el = box.current
+    if (!clientId || !el) return
+    let gone = false
+    loadGsi().then(() => {
+      const id = window.google?.accounts.id
+      if (gone || !id) return
+      id.initialize({ client_id: clientId, callback: (r: { credential: string }) => latest.current(r.credential), ux_mode: 'popup', context: signup ? 'signup' : 'signin', itp_support: true })
+      el.replaceChildren()
+      id.renderButton(el, { type: 'standard', theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', locale: 'pt-BR', logo_alignment: 'center', width: Math.min(400, el.offsetWidth) })
+    }, () => setClientId(null)) // script bloqueado (extensão, rede): fica só o formulário
+    return () => { gone = true }
+  }, [clientId, signup])
+  if (!clientId) return null
+  return (
+    <div className="rise mt-8" style={step(3)}>
+      <div ref={box} className="flex h-11 justify-center" />
+      <p className="mt-6 -mb-2 flex items-center gap-3 text-[13px] text-muted before:h-px before:flex-1 before:bg-[#e5e5ea] after:h-px after:flex-1 after:bg-[#e5e5ea]">ou com e-mail</p>
+    </div>
+  )
+}
+
 /** Esqueci a senha (pede o e-mail) e Redefinir (link do e-mail: /painel?redefinir=<token>). */
 function Recover({ token, onDone, onBack }: { token: string | null; onDone: (s: Session) => void; onBack: () => void }) {
   const [busy, setBusy] = useState(false)
@@ -218,6 +261,20 @@ export function Auth({ onDone }: { onDone: (s: Session) => void }) {
     }
   }
 
+  // Mesma rota para cadastro e login: e-mail novo cria a conta (já confirmada), e-mail existente entra nela.
+  const google = async (credential: string) => {
+    started()
+    setBusy(true)
+    setError('')
+    import('./Cards')
+    try {
+      onDone(await api<Session>('/auth/google', 'POST', { credential, name: name.trim() || undefined, ref: referral(), origin: captureOrigin().origin }))
+    } catch (err) {
+      setError(errorText(err))
+      setBusy(false)
+    }
+  }
+
   const label = (text: string, hint?: string, control?: React.ReactNode) => (
     <label className="grid gap-2">
       <span className="text-[14px] font-medium text-ink">{text}</span>
@@ -263,6 +320,8 @@ export function Auth({ onDone }: { onDone: (s: Session) => void }) {
               </p>
             </div>
           </div>
+
+          <GoogleButton signup={!isLogin} onCredential={google} />
 
           <form onSubmit={submit} onFocus={started} aria-busy={busy} className="rise mt-8 grid gap-5" style={step(3)}>
             {!isLogin && label('Seu nome', 'Aparece no seu cartão.',

@@ -16,6 +16,10 @@ export function detectSource(search: string, ua: string, referrer: string): stri
   return known.find(([re]) => re.test(host))?.[1] ?? 'outro'
 }
 
+/** Navegador embutido de app (Instagram, Facebook, TikTok, LinkedIn, WebView do Android). O Google bloqueia login
+ *  nesses navegadores (erro 403 disallowed_useragent), então o botão "Continuar com Google" nem aparece neles. */
+export const inAppBrowser = (ua: string) => /Instagram|FBAN|FBAV|FB_IAB|musical_ly|TikTok|BytedanceWebview|LinkedInApp|; wv\)/i.test(ua)
+
 /** Nome do clique pelo destino do link. Botões sem link (Pix, cupom) usam data-track. */
 export function targetOf(href: string): string {
   if (href.startsWith('mailto:')) return 'email'
