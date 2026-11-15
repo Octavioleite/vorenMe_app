@@ -11,7 +11,7 @@ const step = (i: number) => ({ '--i': i }) as CSSProperties
 const AUTOPLAY = 3200
 // Mesma linguagem da página inicial: campos cinza-claro sem borda, botões em pílula.
 const field = 'h-12 w-full rounded-[14px] bg-[#f2f2f4] px-4 text-[16px] text-ink outline-none ring-accent/40 transition-shadow placeholder:text-[#8e8e93] focus:bg-white focus:ring-2'
-const PERKS = ['3 dias grátis, sem cartão de crédito','Até 3 cartões e links ilimitados', 'Cancele quando quiser']
+const PERKS = ['30 dias grátis, sem cartão de crédito','Até 3 cartões e links ilimitados', 'Cancele quando quiser']
 
 /** Cartão-modelo. O ativo inclina seguindo o ponteiro (CSS vars, sem re-render) e,
  *  se a pessoa digitou o nome no cadastro, mostra o nome dela no lugar do exemplo. */
@@ -256,7 +256,7 @@ export function Auth({ onDone }: { onDone: (s: Session) => void }) {
             <div className="min-w-0">
               <h1 style={{ ...step(1), viewTransitionName: 'auth-title' }}
                 className={`rise leading-[1.02] font-semibold tracking-[-0.045em] text-ink ${isLogin ? 'text-[40px]' : 'text-[30px] sm:text-[40px]'}`}>
-                {isLogin ? 'Bem-vindo de volta.' : 'Comece seus 3 dias grátis.'}
+                {isLogin ? 'Bem-vindo de volta.' : 'Comece seus 30 dias grátis.'}
               </h1>
               <p className={`rise mt-3 text-muted ${isLogin ? 'text-[17px]' : 'text-[15px] sm:text-[17px]'}`} style={step(2)}>
                 {isLogin ? 'Entre para gerenciar seus cartões.' : 'Sem cartão de crédito. Seu cartão no ar em poucos minutos.'}
@@ -287,7 +287,7 @@ export function Auth({ onDone }: { onDone: (s: Session) => void }) {
             <Errors text={error} />
             <button disabled={busy}
               className="press group mt-1 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-accent text-[16px] font-semibold text-white hover:brightness-110 disabled:opacity-50">
-              {busy ? 'Aguarde...' : isLogin ? 'Entrar' : 'Testar 3 dias grátis'}
+              {busy ? 'Aguarde...' : isLogin ? 'Entrar' : 'Testar 30 dias grátis'}
               {!busy && <ArrowRight size={17} weight="bold" aria-hidden="true" className="transition-transform duration-300 group-hover:translate-x-1" />}
             </button>
           </form>

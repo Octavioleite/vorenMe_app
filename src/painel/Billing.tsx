@@ -51,7 +51,7 @@ function headline(s: Status, justPaid: boolean) {
 function Referral({ r }: { r: Status['referral'] }) {
   const { copy, copied } = useCopy()
   const link = r.code ? `${location.origin}/painel?cadastro=1&ref=${encodeURIComponent(r.code)}` : ''
-  const wa = `https://wa.me/?text=${encodeURIComponent(`Fiz meu cartão de visita digital no VorenMe e recomendo! Teste 3 dias grátis: ${link}`)}`
+  const wa = `https://wa.me/?text=${encodeURIComponent(`Fiz meu cartão de visita digital no VorenMe e recomendo! Teste 30 dias grátis: ${link}`)}`
   return (
     <section className="grid gap-6 overflow-hidden rounded-[24px] bg-accent/8 p-6 sm:p-8 lg:grid-cols-[1fr_auto] lg:items-center">
       <div className="grid gap-4">

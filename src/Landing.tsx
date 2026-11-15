@@ -15,7 +15,7 @@ type Device = 'desktop' | 'tablet' | 'phone'
 const API = `${import.meta.env.VITE_API_URL ?? ''}/api/v1`
 const LOGIN = '/painel'
 const SIGNUP = '/painel?cadastro=1'
-const CTA = 'Testar 3 dias grátis'
+const CTA = 'Testar 30 dias grátis'
 const WRAP = 'mx-auto w-full max-w-[1180px] px-4 sm:px-6 lg:px-10'
 const H2 = 'text-[clamp(2rem,8vw,3.5rem)] leading-[1.05] font-semibold tracking-[-0.045em] text-balance'
 
@@ -86,7 +86,7 @@ const TESTIMONIALS: Testimonial[] = [
 const MIN_CARDS_PROOF = 100
 
 const FAQ = [
-  { q: 'Como funcionam os 3 dias grátis?', a: 'Você cria a conta só com e-mail e senha, sem cartão de crédito, e usa tudo liberado por 3 dias. Se gostar, escolhe mensal ou anual no painel. Se não, nada é cobrado.' },
+  { q: 'Como funcionam os 30 dias grátis?', a: 'Você cria a conta só com e-mail e senha, sem cartão de crédito, e usa tudo liberado por 30 dias. Se gostar, escolhe mensal ou anual no painel. Se não, nada é cobrado.' },
   { q: 'Tem fidelidade ou multa?', a: 'Não. No plano mensal você cancela quando quiser pelo próprio painel. No anual você paga 10 meses e usa 12; cancelar só impede a renovação, sem reembolso proporcional.' },
   { q: 'Como funciona o plano anual?', a: 'Você paga R$ 99,90 uma vez por ano, o equivalente a 10 mensalidades, e usa os 12 meses. São 2 meses grátis (R$ 19,98 de economia) em relação ao mensal.' },
   { q: 'O que é o VorenMe Conecta?', a: 'É o bloco que transforma visita em cliente: você escolhe o próximo passo (agendar, pedir orçamento, comprar), o WhatsApp abre com a mensagem pronta e o painel mostra cliques, contatos e o que ajustar. Já vem no plano.' },
@@ -425,7 +425,7 @@ function Landing() {
                 <span className="word"><span className="text-accent" style={i(3)}>link.</span></span>
               </h1>
               <p className="rise mx-auto mt-6 max-w-[38ch] text-[18px] leading-relaxed text-muted md:text-[20px] lg:mx-0" style={i(4)}>
-                Um cartão bonito que leva o cliente direto ao seu WhatsApp. Teste 3 dias grátis, sem cartão de crédito.
+                Um cartão bonito que leva o cliente direto ao seu WhatsApp. Teste 30 dias grátis, sem cartão de crédito.
               </p>
               <div className="rise mt-8 flex flex-wrap justify-center gap-3 lg:justify-start" style={i(5)}>
                 <CtaButton />
@@ -705,7 +705,7 @@ function Landing() {
           <div className="price mx-auto mt-8 max-w-[560px] rounded-[32px] bg-[#f5f5f7] p-6 text-left sm:p-8 md:p-12" data-reveal>
             <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
               <div>
-                <p className="text-[15px] font-semibold text-accent">3 dias grátis</p>
+                <p className="text-[15px] font-semibold text-accent">30 dias grátis</p>
                 <p className="mt-1 text-muted">depois</p>
               </div>
               <p className="flex items-baseline gap-1">
@@ -755,7 +755,7 @@ function Landing() {
         <section className="bg-[#f5f5f7] py-20 text-center sm:py-28 md:py-40">
           <div className={WRAP} data-reveal>
             <h2 className="text-[clamp(2.75rem,13vw,6rem)] leading-[0.95] font-semibold tracking-[-0.06em]">Seu mundo.<br /><span className="text-accent">Um link.</span></h2>
-            <p className="mx-auto mt-6 max-w-[38ch] text-[18px] text-muted">Crie seu cartão agora e use tudo liberado por 3 dias. Sem cartão de crédito.</p>
+            <p className="mx-auto mt-6 max-w-[38ch] text-[18px] text-muted">Crie seu cartão agora e use tudo liberado por 30 dias. Sem cartão de crédito.</p>
             <div className="mt-9"><CtaButton big /></div>
           </div>
         </section>

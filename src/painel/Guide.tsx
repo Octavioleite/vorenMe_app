@@ -75,7 +75,7 @@ const STEPS: Step[] = [
     text: 'Na aba Estatísticas, escolha o cartão e veja visitas, cliques e de onde as pessoas vieram.',
     tips: ['Veja o que mais clicam (WhatsApp, Instagram, Pix...) e os horários de pico.', 'Toque numa origem para filtrar só as visitas dela.'] },
   { id: 'assinatura', chapter: 'Divulgar', icon: CreditCard, title: 'Assinatura',
-    text: 'Você começa com 3 dias grátis. Para o cartão continuar no ar depois disso, assine no menu da sua conta, em Assinatura.',
+    text: 'Você começa com 30 dias grátis. Para o cartão continuar no ar depois disso, assine no menu da sua conta, em Assinatura.',
     tips: ['Mensal (R$ 9,99) ou anual (R$ 99,90: paga 10 meses, usa 12), com tudo incluso. Você pode ter até 3 cartões.', 'Indique amigos pelo seu link e ganhe meses grátis.'] },
 ]
 const CHAPTERS = ['Começar', 'Montar', 'Extras', 'Divulgar']
