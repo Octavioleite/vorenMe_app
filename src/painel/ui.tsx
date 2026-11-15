@@ -8,13 +8,13 @@ import { ApiError, uploadImage } from './api'
 
 /* Forma (mesma linguagem da página inicial): superfícies 20-24px · campos 12px cinza-claro sem borda · botões em pílula · só-ícone em círculo. */
 export const input =
-  'w-full rounded-[12px] border border-transparent bg-[#f2f2f4] px-3.5 py-2.5 text-[16px] text-ink placeholder:text-[#8e8e93] sm:text-[15px] outline-none transition-[background-color,box-shadow] focus:bg-white focus:ring-2 focus:ring-accent/40 disabled:opacity-50'
+  'w-full rounded-[12px] border border-transparent bg-field px-3.5 py-2.5 text-[16px] text-ink placeholder:text-[#8e8e93] sm:text-[15px] outline-none transition-[background-color,box-shadow] focus:bg-white focus:ring-2 focus:ring-accent/40 disabled:opacity-50'
 const btn =
   'press inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold disabled:pointer-events-none disabled:opacity-40'
 export const primary = `${btn} bg-accent text-accent-fg hover:brightness-110`
-export const secondary = `${btn} bg-[#f2f2f4] text-ink hover:bg-[#e8e8ec]`
+export const secondary = `${btn} bg-field text-ink hover:bg-field-hover`
 export const iconBtn =
-  'press grid size-10 shrink-0 place-items-center rounded-full bg-[#f2f2f4] text-muted hover:bg-[#e8e8ec] hover:text-ink'
+  'press grid size-10 shrink-0 place-items-center rounded-full bg-field text-muted hover:bg-field-hover hover:text-ink'
 
 export const thumb = (src: string, w = 640) =>
   src.startsWith('https://images.unsplash.com/') ? `${src}${src.includes('?') ? '&' : '?'}w=${w}&q=75&auto=format&fit=crop` : src
@@ -44,10 +44,19 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
   )
 }
 
+/** Doherty: em vez de "Carregando...", o esqueleto do que vem (a pessoa já vê a forma da tela). */
+export function Loading({ rows = 3, className = 'h-16', label = 'Carregando' }: { rows?: number; className?: string; label?: string }) {
+  return (
+    <div role="status" aria-label={label} className="grid gap-3">
+      {Array.from({ length: rows }, (_, i) => <div key={i} className={`skeleton rounded-[20px] ${className}`} style={{ opacity: 1 - i * 0.2 }} />)}
+    </div>
+  )
+}
+
 export function Errors({ text }: { text: string }) {
   if (!text) return null
   return (
-    <p role="alert" className="flex items-start gap-2 rounded-[12px] border border-red-500/25 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-500 dark:text-red-400">
+    <p key={text} role="alert" className="shake flex items-start gap-2 rounded-[12px] border border-red-500/25 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-500 dark:text-red-400">
       <WarningCircle size={18} weight="bold" className="mt-px shrink-0" aria-hidden="true" />
       {text}
     </p>
@@ -80,7 +89,7 @@ export function Section({ id, icon, title, description, badge, defaultOpen = tru
           {description && <span className="block truncate text-[13px] text-muted">{description}</span>}
         </span>
         {badge && <span className={`shrink-0 rounded-full px-2.5 py-1 text-[12px] font-medium ${highlight ? 'bg-accent/12 font-semibold text-accent' : 'bg-surface-2 text-muted'}`}>{badge}</span>}
-        <CaretDown size={16} weight="bold" aria-hidden="true" className="shrink-0 text-muted transition-transform duration-200 group-open/s:rotate-180" />
+        <CaretDown size={16} weight="bold" aria-hidden="true" className="shrink-0 text-muted transition-transform duration-500 ease-spring group-open/s:rotate-180" />
       </summary>
       <div className="@container border-t border-line px-4 pt-5 pb-6 sm:px-6">{children}</div>
     </details>
@@ -116,7 +125,7 @@ export function Tags({ label, hint, value, onChange, placeholder }: {
           <span key={t} className="inline-flex items-center gap-1 rounded-full bg-surface-2 py-1 pr-1 pl-3 text-[13px]">
             {t}
             <button type="button" onClick={() => onChange(value.filter((x) => x !== t))} aria-label={`Remover ${t}`}
-              className="grid size-5 place-items-center rounded-full text-muted hover:bg-line-strong hover:text-ink pointer-coarse:size-8">
+              className="hit grid size-5 place-items-center rounded-full text-muted hover:bg-line-strong hover:text-ink pointer-coarse:size-8">
               <X size={11} weight="bold" />
             </button>
           </span>

@@ -84,7 +84,7 @@ function CopyLink({ url }: { url: string }) {
 
 /* ── Barra de edição da prévia (estilo Canva). Fica fora do iframe reduzido, em tamanho real. ── */
 const chip = (on: boolean) => `press inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[14px] font-medium ${on ? 'border-ink bg-ink text-bg' : 'border-line bg-bg hover:border-line-strong'}`
-const barBox = 'step-in mx-auto grid max-w-[560px] gap-3 rounded-[20px] bg-surface p-3 text-left shadow-[0_16px_40px_-20px_rgb(17_17_19/0.45)] ring-1 ring-black/5'
+const barBox = 'step-in mx-auto grid max-w-[560px] gap-3 rounded-[20px] bg-surface p-3 text-left shadow-2 ring-1 ring-black/5'
 
 function Bar({ label, icon, actions, onClose, children }: { label: string; icon: React.ReactNode; actions: React.ReactNode; onClose: () => void; children: React.ReactNode }) {
   return (
@@ -117,14 +117,14 @@ function FontRow({ value, onChange }: { value?: FontId; onChange: (f?: FontId) =
 /** auto = o botão "sem cor própria" (o que ele significa muda: cor do estilo, branco, cor do cartão). */
 function ColorRow({ value, accent, auto, onChange }: { value?: string; accent: string; auto: [string, string]; onChange: (c?: string) => void }) {
   const colors = [...new Set(['#FAFAF9', '#121214', accent.toUpperCase(), ...SWATCHES])]
-  const ring = (on: boolean) => `press size-7 rounded-full border-2 ${on ? 'border-ink' : 'border-line-strong'}`
+  const ring = (on: boolean) => `press size-8 pointer-coarse:size-10 rounded-full border-2 ${on ? 'border-ink' : 'border-line-strong'}`
   return (
     <div role="group" aria-label="Cor" className="flex flex-wrap items-center gap-1.5">
       <button type="button" aria-pressed={!value} title={auto[0]} aria-label={auto[0]} className={ring(!value)} style={{ background: auto[1] }} onClick={() => onChange(undefined)} />
       {colors.map((hex) => (
         <button key={hex} type="button" aria-pressed={value === hex} aria-label={`Cor ${hex}`} title={hex} className={ring(value === hex)} style={{ background: hex }} onClick={() => onChange(hex)} />
       ))}
-      <label className="press relative grid size-7 cursor-pointer place-items-center overflow-hidden rounded-full border border-line-strong" title="Outra cor">
+      <label className="press relative grid size-8 pointer-coarse:size-10 cursor-pointer place-items-center overflow-hidden rounded-full border border-line-strong" title="Outra cor">
         <span className="sr-only">Outra cor</span>
         <Plus size={12} weight="bold" aria-hidden="true" />
         <input type="color" value={value ?? '#FAFAF9'} onChange={(e) => onChange(e.target.value.toUpperCase())} className="absolute inset-0 cursor-pointer opacity-0" />
@@ -304,7 +304,7 @@ function AddressFinder({ value, onChange }: { value: CreatorConfig['address']; o
           <div className="flex flex-wrap gap-2">
             <span className="self-center text-[13px] text-muted">Testar:</span>
             {([['Google Maps', l.maps], ['Waze', l.waze], ['Uber', l.uber]] as const).map(([n, href]) => (
-              <a key={n} href={href} target="_blank" rel="noreferrer" className="press inline-flex items-center gap-1 rounded-full bg-[#f2f2f4] px-3 py-1.5 text-[13px] font-medium hover:bg-[#e8e8ec]">
+              <a key={n} href={href} target="_blank" rel="noreferrer" className="press inline-flex items-center gap-1 rounded-full bg-field px-3 py-1.5 text-[13px] font-medium hover:bg-field-hover">
                 {n} <ArrowSquareOut size={13} aria-hidden="true" />
               </a>
             ))}
@@ -661,7 +661,7 @@ export function Editor({ card, wizard, focus, published = true, onBack, onAuthLo
             {locked ? <><WarningCircle size={15} weight="bold" aria-hidden="true" /> Plano vencido</>
               : error || slugPending ? <><WarningCircle size={15} weight="bold" aria-hidden="true" /> Não salvo</>
               : busy || configDirty ? <><CloudArrowUp size={15} aria-hidden="true" /> Salvando...</>
-              : <><Check size={15} weight="bold" aria-hidden="true" /> Salvo</>}
+              : <><Check size={15} weight="bold" aria-hidden="true" className="pop" /> Salvo</>}
           </span>
           <GuideButton compact start="identidade" onSection={(id) => {
             const i = STEPS.findIndex(([, ids]) => ids.includes(id))
@@ -679,7 +679,7 @@ export function Editor({ card, wizard, focus, published = true, onBack, onAuthLo
               {STEPS.map(([label], i) => (
                 <li key={label}>
                   <button type="button" onClick={() => toStep(i)} aria-current={i === step ? 'step' : undefined}
-                    className={`press inline-flex items-center gap-1.5 rounded-full py-1.5 pr-3.5 pl-1.5 text-[13px] font-medium transition-colors ${i === step ? 'bg-ink text-bg' : i < step ? 'bg-accent/10 text-accent' : 'bg-[#f2f2f4] text-muted hover:text-ink'}`}>
+                    className={`press inline-flex items-center gap-1.5 rounded-full py-1.5 pr-3.5 pl-1.5 text-[13px] font-medium transition-colors ${i === step ? 'bg-ink text-bg' : i < step ? 'bg-accent/10 text-accent' : 'bg-field text-muted hover:text-ink'}`}>
                     <span className={`grid size-5 place-items-center rounded-full text-[11px] ${i === step ? 'bg-bg text-ink' : 'bg-bg/70'}`}>
                       {i < step ? <Check size={11} weight="bold" aria-hidden="true" /> : i + 1}
                     </span>
@@ -691,7 +691,7 @@ export function Editor({ card, wizard, focus, published = true, onBack, onAuthLo
             <div className="mt-2.5 grid gap-1" style={{ gridTemplateColumns: `repeat(${STEPS.length}, minmax(0, 1fr))` }} aria-hidden="true">
               {STEPS.map(([label], i) => (
                 <span key={label} className="h-1 overflow-hidden rounded-full bg-line">
-                  <span className={`block h-full origin-left rounded-full bg-accent transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${i <= step ? 'scale-x-100' : 'scale-x-0'}`} />
+                  <span className={`block h-full origin-left rounded-full bg-accent transition-transform duration-700 ease-spring motion-reduce:transition-none ${i <= step ? 'scale-x-100' : 'scale-x-0'}`} />
                 </span>
               ))}
             </div>
@@ -700,7 +700,7 @@ export function Editor({ card, wizard, focus, published = true, onBack, onAuthLo
           <nav aria-label="Seções" className="-mx-1 mt-3 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none]">
             {nav.map(([id, label]) => (
               <button key={id} type="button" onClick={() => jump(id)} aria-current={active === id ? 'true' : undefined}
-                className={`press inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors ${active === id ? 'bg-ink text-bg' : id === 'conecta' ? 'bg-accent/12 font-semibold text-accent hover:bg-accent/20' : 'bg-[#f2f2f4] text-muted hover:text-ink'}`}>
+                className={`press inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors ${active === id ? 'bg-ink text-bg' : id === 'conecta' ? 'bg-accent/12 font-semibold text-accent hover:bg-accent/20' : 'bg-field text-muted hover:text-ink'}`}>
                 {id === 'conecta' && <Target size={14} weight="bold" aria-hidden="true" />}
                 {label}
               </button>
@@ -915,7 +915,7 @@ export function Editor({ card, wizard, focus, published = true, onBack, onAuthLo
                 {PLATFORMS.map((p) => {
                   const { name, Icon } = platformMeta[p]
                   return (
-                    <button key={p} type="button" className="press inline-flex items-center gap-1.5 rounded-full bg-[#f2f2f4] py-1.5 pr-3 pl-2 text-[13px] font-medium hover:bg-[#e8e8ec]"
+                    <button key={p} type="button" className="press inline-flex items-center gap-1.5 rounded-full bg-field py-1.5 pr-3 pl-2 text-[13px] font-medium hover:bg-field-hover"
                       onClick={() => set((x) => { x.socials.push({ platform: p, handle: '', url: '' }) })}>
                       <Icon size={15} weight="bold" aria-hidden="true" /> {name}
                     </button>
@@ -1215,7 +1215,7 @@ export function Editor({ card, wizard, focus, published = true, onBack, onAuthLo
                 <Field label="Link do cartão" hint={slug !== saved.slug
                   ? (SLUG.test(slug) ? 'Ainda não salvo: aperte Enter ou saia do campo.' : 'Use de 3 a 31 caracteres: letras minúsculas, números, ponto, hífen ou _.')
                   : 'Mudar o link faz o link e os QR codes antigos pararem de funcionar.'}>
-                  <div className="flex items-center rounded-[12px] bg-[#f2f2f4] focus-within:bg-white focus-within:ring-2 focus-within:ring-accent/40">
+                  <div className="flex items-center rounded-[12px] bg-field focus-within:bg-white focus-within:ring-2 focus-within:ring-accent/40">
                     <span className="pl-3.5 text-[15px] text-muted">/</span>
                     <input value={slug} autoCapitalize="none" autoCorrect="off" spellCheck={false}
                       onChange={(e) => setSlug(toSlug(e.target.value))}
@@ -1254,7 +1254,7 @@ export function Editor({ card, wizard, focus, published = true, onBack, onAuthLo
         </fieldset>
 
         {/* Um único preview: coluna lateral no desktop, tela cheia no celular quando aberto. */}
-        <aside className={preview ? 'fixed inset-0 z-30 overflow-auto overscroll-contain bg-[#f5f5f7] p-4 pt-16 pb-[max(1rem,env(safe-area-inset-bottom))] lg:static lg:z-auto lg:overflow-visible lg:bg-transparent lg:p-0' : 'hidden lg:block'}>
+        <aside className={preview ? 'fixed inset-0 z-30 overflow-auto overscroll-contain bg-field p-4 pt-16 pb-[max(1rem,env(safe-area-inset-bottom))] lg:static lg:z-auto lg:overflow-visible lg:bg-transparent lg:p-0' : 'hidden lg:block'}>
           {preview && (
             <button type="button" onClick={() => setPreview(false)} className={`${iconBtn} fixed top-[max(1rem,env(safe-area-inset-top))] right-4 bg-surface lg:hidden`} aria-label="Fechar prévia">
               <X size={17} />

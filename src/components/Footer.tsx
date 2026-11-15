@@ -36,7 +36,7 @@ export function Footer() {
           <span className="font-semibold text-ink">VorenMe</span>
           <span className="text-muted"> · Crie o seu grátis</span>
         </span>
-        <ArrowUpRight size={14} weight="bold" aria-hidden="true" className="text-muted transition-transform group-hover:-translate-y-px group-hover:translate-x-px group-hover:text-ink" />
+        <ArrowUpRight size={14} weight="bold" aria-hidden="true" className="text-muted transition-transform duration-500 ease-anticipate group-hover:-translate-y-px group-hover:translate-x-px group-hover:text-ink" />
       </ExternalLink>
     </footer>
   )

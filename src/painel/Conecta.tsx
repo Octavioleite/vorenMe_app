@@ -4,7 +4,7 @@ import type { ConnectConfig } from '../config/types'
 import { api, ApiError, type Card } from './api'
 import { CHANNEL_LABEL } from './ConnectEditor'
 import { forSave } from './forSave'
-import { Errors, Field, ask, errorText, input, primary, secondary } from './ui'
+import { Errors, Field, ask, errorText, input, primary, secondary, Loading } from './ui'
 
 interface Summary {
   visitors: number; sectionViewers: number; actionClickers: number; whatsappIntents: number; leads: number; conversions: number
@@ -131,7 +131,7 @@ export function Conecta({ card, range, onAuthLost }: { card: Card; range: { from
         <p className="tile p-5 text-[15px] text-muted">O Conecta está desligado neste cartão. Ative no editor (seção VorenMe Conecta) para escolher o objetivo, as ações do visitante e os serviços.</p>
       )}
 
-      {!data && !error && <div className="h-[124px] animate-pulse rounded-[20px] bg-[#f2f2f4]" aria-hidden="true" />}
+      {!data && !error && <div className="h-[124px] animate-pulse rounded-[20px] bg-field" aria-hidden="true" />}
       {data && (
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -245,7 +245,7 @@ export function Conecta({ card, range, onAuthLost }: { card: Card; range: { from
       <div className="grid gap-3 lg:grid-cols-2">
         <section className="tile grid content-start gap-3 p-5 sm:p-6">
           <h3 className="text-[16px] font-semibold">Contatos recebidos</h3>
-          {leads === null ? <p className="text-sm text-muted">Carregando...</p> : leads.length === 0 ? (
+          {leads === null ? <Loading /> : leads.length === 0 ? (
             <p className="text-sm text-muted">{k?.actions.some((a) => a.channel === 'form') ? 'Nenhum contato ainda. Eles aparecem aqui quando alguém enviar o formulário do seu cartão.' : 'Adicione uma ação com formulário no Conecta para receber contatos aqui.'}</p>
           ) : (
             <ul className="grid gap-2">
@@ -298,7 +298,7 @@ export function Conecta({ card, range, onAuthLost }: { card: Card; range: { from
                 loadSummary()
               })} />
           )}
-          {conversions === null ? <p className="text-sm text-muted">Carregando...</p> : conversions.length === 0 ? (
+          {conversions === null ? <Loading /> : conversions.length === 0 ? (
             !draft && <p className="text-sm text-muted">Nenhuma conversão registrada ainda.</p>
           ) : (
             <ul className="grid gap-1">
@@ -308,7 +308,7 @@ export function Conecta({ card, range, onAuthLost }: { card: Card; range: { from
                     <p className="truncate text-[14px] font-medium">{c.note || 'Conversão'}{c.value !== null && <span className="ml-2 font-semibold text-accent">{money(c.value)}</span>}</p>
                     <p className="text-[12px] text-muted">{when(c.occurredAt)}{c.action ? ` · ${actionLabel(c.action)}` : ''}{c.leadId ? ' · do formulário' : ''}</p>
                   </div>
-                  <button type="button" className="press grid size-9 shrink-0 place-items-center rounded-full text-muted hover:bg-[#f2f2f4] hover:text-red-500"
+                  <button type="button" className="press grid size-9 shrink-0 place-items-center rounded-full text-muted hover:bg-field-hover hover:text-red-500"
                     aria-label={`Excluir conversão ${c.note ?? ''}`} title="Excluir" onClick={() => removeConversion(c)}><Trash size={15} /></button>
                 </li>
               ))}

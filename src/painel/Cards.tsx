@@ -14,7 +14,7 @@ function CopyLink({ slug, className }: { slug: string; className: string }) {
   const { done, failed, copy } = useCopyLink(`${location.origin}/${slug}`)
   return (
     <button type="button" onClick={copy} className={`${className} relative`} aria-label={done ? 'Link copiado' : 'Copiar link'} title={done ? 'Link copiado' : 'Copiar link'}>
-      {done ? <Check size={17} weight="bold" className="text-accent" /> : <LinkSimple size={17} />}
+      {done ? <Check size={17} weight="bold" className="pop text-accent" /> : <LinkSimple size={17} />}
       {(done || failed) && <span role="status" className="copied absolute -top-10 left-1/2 rounded-full bg-ink px-3 py-1.5 text-[12px] font-semibold whitespace-nowrap text-bg">{done ? 'Link copiado' : 'Não deu para copiar o link'}</span>}
     </button>
   )
@@ -41,7 +41,7 @@ function CardTile({ card, i, onEdit, onDelete }: { card: Card; i: number; onEdit
   return (
     <li className="rise" style={{ '--i': i } as CSSProperties}>
       <div ref={box} onPointerEnter={arm} onFocus={arm} data-ready={ready || undefined}
-        className="card-tile relative aspect-[4/5] overflow-hidden rounded-[24px] bg-[#f2f2f4] ring-1 ring-black/5">
+        className="card-tile relative aspect-[4/5] overflow-hidden rounded-[24px] bg-field ring-1 ring-black/5">
         <button type="button" onClick={onEdit} className="absolute inset-0 block text-left" aria-label={`Editar ${c.name.first} ${c.name.last}`}>
           <span className="card-photo absolute inset-0">
             <img src={thumb(c.photo.src, 700)} alt="" loading="lazy" className="card-img h-full w-full object-cover" style={{ objectPosition: c.photo.focal ?? '50% 30%' }} />
@@ -58,10 +58,11 @@ function CardTile({ card, i, onEdit, onDelete }: { card: Card; i: number; onEdit
               style={{ width: PHONE_W, height: PHONE_W * 1.25, transform: `scale(${scale})` }} />
           )}
         </button>
-        <div className="card-actions absolute inset-x-3 bottom-3 flex items-center gap-1 rounded-full bg-white/90 p-1.5 shadow-[0_12px_30px_-12px_rgb(17_17_19/0.5)] backdrop-blur-md">
+        <div className="card-actions absolute inset-x-3 bottom-3 flex items-center gap-1 rounded-full bg-white/90 p-1.5 shadow-2 backdrop-blur-md">
           <button type="button" onClick={onEdit} className="press inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-full bg-accent text-[14px] font-semibold text-accent-fg hover:brightness-110">
             <PencilSimple size={16} weight="bold" aria-hidden="true" /> Editar
           </button>
+          <CopyLink slug={card.slug} className={tileBtn} />
           {card.config.connect && (
             <a href={`/painel/estatisticas/${card.id}#conecta`} className={`${tileBtn} text-accent`} aria-label="Ver contatos do VorenMe Conecta" title="Ver contatos do Conecta">
               <Target size={17} weight="bold" />
@@ -70,7 +71,7 @@ function CardTile({ card, i, onEdit, onDelete }: { card: Card; i: number; onEdit
           <a href={`/${card.slug}`} target="_blank" rel="noreferrer" className={tileBtn} aria-label="Abrir cartão" title="Abrir cartão">
             <ArrowSquareOut size={17} />
           </a>
-          <CopyLink slug={card.slug} className={tileBtn} />
+          <span aria-hidden="true" className="mx-0.5 h-5 w-px bg-black/10" />
           <button type="button" onClick={onDelete} className={`${tileBtn} hover:bg-red-500/10 hover:text-red-500`} aria-label="Excluir cartão" title="Excluir cartão">
             <Trash size={17} />
           </button>
@@ -91,7 +92,7 @@ function AddTile({ i, onClick }: { i: number; onClick: () => void }) {
   return (
     <li className="rise" style={{ '--i': i } as CSSProperties}>
       <button type="button" onClick={onClick} className="add-tile group grid aspect-[4/5] w-full place-content-center justify-items-center gap-4 rounded-[24px] border-2 border-dashed border-[#d9d9de] text-muted transition-colors hover:border-accent hover:bg-accent/4 hover:text-accent">
-        <span className="add-plus grid size-14 place-items-center rounded-full bg-[#f2f2f4] group-hover:bg-accent group-hover:text-accent-fg">
+        <span className="add-plus grid size-14 place-items-center rounded-full bg-field group-hover:bg-accent group-hover:text-accent-fg">
           <Plus size={24} weight="bold" aria-hidden="true" />
         </span>
         <span className="text-[15px] font-semibold">Novo cartão</span>
@@ -175,7 +176,7 @@ function NewCardDialog({ templates, name, dialog, onCreated, fail }: {
         {!chosen && <>
         {/* Filtros: categoria (chips) e busca por nome/nicho */}
         <div className="grid gap-3">
-          <label className="flex items-center gap-2 rounded-full bg-[#f2f2f4] px-4 focus-within:bg-white focus-within:ring-2 focus-within:ring-accent/40">
+          <label className="flex items-center gap-2 rounded-full bg-field px-4 focus-within:bg-white focus-within:ring-2 focus-within:ring-accent/40">
             <MagnifyingGlass size={17} className="text-muted" aria-hidden="true" />
             <span className="sr-only">Buscar modelo</span>
             <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar: barbearia, unhas, dentista..."
@@ -184,7 +185,7 @@ function NewCardDialog({ templates, name, dialog, onCreated, fail }: {
           <div role="group" aria-label="Categorias" className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
             {cats.map((c) => (
               <button key={c} type="button" onClick={() => setCat(c)} aria-pressed={cat === c}
-                className={`press shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-medium ${cat === c ? 'border-ink bg-ink text-bg' : 'border-transparent bg-[#f2f2f4] text-muted hover:text-ink'}`}>
+                className={`press shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-medium ${cat === c ? 'border-ink bg-ink text-bg' : 'border-transparent bg-field text-muted hover:text-ink'}`}>
                 {c}
               </button>
             ))}
@@ -216,7 +217,7 @@ function NewCardDialog({ templates, name, dialog, onCreated, fail }: {
                       </span>
                     </span>
                     {on && (
-                      <span className="absolute top-2 right-2 grid size-6 place-items-center rounded-full bg-accent text-accent-fg">
+                      <span className="pop absolute top-2 right-2 grid size-6 place-items-center rounded-full bg-accent text-accent-fg">
                         <Check size={14} weight="bold" aria-hidden="true" />
                       </span>
                     )}
@@ -230,7 +231,7 @@ function NewCardDialog({ templates, name, dialog, onCreated, fail }: {
 
         {chosen && <>
         {/* Passo 2: modelo escolhido + endereço */}
-        <div className="flex items-center gap-3 sm:gap-4 rounded-[16px] bg-[#f5f5f7] p-3">
+        <div className="flex items-center gap-3 sm:gap-4 rounded-[16px] bg-field p-3">
           <img src={thumb(chosen.config.photo.src, 400)} alt="" className="aspect-[3/4] w-16 shrink-0 rounded-[10px] object-cover"
             style={{ objectPosition: chosen.config.photo.focal ?? '50% 30%', viewTransitionName: 'tpl-pick' }} />
           <div className="min-w-0 flex-1">
@@ -244,7 +245,7 @@ function NewCardDialog({ templates, name, dialog, onCreated, fail }: {
 
         <div className="step-in mt-6" style={{ '--i': 1 } as CSSProperties}>
           <Field label="Endereço do cartão" hint="Letras minúsculas, números, ponto, hífen ou _. Mínimo 3 caracteres.">
-            <div className="flex items-center gap-2 rounded-[12px] bg-[#f2f2f4] px-3.5 focus-within:bg-white focus-within:ring-2 focus-within:ring-accent/40">
+            <div className="flex items-center gap-2 rounded-[12px] bg-field px-3.5 focus-within:bg-white focus-within:ring-2 focus-within:ring-accent/40">
               <span aria-hidden="true" className="text-[17px] text-muted">/</span>
               <input value={slug} onChange={(e) => setSlug(toSlug(e.target.value))} autoFocus
                 aria-label="Endereço do cartão" placeholder="seunome" autoCapitalize="none" autoCorrect="off" spellCheck={false}
@@ -394,7 +395,7 @@ export function Cards({ name, admin, published, onEdit, onAuthLost }: { name?: s
           ))}
         </ul>
       ) : cards.length === 0 ? (
-        <div className="rise mt-8 grid items-center gap-10 overflow-hidden rounded-[32px] bg-[#f5f5f7] p-6 sm:p-12 md:grid-cols-[1fr_auto]" style={{ '--i': 1 } as CSSProperties}>
+        <div className="rise mt-8 grid items-center gap-10 overflow-hidden rounded-[32px] bg-field p-6 sm:p-12 md:grid-cols-[1fr_auto]" style={{ '--i': 1 } as CSSProperties}>
           <div className="max-w-md">
             <h2 className="text-[32px] leading-[1.05] font-semibold tracking-[-0.04em]">Crie seu primeiro cartão.</h2>
             <p className="mt-3 text-[17px] text-muted">Escolha um modelo pronto para o seu ramo, troque foto e textos e compartilhe o link.</p>

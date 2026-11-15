@@ -10,7 +10,7 @@ const step = (i: number) => ({ '--i': i }) as CSSProperties
 
 const AUTOPLAY = 3200
 // Mesma linguagem da página inicial: campos cinza-claro sem borda, botões em pílula.
-const field = 'h-12 w-full rounded-[14px] bg-[#f2f2f4] px-4 text-[16px] text-ink outline-none ring-accent/40 transition-shadow placeholder:text-[#8e8e93] focus:bg-white focus:ring-2'
+const field = 'h-12 w-full rounded-[14px] bg-field px-4 text-[16px] text-ink outline-none ring-accent/40 transition-shadow placeholder:text-[#8e8e93] focus:bg-white focus:ring-2'
 const PERKS = ['30 dias grátis, sem cartão de crédito','Até 3 cartões e links ilimitados', 'Cancele quando quiser']
 
 /** Cartão-modelo. O ativo inclina seguindo o ponteiro (CSS vars, sem re-render) e,
@@ -160,7 +160,7 @@ function Recover({ token, onDone, onBack }: { token: string | null; onDone: (s: 
       <h1 className="text-[40px] leading-[1.02] font-semibold tracking-[-0.045em] text-ink">{token ? 'Crie uma nova senha.' : 'Esqueceu a senha?'}</h1>
       <p className="mt-3 text-[17px] text-muted">{token ? 'Depois disso você já entra direto.' : 'Mandamos um link para o seu e-mail. Ele vale por 1 hora.'}</p>
       {sent ? (
-        <p className="mt-8 rounded-[14px] bg-[#f2f2f4] p-4 text-[15px]">Pronto! Se esse e-mail tiver conta no VorenMe, o link chega em instantes. Confira também o spam.</p>
+        <p className="mt-8 rounded-[14px] bg-field p-4 text-[15px]">Pronto! Se esse e-mail tiver conta no VorenMe, o link chega em instantes. Confira também o spam.</p>
       ) : (
         <form onSubmit={submit} aria-busy={busy} className="mt-8 grid gap-5">
           <label className="grid gap-2">
@@ -240,7 +240,7 @@ export function Auth({ onDone }: { onDone: (s: Session) => void }) {
           {recover ? <Recover token={resetToken} onDone={onDone} onBack={() => transition(() => { setRecover(false); history.replaceState(null, '', '/painel') })} /> : <>
           {/* Cadastro: quem veio do "Testar grátis" vê uma decisão só; "Entrar" fica no rodapé do formulário. */}
           {isLogin && (
-            <div role="group" aria-label="Acesso" className="rise mb-8 inline-grid grid-cols-2 rounded-full bg-[#f2f2f4] p-1">
+            <div role="group" aria-label="Acesso" className="rise mb-8 inline-grid grid-cols-2 rounded-full bg-field p-1">
               {(Object.keys(MODES) as Mode[]).map((m) => (
                 <button key={m} type="button" aria-pressed={mode === m} onClick={() => toMode(m)}
                   style={mode === m ? { viewTransitionName: 'auth-tab' } : undefined}
@@ -288,7 +288,7 @@ export function Auth({ onDone }: { onDone: (s: Session) => void }) {
             <button disabled={busy}
               className="press group mt-1 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-accent text-[16px] font-semibold text-white hover:brightness-110 disabled:opacity-50">
               {busy ? 'Aguarde...' : isLogin ? 'Entrar' : 'Testar 30 dias grátis'}
-              {!busy && <ArrowRight size={17} weight="bold" aria-hidden="true" className="transition-transform duration-300 group-hover:translate-x-1" />}
+              {!busy && <ArrowRight size={17} weight="bold" aria-hidden="true" className="transition-transform duration-500 ease-anticipate group-hover:translate-x-1" />}
             </button>
           </form>
 
@@ -310,7 +310,7 @@ export function Auth({ onDone }: { onDone: (s: Session) => void }) {
         </div>
       </main>
 
-      <aside className="m-3 hidden grid-rows-[auto_1fr] overflow-hidden rounded-[32px] bg-[#f5f5f7] p-10 lg:grid xl:p-14">
+      <aside className="m-3 hidden grid-rows-[auto_1fr] overflow-hidden rounded-[32px] bg-field p-10 lg:grid xl:p-14">
         <div className="text-center">
           <h2 key={preview ? 'you' : 'pitch'} className="rise mx-auto max-w-md text-[40px] leading-[1.02] font-semibold tracking-[-0.045em] text-ink xl:text-[48px]">
             {preview ? <>Assim fica<br /><span className="text-accent">o seu cartão.</span></> : <>Seu mundo.<br /><span className="text-accent">Um link.</span></>}

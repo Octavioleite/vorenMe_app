@@ -41,7 +41,7 @@ export function SupportButton() {
   return (
     <>
       <button type="button" onClick={open} aria-haspopup="dialog" aria-label="Suporte" title="Suporte"
-        className="press inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-[#f2f2f4] px-3 text-[14px] font-medium text-muted hover:bg-[#e8e8ec] hover:text-ink sm:px-4">
+        className="press inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-field px-3 text-[14px] font-medium text-muted hover:bg-field-hover hover:text-ink sm:px-4">
         <Headset size={18} aria-hidden="true" />
         <span className="hidden sm:inline" aria-hidden="true">Suporte</span>
       </button>
@@ -67,7 +67,7 @@ export function SupportButton() {
             <WhatsappLogo size={20} weight="bold" aria-hidden="true" /> Conversar no WhatsApp
           </a>
 
-          <ul className="mt-3 divide-y divide-black/6 rounded-[16px] bg-[#f5f5f7]">
+          <ul className="mt-3 divide-y divide-black/6 rounded-[16px] bg-field">
             <ContactRow label="WhatsApp" value={PHONE_LABEL} href={WHATSAPP_URL} copy={PHONE_LABEL} />
             <ContactRow label="E-mail" value={SUPPORT_EMAIL} href={`mailto:${SUPPORT_EMAIL}`} copy={SUPPORT_EMAIL} />
           </ul>

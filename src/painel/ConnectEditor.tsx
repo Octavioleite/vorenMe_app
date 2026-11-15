@@ -69,7 +69,7 @@ export function ConnectEditor({ c, set, cardId }: { c: CreatorConfig; set: (fn: 
                   <span className="block text-[15px] leading-tight font-semibold">{GOAL_LABEL[g]}</span>
                   <span className="mt-0.5 block text-[13px] text-muted">{example}</span>
                 </span>
-                <ArrowRight size={16} weight="bold" aria-hidden="true" className="shrink-0 text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-accent" />
+                <ArrowRight size={16} weight="bold" aria-hidden="true" className="shrink-0 text-muted transition-transform duration-500 ease-anticipate group-hover:translate-x-1 group-hover:text-accent" />
               </button>
             )
           })}

@@ -116,7 +116,7 @@ function Ranked({ title, rows, names, empty, active, onPick }: {
               <li key={r.key}>
                 {onPick ? (
                   <button type="button" onClick={() => onPick(on ? '' : r.key)} aria-pressed={on}
-                    className={`press block w-full rounded-[12px] px-3 py-2 text-left hover:bg-[#f5f5f7] ${on ? 'bg-[#f5f5f7]' : ''}`}>{body}</button>
+                    className={`press block w-full rounded-[12px] px-3 py-2 text-left hover:bg-field-hover ${on ? 'bg-field' : ''}`}>{body}</button>
                 ) : <div className="px-3 py-2">{body}</div>}
               </li>
             )
@@ -128,7 +128,7 @@ function Ranked({ title, rows, names, empty, active, onPick }: {
 }
 
 function Skeleton() {
-  const block = 'animate-pulse rounded-[20px] bg-[#f2f2f4]'
+  const block = 'animate-pulse rounded-[20px] bg-field'
   return (
     <div className="grid gap-3" aria-hidden="true">
       <div className="grid gap-3 sm:grid-cols-3">{[0, 1, 2].map((i) => <div key={i} className={`${block} h-[124px]`} />)}</div>
@@ -222,7 +222,7 @@ export function Stats({ cardId, onBack, onAuthLost, admin = false }: { cardId: s
       {/* Filtros: uma faixa só, acima de tudo o que eles mudam. */}
       <section aria-label="Filtros" className="grid gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <div role="group" aria-label="Período" className="flex max-w-full gap-1 overflow-x-auto rounded-full bg-[#f5f5f7] p-1 [scrollbar-width:none]">
+          <div role="group" aria-label="Período" className="flex max-w-full gap-1 overflow-x-auto rounded-full bg-field p-1 [scrollbar-width:none]">
             {PRESETS.map((p) => (
               <button key={p.id} type="button" aria-pressed={filters.preset === p.id} onClick={() => set({ preset: p.id })} className={pill(filters.preset === p.id)}>{p.label}</button>
             ))}
@@ -260,7 +260,7 @@ export function Stats({ cardId, onBack, onAuthLost, admin = false }: { cardId: s
               {[['Este mês', ymd(new Date(new Date().getFullYear(), new Date().getMonth(), 1)), today()],
                 ['Mês passado', ymd(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1)), ymd(new Date(new Date().getFullYear(), new Date().getMonth(), 0))]].map(([label, from, to]) => (
                 <button key={label} type="button" onClick={() => { setDraft({ from, to }); setRangeError(''); set({ preset: 'custom', from, to }) }}
-                  className="press rounded-full border border-line px-3 py-1.5 text-[13px] font-medium hover:bg-[#f5f5f7]">{label}</button>
+                  className="press rounded-full border border-line px-3 py-1.5 text-[13px] font-medium hover:bg-field-hover">{label}</button>
               ))}
             </div>
             {rangeError && <p className="w-full text-[13px] font-medium text-red-600" role="alert">{rangeError}</p>}
@@ -297,7 +297,7 @@ export function Stats({ cardId, onBack, onAuthLost, admin = false }: { cardId: s
               <h2 className="text-[20px] font-semibold tracking-tight">Ainda sem visitas {data.source ? 'dessa origem ' : ''}nesse período</h2>
               <p className="max-w-[60ch] text-[15px] text-muted">Os números aparecem assim que alguém abrir seu cartão. Para começar:</p>
               <ul className="grid gap-1.5 text-[15px]">
-                <li>Coloque o link na bio do Instagram com <code className="rounded bg-[#f2f2f4] px-1.5 py-0.5 text-[13px]">?s=ig</code> no final.</li>
+                <li>Coloque o link na bio do Instagram com <code className="rounded bg-field px-1.5 py-0.5 text-[13px]">?s=ig</code> no final.</li>
                 <li>Mande o link nos seus grupos e contatos do WhatsApp.</li>
                 <li>Imprima o QR code na aba Imprimir e deixe no balcão.</li>
               </ul>
@@ -314,7 +314,7 @@ export function Stats({ cardId, onBack, onAuthLost, admin = false }: { cardId: s
               <section className="tile p-5 sm:p-6">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <h2 className="text-[16px] font-semibold">{metric === 'views' ? 'Visitas' : 'Cliques'} por dia</h2>
-                  <div role="group" aria-label="Métrica do gráfico" className="flex gap-1 rounded-full bg-[#f5f5f7] p-1">
+                  <div role="group" aria-label="Métrica do gráfico" className="flex gap-1 rounded-full bg-field p-1">
                     <button type="button" aria-pressed={metric === 'views'} onClick={() => setMetric('views')} className={pill(metric === 'views')}>Visitas</button>
                     <button type="button" aria-pressed={metric === 'clicks'} onClick={() => setMetric('clicks')} className={pill(metric === 'clicks')}>Cliques</button>
                   </div>

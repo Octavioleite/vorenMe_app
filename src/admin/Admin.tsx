@@ -2,7 +2,7 @@ import { SignOut } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { api, ApiError, session } from '../painel/api'
 import { Auth } from '../painel/Auth'
-import { Errors, errorText, secondary, tipAt, transition } from '../painel/ui'
+import { Errors, errorText, secondary, tipAt, transition, Loading } from '../painel/ui'
 import { Cards } from './Cards'
 import { Site } from './Site'
 import { UserDetail, Users } from './Users'
@@ -24,13 +24,13 @@ export const STATUS: Record<string, { label: string; cls: string }> = {
   trial: { label: 'Em teste', cls: 'bg-accent/12 text-accent' },
   basico: { label: 'Vencido (básico)', cls: 'bg-amber-500/15 text-amber-700' },
   offline: { label: 'Fora do ar', cls: 'bg-red-500/12 text-red-600' },
-  desativado: { label: 'Desativado', cls: 'bg-[#e8e8ec] text-muted' },
+  desativado: { label: 'Desativado', cls: 'bg-field-hover text-muted' },
 }
 export const METHOD: Record<string, string> = {
   asaas: 'Asaas', pix: 'Pix', dinheiro: 'Dinheiro', transferencia: 'Transferência', cartao: 'Cartão (maquininha)', cortesia: 'Cortesia',
 }
 export function Badge({ status }: { status: string }) {
-  const s = STATUS[status] ?? { label: status, cls: 'bg-[#f2f2f4] text-muted' }
+  const s = STATUS[status] ?? { label: status, cls: 'bg-field text-muted' }
   return <span className={`inline-block shrink-0 rounded-full px-2.5 py-1 text-[12px] font-semibold ${s.cls}`}>{s.label}</span>
 }
 
@@ -87,13 +87,13 @@ export function Admin() {
           <img src="/favicon.png" alt="" width={30} height={30} className="rounded-full" />
           <span>VorenMe <span className="text-muted">admin</span></span>
         </span>
-        <nav aria-label="Admin" className="order-last grid w-full min-w-0 grid-cols-4 gap-1 rounded-full bg-[#f5f5f7] p-1 md:order-none md:flex md:w-auto">
+        <nav aria-label="Admin" className="order-last grid w-full min-w-0 grid-cols-4 gap-1 rounded-full bg-field p-1 md:order-none md:flex md:w-auto">
           {tab('/admin', 'Visão geral', r.view === 'home')}
           {tab('/admin/usuarios', 'Usuários', r.view === 'users' || r.view === 'user')}
           {tab('/admin/cartoes', 'Cartões', r.view === 'cards')}
           {tab('/admin/site', 'Site', r.view === 'site')}
         </nav>
-        <button type="button" onClick={logout} aria-label="Sair" className="press grid size-10 place-items-center rounded-full bg-[#f2f2f4] text-muted hover:text-ink">
+        <button type="button" onClick={logout} aria-label="Sair" className="press grid size-10 place-items-center rounded-full bg-field text-muted hover:text-ink">
           <SignOut size={17} aria-hidden="true" />
         </button>
       </header>
@@ -262,7 +262,7 @@ function Overview({ fail }: { fail: Fail }) {
   useEffect(() => { api<OverviewData>('/admin/overview').then(setD, (e) => fail(e, setError)) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (error) return <Errors text={error} />
-  if (!d) return <p className="text-sm text-muted">Carregando...</p>
+  if (!d) return <Loading />
 
   const u = d.users
   const [prev, cur] = d.revenueByMonth.slice(-2)

@@ -73,8 +73,8 @@ export function DevicePreview({ frame, src, pulse, onDevice, toolbar }: { frame:
   }
 
   return (
-    <div className="sticky top-24 lg:top-[124px] lg:rounded-[32px] lg:bg-[#f5f5f7] lg:p-8" data-device={device}>
-      <div role="radiogroup" aria-label="Tamanho da tela" className="mx-auto mb-6 flex w-fit gap-1 rounded-full bg-[#f2f2f4] p-1">
+    <div className="sticky top-24 lg:top-[124px] lg:rounded-[32px] lg:bg-field lg:p-8" data-device={device}>
+      <div role="radiogroup" aria-label="Tamanho da tela" className="mx-auto mb-6 flex w-fit gap-1 rounded-full bg-field p-1">
         {(Object.keys(DEVICES) as Device[]).map((key) => {
           const { label, icon: Icon } = DEVICES[key]
           const on = key === device

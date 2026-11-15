@@ -136,7 +136,7 @@ export function GuideButton({ onStart, onSection, verified = true, autoOpen, com
                 const on = step.chapter === ch
                 return (
                   <button key={ch} type="button" onClick={() => setI(at)} aria-current={on ? 'step' : undefined}
-                    className={`press shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors ${on ? 'bg-ink text-bg' : 'bg-[#f2f2f4] text-muted hover:text-ink'}`}>
+                    className={`press shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors ${on ? 'bg-ink text-bg' : 'bg-field text-muted hover:text-ink'}`}>
                     {ch}
                   </button>
                 )
@@ -158,7 +158,7 @@ export function GuideButton({ onStart, onSection, verified = true, autoOpen, com
               <h2 id="guide-title" className="mt-4 text-[26px] leading-[1.1] font-semibold tracking-[-0.03em]">{step.title}</h2>
               <p id="guide-text" className="mt-2 text-[16px] leading-relaxed text-ink/80">{step.text}</p>
               {step.id === 'endereco' && (
-                <p className="mt-4 rounded-[12px] bg-[#f2f2f4] px-3.5 py-2.5 text-[15px]">
+                <p className="mt-4 rounded-[12px] bg-field px-3.5 py-2.5 text-[15px]">
                   <span className="text-muted">{location.host}/</span><span className="font-semibold">seunome</span>
                 </p>
               )}

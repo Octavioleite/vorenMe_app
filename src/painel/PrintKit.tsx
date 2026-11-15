@@ -128,7 +128,7 @@ const Shape = ({ f, on }: { f: Format; on: boolean }) => {
   const { w, h } = FORMATS[f]
   const k = 34 / Math.max(w, h)
   return (
-    <span className="grid size-11 shrink-0 place-items-center rounded-[12px] bg-[#f5f5f7]">
+    <span className="grid size-11 shrink-0 place-items-center rounded-[12px] bg-field">
       <span className={`rounded-[3px] transition-colors ${on ? 'bg-accent' : 'bg-[#d1d1d6]'}`} style={{ width: w * k, height: h * k }} />
     </span>
   )
@@ -188,8 +188,8 @@ export function PrintKit({ cardId, onBack, onAuthLost }: { cardId: string; onBac
 
       {!card && !error && (
         <div className="grid gap-4 lg:grid-cols-[380px_1fr]" aria-hidden="true">
-          <div className="h-[520px] animate-pulse rounded-[24px] bg-[#f2f2f4]" />
-          <div className="h-[520px] animate-pulse rounded-[24px] bg-[#f2f2f4]" />
+          <div className="h-[520px] animate-pulse rounded-[24px] bg-field" />
+          <div className="h-[520px] animate-pulse rounded-[24px] bg-field" />
         </div>
       )}
 
@@ -202,7 +202,7 @@ export function PrintKit({ cardId, onBack, onAuthLost }: { cardId: string; onBac
               {(Object.keys(FORMATS) as Format[]).map((k) => {
                 const on = format === k
                 return (
-                  <label key={k} className={`press flex cursor-pointer items-center gap-3 rounded-[16px] border p-2.5 pr-3 transition-colors ${on ? 'border-accent bg-accent/6' : 'border-line hover:bg-[#f5f5f7]'}`}>
+                  <label key={k} className={`press flex cursor-pointer items-center gap-3 rounded-[16px] border p-2.5 pr-3 transition-colors ${on ? 'border-accent bg-accent/6' : 'border-line hover:bg-field-hover'}`}>
                     <input type="radio" name="format" className="sr-only" checked={on} onChange={() => setFormat(k)} />
                     <Shape f={k} on={on} />
                     <span className="min-w-0 flex-1">
@@ -221,7 +221,7 @@ export function PrintKit({ cardId, onBack, onAuthLost }: { cardId: string; onBac
                 {(Object.keys(THEMES) as Theme[]).map((t) => {
                   const p = palette(t, card.config.accent)
                   return (
-                    <label key={t} className={`press grid cursor-pointer justify-items-center gap-1.5 rounded-[14px] border p-2.5 text-[13px] font-medium ${theme === t ? 'border-accent bg-accent/6' : 'border-line hover:bg-[#f5f5f7]'}`}>
+                    <label key={t} className={`press grid cursor-pointer justify-items-center gap-1.5 rounded-[14px] border p-2.5 text-[13px] font-medium ${theme === t ? 'border-accent bg-accent/6' : 'border-line hover:bg-field-hover'}`}>
                       <input type="radio" name="theme" className="sr-only" checked={theme === t} onChange={() => setTheme(t)} />
                       <span className="grid size-8 place-items-center rounded-full border border-line" style={{ background: p.bg }}>
                         <span className="size-3 rounded-[3px] bg-white ring-1 ring-black/10" />
@@ -251,7 +251,7 @@ export function PrintKit({ cardId, onBack, onAuthLost }: { cardId: string; onBac
             {!isStory && (
               <div className="flex items-center justify-between gap-3">
                 <span className={label} id="copies-label">Cópias</span>
-                <div className="flex items-center gap-1 rounded-full bg-[#f5f5f7] p-1" role="group" aria-labelledby="copies-label">
+                <div className="flex items-center gap-1 rounded-full bg-field p-1" role="group" aria-labelledby="copies-label">
                   <button type="button" className="press grid size-8 place-items-center rounded-full hover:bg-white disabled:opacity-30 pointer-coarse:size-10" disabled={copies <= 1} onClick={() => setCopies((n) => n - 1)} aria-label="Menos uma cópia"><Minus size={14} weight="bold" /></button>
                   <span className="w-8 text-center text-[15px] font-semibold tabular-nums" aria-live="polite">{copies}</span>
                   <button type="button" className="press grid size-8 place-items-center rounded-full hover:bg-white disabled:opacity-30 pointer-coarse:size-10" disabled={copies >= 20} onClick={() => setCopies((n) => n + 1)} aria-label="Mais uma cópia"><Plus size={14} weight="bold" /></button>
@@ -279,12 +279,12 @@ export function PrintKit({ cardId, onBack, onAuthLost }: { cardId: string; onBac
               </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <p className="rounded-[16px] bg-[#f5f5f7] p-4 text-[14px] leading-relaxed">
+              <p className="rounded-[16px] bg-field p-4 text-[14px] leading-relaxed">
                 {isStory
                   ? 'Poste nos Stories e use o adesivo de link do Instagram apontando para o seu cartão.'
                   : <>Na janela de impressão escolha <b>Tamanho real (100%)</b>. Papel couché ou adesivo vinil deixam o QR mais nítido.</>}
               </p>
-              <p className="rounded-[16px] bg-[#f5f5f7] p-4 text-[14px] leading-relaxed">
+              <p className="rounded-[16px] bg-field p-4 text-[14px] leading-relaxed">
                 Escaneie com o celular antes de mandar para a gráfica. Quem vier pelo QR aparece como <b>QR code impresso</b> nas estatísticas.
               </p>
             </div>

@@ -25,7 +25,7 @@
   }
   @keyframes word-up { from { transform: translateY(105%); } }
 
-  .cta-arrow { transition: transform 0.35s var(--ease); }
+  .cta-arrow { transition: transform var(--dur-4) var(--ease-anticipate); } /* anticipation: recua antes de avançar */
   @media (hover: hover) { .cta:hover .cta-arrow { transform: translateX(4px); } }
 
   /* ── Aparelhos ── */
@@ -113,7 +113,7 @@
 
   /* ── Conecta: os passos entram em sequência e a mensagem do cliente "chega" por último (a história do Conecta) ── */
   .conecta-step, .conecta-stat { transition: opacity 0.5s var(--ease), transform 0.6s var(--ease); transition-delay: calc(var(--i) * 120ms + 250ms); }
-  .conecta-bubble { transition: opacity 0.5s var(--ease), transform 0.6s var(--ease); transition-delay: 0.9s; transform-origin: bottom left; }
+  .conecta-bubble { transition: opacity 0.5s var(--ease), transform 0.7s var(--ease-spring); transition-delay: 0.9s; transform-origin: bottom left; }
   .reveal-ready [data-reveal]:not([data-shown]) .conecta-step,
   .reveal-ready [data-reveal]:not([data-shown]) .conecta-stat { opacity: 0; transform: translateY(10px); }
   .reveal-ready [data-reveal]:not([data-shown]) .conecta-bubble { opacity: 0; transform: translateY(12px) scale(0.94); }

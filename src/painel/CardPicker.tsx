@@ -1,7 +1,7 @@
 import { ArrowRight } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { api, ApiError, type Card } from './api'
-import { Errors, Thumb, errorText } from './ui'
+import { Errors, Thumb, errorText, Loading } from './ui'
 
 /** Passo 1 de Estatísticas e Imprimir: escolher o cartão. */
 export function CardPicker({ title, text, onPick, onAuthLost }: { title: string; text: string; onPick: (id: string) => void; onAuthLost: () => void }) {
@@ -19,7 +19,7 @@ export function CardPicker({ title, text, onPick, onAuthLost }: { title: string;
         <p className="mt-2 text-[17px] text-muted">{text}</p>
       </div>
       <Errors text={error} />
-      {cards === null && !error && <p className="text-sm text-muted">Carregando seus cartões...</p>}
+      {cards === null && !error && <Loading />}
       {cards?.length === 0 && <p className="text-muted">Você ainda não tem cartões. Crie um na aba Cartões.</p>}
       {cards && cards.length > 0 && (
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -32,7 +32,7 @@ export function CardPicker({ title, text, onPick, onAuthLost }: { title: string;
                   <span className="block truncate font-semibold">{`${c.config.name.first} ${c.config.name.last}`.trim()}</span>
                   <span className="block truncate text-[14px] text-muted">/{c.slug}</span>
                 </span>
-                <ArrowRight size={18} className="text-muted transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                <ArrowRight size={18} className="text-muted transition-transform duration-500 ease-anticipate group-hover:translate-x-1" aria-hidden="true" />
               </button>
             </li>
           ))}

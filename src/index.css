@@ -16,7 +16,17 @@
 :root {
   --radius: 20px;
   --radius-ctl: 12px;
+  /* Motion: entradas desaceleram (out), saídas aceleram (in), spring passa do ponto e volta (follow through).
+     Durações em escala (timing): toque 120 · hover 200 · entrada de UI 320 (Doherty: < 400ms) · palco 600. */
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-exit: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* anticipation: recua um pouco antes de ir, e passa do ponto na chegada */
+  --ease-anticipate: cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+  --dur-3: 320ms;
+  --dur-4: 600ms;
   --font-display: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
   color-scheme: dark;
 }
@@ -32,6 +42,12 @@
   --line-strong: rgb(255 255 255 / 0.16);
   --tile-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
   --card-shadow: 0 40px 80px -40px rgb(0 0 0 / 0.9), 0 16px 32px -16px rgb(0 0 0 / 0.6);
+  --field: #1f1f22;
+  --field-hover: #29292d;
+  /* Solid drawing: uma luz só, de cima. Elevação cresce em y e blur juntos. */
+  --elev-1: 0 1px 2px rgb(0 0 0 / 0.3);
+  --elev-2: 0 18px 40px -16px rgb(0 0 0 / 0.6);
+  --elev-3: 0 34px 70px -34px rgb(0 0 0 / 0.8);
 }
 
 [data-theme='light'] {
@@ -44,6 +60,11 @@
   --line-strong: rgb(18 18 20 / 0.18);
   --tile-shadow: 0 1px 2px rgb(18 18 20 / 0.04), 0 12px 32px -20px rgb(18 18 20 / 0.2);
   --card-shadow: 0 40px 80px -40px rgb(18 18 20 / 0.55), 0 16px 32px -16px rgb(18 18 20 / 0.3);
+  --field: #f2f2f4;
+  --field-hover: #e8e8ec;
+  --elev-1: 0 1px 2px color-mix(in srgb, var(--accent) 6%, rgb(18 18 20 / 0.06));
+  --elev-2: 0 18px 40px -16px color-mix(in srgb, var(--accent) 18%, rgb(18 18 20 / 0.3));
+  --elev-3: 0 34px 70px -34px color-mix(in srgb, var(--accent) 45%, rgb(18 18 20 / 0.35));
   color-scheme: light;
 }
 
@@ -57,8 +78,16 @@
   --color-line-strong: var(--line-strong);
   --color-accent: var(--accent);
   --color-accent-fg: var(--accent-fg);
+  --color-field: var(--field);
+  --color-field-hover: var(--field-hover);
+  --shadow-1: var(--elev-1);
+  --shadow-2: var(--elev-2);
+  --shadow-3: var(--elev-3);
   --font-sans: 'Geist Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --ease-out-expo: var(--ease);
+  --ease-exit: var(--ease-exit);
+  --ease-spring: var(--ease-spring);
+  --ease-anticipate: var(--ease-anticipate);
 }
 
 /* ── Base ─────────────────────────────────────────────────────────────── */
@@ -105,9 +134,9 @@ body {
     border-radius: var(--radius);
     box-shadow: var(--tile-shadow);
     transition:
-      border-color 0.3s var(--ease),
-      background-color 0.3s var(--ease),
-      transform 0.4s var(--ease);
+      border-color var(--dur-3) var(--ease),
+      background-color var(--dur-3) var(--ease),
+      transform var(--dur-4) var(--ease-spring);
   }
   /* Hovers com movimento só em quem tem mouse: no toque eles disparam no tap e ficam presos. */
   @media (hover: hover) {
@@ -117,8 +146,8 @@ body {
     }
   }
   a.tile:active {
-    transform: scale(0.985);
-    transition-duration: 0.1s;
+    transform: scale(1.008, 0.98);
+    transition: transform var(--dur-1) var(--ease);
   }
 
   /* Image zoom inside a hovered link */
@@ -139,24 +168,41 @@ body {
 
   /* Diagonal arrow nudge */
   .nudge {
-    transition: transform 0.35s var(--ease);
+    transition: transform var(--dur-4) var(--ease-anticipate);
   }
   a:focus-visible .nudge {
     transform: translate(2px, -2px);
   }
 
   /* Press feedback for buttons */
+  /* Squash & stretch: aperta achatando (mais largo, mais baixo) e solta com mola, passando um pouco do ponto. */
   .press {
     transition:
-      transform 0.2s var(--ease),
-      background-color 0.25s var(--ease),
-      border-color 0.25s var(--ease),
-      color 0.25s var(--ease),
-      opacity 0.25s var(--ease);
+      transform var(--dur-4) var(--ease-spring),
+      background-color var(--dur-2) var(--ease),
+      border-color var(--dur-2) var(--ease),
+      color var(--dur-2) var(--ease),
+      opacity var(--dur-2) var(--ease);
   }
   .press:active {
-    transform: scale(0.97);
-    transition-duration: 0.08s;
+    transform: scale(1.02, 0.94);
+    transition: transform var(--dur-1) var(--ease);
+  }
+
+  /* Fitts: área de toque maior que o desenho (mín. ~44px no dedo), sem mudar o visual. */
+  .hit {
+    position: relative;
+  }
+  .hit::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: 9999px;
+  }
+  @media (pointer: coarse) {
+    .hit::after {
+      inset: -12px;
+    }
   }
 
   /* ── The identity card (hero object) ─────────────────────────────── */
@@ -474,9 +520,9 @@ body {
   opacity: 0;
   visibility: hidden;
   transition:
-    transform 0.35s var(--ease),
-    opacity 0.25s var(--ease),
-    visibility 0s 0.35s;
+    transform var(--dur-3) var(--ease-exit),
+    opacity var(--dur-2) var(--ease-exit),
+    visibility 0s var(--dur-3);
 }
 
 /* QR dialog */
@@ -490,12 +536,47 @@ dialog.qr-dialog {
   /* O UA põe overflow:auto; a animação "deal" (translate/rotate) passava da borda e piscava um scroll. */
   overflow: visible;
 }
+/* Staging: o fundo recua (escurece e desfoca) para a decisão ficar sozinha no palco. */
 dialog.qr-dialog::backdrop {
   background: rgb(8 8 9 / 0.7);
   backdrop-filter: blur(6px);
+  animation: fade var(--dur-3) var(--ease) backwards;
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
 }
 dialog.qr-dialog[open] > * {
   animation: deal 0.6s var(--ease) backwards;
+}
+
+/* Exagero (só em momentos-chave): sucesso estoura e assenta; erro balança como um "não" com a cabeça. */
+.pop {
+  animation: pop 0.5s var(--ease-spring) backwards;
+}
+@keyframes pop {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+.shake {
+  animation: shake 0.42s var(--ease);
+}
+@keyframes shake {
+  20% {
+    transform: translateX(-6px);
+  }
+  45% {
+    transform: translateX(5px);
+  }
+  70% {
+    transform: translateX(-3px);
+  }
+  88% {
+    transform: translateX(1px);
+  }
 }
 
 /* Login: o nome do modelo ativo enche até a próxima troca do carrossel */
@@ -519,7 +600,7 @@ dialog.qr-dialog[open] > * {
   animation-duration: 0.35s;
 }
 [data-vt='page']::view-transition-old(root) {
-  animation: vt-out 0.35s var(--ease) both;
+  animation: vt-out var(--dur-3) var(--ease-exit) both;
 }
 [data-vt='page']::view-transition-new(root) {
   animation: vt-in 0.6s var(--ease) 0.08s both;

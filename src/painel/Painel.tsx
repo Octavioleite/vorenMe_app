@@ -1,5 +1,5 @@
 import { CaretDown, SignOut, WarningCircle } from '@phosphor-icons/react'
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState, type CSSProperties } from 'react'
 import { api, ApiError, session, supportTab, type Card } from './api'
 import { SupportBanner, SupportEnded } from './SupportBanner'
 import { Auth } from './Auth'
@@ -14,7 +14,7 @@ const Cards = lazy(() => import('./Cards').then((m) => ({ default: m.Cards })))
 const Editor = lazy(() => import('./Editor').then((m) => ({ default: m.Editor })))
 const Stats = lazy(() => import('./Stats').then((m) => ({ default: m.Stats })))
 const PrintKit = lazy(() => import('./PrintKit').then((m) => ({ default: m.PrintKit })))
-import { Errors, errorText, transition, primary } from './ui'
+import { Errors, errorText, transition, primary, Loading } from './ui'
 
 /** Rotas: /painel (cartões) · /painel/estatisticas[/:id] · /painel/imprimir[/:id] · /painel/assinatura · /painel/perfil · /painel/:id/editar.
  *  Recarregar mantém onde a pessoa estava. */
@@ -64,6 +64,16 @@ export function Painel() {
     if (!card) setTab('/painel')
   }
 
+  // Jakob: o menu da conta fecha como qualquer menu, com Esc ou clicando fora.
+  useEffect(() => {
+    const close = (e: Event) => document.querySelectorAll<HTMLDetailsElement>('details[data-menu][open]').forEach((d) => {
+      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !d.contains(e.target as Node)) d.open = false
+    })
+    addEventListener('pointerdown', close)
+    addEventListener('keydown', close)
+    return () => { removeEventListener('pointerdown', close); removeEventListener('keydown', close) }
+  }, [])
+
   // Voltar/avançar do navegador.
   useEffect(() => {
     const onPop = () => { setFresh(false); setEditingId(idFromUrl()); setEditing(null); setTab(tabFromUrl()); setSub(subFromUrl()) }
@@ -101,7 +111,7 @@ export function Painel() {
             <img src="/favicon.png" alt="" width={30} height={30} className="rounded-full" />
             <span>VorenMe</span>
           </a>
-          <nav aria-label="Painel" className="print-hide order-last grid w-full min-w-0 grid-cols-3 gap-1 rounded-full bg-[#f5f5f7] p-1 sm:order-none sm:flex sm:w-auto sm:overflow-x-auto [scrollbar-width:none]">
+          <nav aria-label="Painel" className="print-hide order-last grid w-full min-w-0 grid-cols-3 gap-1 rounded-full bg-field p-1 sm:order-none sm:flex sm:w-auto sm:overflow-x-auto [scrollbar-width:none]">
             {MAIN.map((t) => (
               <a key={t.path} href={t.path} aria-current={tab === t.path ? 'page' : undefined}
                 onClick={(e) => { e.preventDefault(); goTab(t.path) }}
@@ -112,25 +122,25 @@ export function Painel() {
           </nav>
           <div className="flex items-center gap-2">
             <SupportButton />
-            <details className="relative">
-              <summary aria-label="Conta" className={`press flex cursor-pointer list-none items-center gap-2 rounded-full bg-[#f5f5f7] py-1 pr-1 pl-1 text-[14px] sm:pr-3 [&::-webkit-details-marker]:hidden ${ACCOUNT.some((t) => t.path === tab) ? 'ring-2 ring-accent/30' : ''}`}>
-                <span aria-hidden="true" className="grid size-8 place-items-center rounded-full bg-accent text-[13px] font-semibold text-accent-fg">
+            <details data-menu className="relative">
+              <summary aria-label="Conta" className={`press flex cursor-pointer list-none items-center gap-2 rounded-full bg-field py-1 pr-2 pl-1 text-[14px] sm:pr-3 [&::-webkit-details-marker]:hidden ${ACCOUNT.some((t) => t.path === tab) ? 'ring-2 ring-accent/30' : ''}`}>
+                <span aria-hidden="true" className="grid size-9 place-items-center rounded-full bg-accent text-[13px] font-semibold text-accent-fg">
                   {(user.name || user.email).trim()[0]?.toUpperCase()}
                 </span>
                 <span className="hidden max-w-[160px] truncate font-medium sm:inline">{user.name || user.email}</span>
-                <CaretDown size={14} weight="bold" className="hidden text-muted sm:block" aria-hidden="true" />
+                <CaretDown size={14} weight="bold" className="mr-1 text-muted transition-transform duration-500 ease-spring [[open]>summary_&]:rotate-180 sm:mr-0" aria-hidden="true" />
               </summary>
-              <div className="absolute top-12 right-0 z-20 grid w-56 gap-1 rounded-[20px] bg-white p-2 text-[15px] shadow-[0_18px_40px_-16px_rgb(18_18_20/0.35)]"
+              <div className="menu-pop absolute top-13 right-0 z-20 grid w-56 gap-1 rounded-[20px] bg-white p-2 text-[15px] shadow-2"
                 onClick={(e) => (e.target as HTMLElement).closest('a,button') && e.currentTarget.parentElement?.removeAttribute('open')}>
                 <p className="truncate px-3 pt-1.5 pb-2 text-[13px] text-muted">{user.email}</p>
-                {ACCOUNT.map((t) => (
-                  <a key={t.path} href={t.path} aria-current={tab === t.path ? 'page' : undefined}
+                {ACCOUNT.map((t, i) => (
+                  <a key={t.path} style={{ '--i': i + 1 } as CSSProperties} href={t.path} aria-current={tab === t.path ? 'page' : undefined}
                     onClick={(e) => { e.preventDefault(); goTab(t.path) }}
-                    className="rounded-xl px-3 py-2.5 font-medium hover:bg-[#f2f2f4] aria-[current=page]:bg-[#f2f2f4]">
+                    className="rounded-xl px-3 py-2.5 font-medium hover:bg-field-hover aria-[current=page]:bg-field">
                     {t.label}
                   </a>
                 ))}
-                <button type="button" onClick={logout} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-left font-medium text-muted hover:bg-[#f2f2f4] hover:text-ink">
+                <button type="button" onClick={logout} style={{ '--i': ACCOUNT.length + 1 } as CSSProperties} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-left font-medium text-muted hover:bg-field-hover hover:text-ink">
                   <SignOut size={17} aria-hidden="true" /> Sair
                 </button>
               </div>
@@ -142,7 +152,7 @@ export function Painel() {
       <div className={editingId ? '' : 'pt-6'}>
         {!editingId && <VerifyBanner user={user} />}
         {!editingId && tab !== '/painel/assinatura' && <PlanBanner onSubscribe={() => goTab('/painel/assinatura')} />}
-        <Suspense fallback={<p className="pt-4 text-sm text-muted">Carregando...</p>}>
+        <Suspense fallback={<Loading />}>
         {editing ? (
           <Editor key={editing.id} card={editing} wizard={fresh} focus={focus} published={user.published ?? !!user.emailVerified} onBack={() => open(null)} onAuthLost={logout} />
         ) : editingId ? (
@@ -153,7 +163,7 @@ export function Painel() {
                 <button type="button" className="text-sm font-semibold text-accent hover:underline" onClick={() => open(null)}>Voltar para seus cartões</button>
               </>
             ) : (
-              <p className="text-sm text-muted">Carregando cartão...</p>
+              <Loading />
             )}
           </div>
         ) : (

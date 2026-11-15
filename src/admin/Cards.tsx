@@ -1,7 +1,7 @@
 import { MagnifyingGlass } from '@phosphor-icons/react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../painel/api'
-import { Errors, Thumb, ask, input, secondary } from '../painel/ui'
+import { Errors, Thumb, ask, input, secondary, Loading } from '../painel/ui'
 import { date, fmt, navigate, type Fail } from './Admin'
 
 export interface ModCard {
@@ -54,13 +54,13 @@ export function Cards({ fail }: { fail: Fail }) {
         <input type="search" className={`${input} max-w-md`} placeholder="Link do cartão" aria-label="Buscar cartão" value={term} onChange={(e) => setTerm(e.target.value)} />
         <button type="submit" className={secondary} aria-label="Buscar"><MagnifyingGlass size={16} aria-hidden="true" /></button>
       </form>
-      <div role="group" aria-label="Filtro" className="flex gap-1 justify-self-start rounded-full bg-[#f5f5f7] p-1">
+      <div role="group" aria-label="Filtro" className="flex gap-1 justify-self-start rounded-full bg-field p-1">
         <button type="button" aria-pressed={!onlyOff} className={pill(!onlyOff)} onClick={() => go({ disabled: '' })}>Todos</button>
         <button type="button" aria-pressed={onlyOff} className={pill(onlyOff)} onClick={() => go({ disabled: '1' })}>Fora do ar</button>
       </div>
 
       <Errors text={error} />
-      {!data ? !error && <p className="text-sm text-muted">Carregando...</p> : (
+      {!data ? !error && <Loading /> : (
         <>
           <p className="text-[13px] text-muted">{fmt(data.total)} cartão(ões)</p>
           {data.cards.length === 0 ? <p className="text-sm text-muted">Nenhum cartão.</p> : (

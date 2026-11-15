@@ -6,7 +6,7 @@
 @layer components {
   /* Troca foto -> página: a foto aproxima e desfoca enquanto a página entra nítida (cross-fade com profundidade).
      Entrar é mais lento e escalonado; sair é rápido, para não atrasar quem passa o mouse por vários cartões. */
-  .card-tile { --in: 0.75s; box-shadow: 0 1px 0 rgb(17 17 19 / 0.02); transition: box-shadow 0.6s var(--ease), transform 0.6s var(--ease); }
+  .card-tile { --in: 0.75s; box-shadow: var(--elev-1); transition: box-shadow var(--dur-4) var(--ease), transform var(--dur-4) var(--ease-spring); }
   .card-img { transition: transform 1.2s var(--ease), filter 0.6s var(--ease); }
   .card-photo { transition: opacity 0.35s var(--ease); }
   .card-photo > span:last-child { transition: transform 0.45s var(--ease), opacity 0.3s var(--ease); }
@@ -15,7 +15,7 @@
 
   @media (hover: hover) {
     .card-actions { opacity: 0; transform: translateY(calc(100% + 16px)) scale(0.96); }
-    .card-tile:hover, .card-tile:focus-within { box-shadow: 0 34px 70px -34px rgb(40 20 110 / 0.5); transform: translateY(-6px); }
+    .card-tile:hover, .card-tile:focus-within { box-shadow: var(--elev-3); transform: translateY(-6px); }
     .card-tile:hover .card-img, .card-tile:focus-within .card-img { transform: scale(1.06); }
     .card-tile:hover .card-photo > span:last-child, .card-tile:focus-within .card-photo > span:last-child { transform: translateY(-12px); opacity: 0; }
 
@@ -38,14 +38,17 @@
     .card-photo > span:last-child { padding-bottom: 76px; }
   }
 
+  /* Arco: o balão sobe pela esquerda, estica ao chegar (squash) e sai subindo pela direita, acelerando. */
   .copied { transform: translateX(-50%); animation: copied 1.6s var(--ease) both; pointer-events: none; }
   @keyframes copied {
-    0% { opacity: 0; transform: translate(-50%, 6px) scale(0.9); }
-    15%, 80% { opacity: 1; transform: translate(-50%, 0) scale(1); }
-    100% { opacity: 0; transform: translate(-50%, -4px); }
+    0% { opacity: 0; transform: translate(calc(-50% - 10px), 10px) scale(0.8, 0.7); }
+    12% { opacity: 1; transform: translate(calc(-50% - 2px), -3px) scale(1.06, 1.08); }
+    20%, 80% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    90% { opacity: 1; transform: translate(calc(-50% + 3px), -3px); animation-timing-function: var(--ease-exit); }
+    100% { opacity: 0; transform: translate(calc(-50% + 10px), -12px) scale(0.96); }
   }
 
-  .add-plus { transition: transform 0.5s var(--ease), background-color 0.3s var(--ease), color 0.3s var(--ease); }
+  .add-plus { transition: transform var(--dur-4) var(--ease-anticipate), background-color 0.3s var(--ease), color 0.3s var(--ease); }
   .add-tile:hover .add-plus { transform: rotate(90deg) scale(1.08); }
 
   .empty-fan img { transform: translate(-50%, -50%) translateX(calc(var(--d) * 70%)) rotate(calc(var(--d) * 8deg)); transition: transform 0.7s var(--ease); }
@@ -55,10 +58,19 @@
   }
   @keyframes fan-in { from { opacity: 0; transform: translate(-50%, -40%) rotate(0deg); } }
 
+  /* Follow through: ao abrir uma seção, o cabeçalho para e o conteúdo chega logo depois. */
+  @media (prefers-reduced-motion: no-preference) {
+    details.tile[open] > summary + div { animation: rise var(--dur-4) var(--ease) 60ms backwards; }
+  }
+  /* Menu (conta): o painel cai e os itens chegam em cascata atrás dele. */
+  .menu-pop { transform-origin: top right; animation: menu-pop var(--dur-3) var(--ease-spring) backwards; }
+  .menu-pop > * { animation: rise var(--dur-3) var(--ease) backwards; animation-delay: calc(var(--i, 0) * 30ms + 60ms); }
+  @keyframes menu-pop { from { opacity: 0; transform: translateY(-6px) scale(0.94); } }
+
   /* ── Editor ──
      preview-pulse : a moldura pisca roxo a cada alteração (mostra que a prévia acompanhou)
      nav ativo     : o atalho da seção visível fica preenchido (onde a pessoa está) */
-  .preview-device { box-shadow: 0 0 0 1px rgb(17 17 19 / 0.06), 0 30px 60px -28px rgb(17 17 19 / 0.45), 0 60px 120px -60px rgb(17 17 19 / 0.35); }
+  .preview-device { box-shadow: 0 0 0 1px rgb(17 17 19 / 0.06), var(--elev-2), 0 60px 120px -60px rgb(17 17 19 / 0.35); }
   @media (prefers-reduced-motion: no-preference) {
     .preview-device[data-pulse] { animation: preview-pulse 0.7s var(--ease); }
   }

@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../painel/api'
-import { Errors, input, secondary } from '../painel/ui'
+import { Errors, input, secondary, Loading } from '../painel/ui'
 import { Bars, Kpi, dayLabel, fmt, ymd, type Fail } from './Admin'
 
 /** /admin/site — página inicial (/): de onde vêm as visitas e os cadastros. */
@@ -78,7 +78,7 @@ export function Site({ fail }: { fail: Fail }) {
           <h1 className="text-[40px] leading-[1.05] font-semibold tracking-[-0.045em]">Site</h1>
           <p className="text-[15px] text-muted">Página inicial: de onde vêm as visitas e os cadastros (utm, anúncios, redes, selo dos cartões).</p>
         </div>
-        <div className="flex max-w-full gap-1 overflow-x-auto rounded-full bg-[#f5f5f7] p-1 [scrollbar-width:none]" role="group" aria-label="Período">
+        <div className="flex max-w-full gap-1 overflow-x-auto rounded-full bg-field p-1 [scrollbar-width:none]" role="group" aria-label="Período">
           {[...PRESETS, 0].map((n) => (
             <button key={n} type="button" aria-pressed={preset === n} onClick={() => pick(n)}
               className={`press shrink-0 rounded-full px-3.5 py-1.5 text-[14px] font-medium sm:px-4 ${preset === n ? 'bg-white text-ink shadow-sm' : 'text-muted hover:text-ink'}`}>{n === 1 ? 'Hoje' : n ? `${n} dias` : 'Personalizado'}</button>
@@ -100,7 +100,7 @@ export function Site({ fail }: { fail: Fail }) {
       )}
 
       <Errors text={error} />
-      {!d || !t ? !error && <p className="text-sm text-muted">Carregando...</p> : (
+      {!d || !t ? !error && <Loading /> : (
         <>
           <section className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7" aria-label="Indicadores">
             <Kpi label="Visitantes" value={fmt(t.visitors)} sub={`${fmt(t.views)} visitas`} />

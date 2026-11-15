@@ -157,8 +157,8 @@ export function Billing() {
 
       {!s && !error && (
         <div className="grid gap-4" aria-hidden="true">
-          <div className="h-[280px] animate-pulse rounded-[24px] bg-[#f2f2f4]" />
-          <div className="h-[220px] animate-pulse rounded-[24px] bg-[#f2f2f4]" />
+          <div className="h-[280px] animate-pulse rounded-[24px] bg-field" />
+          <div className="h-[220px] animate-pulse rounded-[24px] bg-field" />
         </div>
       )}
       {!s && <Errors text={error} />}
@@ -167,7 +167,7 @@ export function Billing() {
         <>
           <section className="tile grid overflow-hidden lg:grid-cols-[1.25fr_1fr]">
             <div className="grid content-start gap-4 p-6 sm:p-8">
-              <span className={`justify-self-start rounded-full px-3 py-1 text-[13px] font-semibold ${s.active ? 'bg-accent/12 text-ink' : 'bg-[#f2f2f4] text-ink'}`}>{h.badge}</span>
+              <span className={`justify-self-start rounded-full px-3 py-1 text-[13px] font-semibold ${s.active ? 'bg-accent/12 text-ink' : 'bg-field text-ink'}`}>{h.badge}</span>
               <h2 className="text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] sm:text-[34px]">{h.title}</h2>
               <p className="max-w-[48ch] text-[15px] leading-relaxed text-muted">{h.text}</p>
               <ul className="mt-2 grid gap-x-6 gap-y-2 text-[14px] sm:grid-cols-2">
@@ -243,7 +243,7 @@ export function Billing() {
 
           <ul className="grid gap-3 sm:grid-cols-3">
             {PROMISES.map(({ Icon, title, text }) => (
-              <li key={title} className="flex items-start gap-3 rounded-[20px] bg-[#f5f5f7] p-4">
+              <li key={title} className="flex items-start gap-3 rounded-[20px] bg-field p-4">
                 <Icon size={22} className="mt-0.5 shrink-0 text-accent" aria-hidden="true" />
                 <span><span className="block text-[15px] font-semibold">{title}</span><span className="block text-[13px] text-muted">{text}</span></span>
               </li>

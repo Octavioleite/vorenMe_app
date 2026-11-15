@@ -2,7 +2,7 @@ import { ArrowLeft, Check, MagnifyingGlass, WarningCircle, WhatsappLogo } from '
 import { useCopy } from '../lib/share'
 import { lazy, Suspense, useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { api } from '../painel/api'
-import { Errors, Field, ask, input, primary, secondary } from '../painel/ui'
+import { Errors, Field, ask, input, primary, secondary, Loading } from '../painel/ui'
 import { ActivityList, Badge, METHOD, PaymentRows, STATUS, ago, date, fmt, navigate, ymd, type Activity, type Fail, type Payment } from './Admin'
 import { toggleCard } from './Cards'
 import type { Origin } from '../lib/track'
@@ -54,7 +54,7 @@ export function Users({ fail }: { fail: Fail }) {
           value={term} onChange={(e) => setTerm(e.target.value)} />
         <button type="submit" className={secondary} aria-label="Buscar"><MagnifyingGlass size={16} aria-hidden="true" /></button>
       </form>
-      <div role="group" aria-label="Status" className="flex max-w-full gap-1 justify-self-start overflow-x-auto rounded-full bg-[#f5f5f7] p-1 [scrollbar-width:none]">
+      <div role="group" aria-label="Status" className="flex max-w-full gap-1 justify-self-start overflow-x-auto rounded-full bg-field p-1 [scrollbar-width:none]">
         <button type="button" aria-pressed={!status} className={pill(!status)} onClick={() => go({ status: '' })}>Todos</button>
         {[...Object.entries(STATUS).map(([k, v]) => [k, v.label]), ['assinante', 'Assinatura Asaas'], ['sumido', 'Pagantes sumidos']].map(([k, label]) => (
           <button key={k} type="button" aria-pressed={status === k} className={pill(status === k)} onClick={() => go({ status: k })}>{label}</button>
@@ -62,7 +62,7 @@ export function Users({ fail }: { fail: Fail }) {
       </div>
 
       <Errors text={error} />
-      {!data ? !error && <p className="text-sm text-muted">Carregando...</p> : (
+      {!data ? !error && <Loading /> : (
         <section className="tile overflow-x-auto p-2 sm:p-3">
           <p className="px-3 pt-2 pb-1 text-[13px] text-muted">{fmt(data.total)} usuário(s)</p>
           {data.users.length === 0 ? <p className="p-3 text-sm text-muted">Ninguém encontrado.</p> : (
@@ -134,11 +134,11 @@ export function UserDetail({ id, me, fail }: { id: string; me: string; fail: Fai
     try { await fn(); await load(); return true } catch (e) { fail(e, onError); return false } finally { setBusy(false) }
   }
 
-  if (!u) return error ? <Errors text={error} /> : <p className="text-sm text-muted">Carregando...</p>
+  if (!u) return error ? <Errors text={error} /> : <Loading />
 
   const courtesy = form.method === 'cortesia'
   const shortcut = (label: string, p: { months?: number; days?: number }) => (
-    <button key={label} type="button" className="press rounded-full border border-line px-3 py-1.5 text-[13px] font-medium hover:bg-[#f5f5f7]"
+    <button key={label} type="button" className="press rounded-full border border-line px-3 py-1.5 text-[13px] font-medium hover:bg-field-hover"
       onClick={() => setForm((f) => ({ ...f, until: plus(u.activeUntil, p), ...(!courtesy && p.months && { amount: (PRICE * p.months).toFixed(2) }) }))}>{label}</button>
   )
   const submit = (e: FormEvent) => {
@@ -279,14 +279,14 @@ export function UserDetail({ id, me, fail }: { id: string; me: string; fail: Fai
 
       {u.cards.length > 0 && (
         <section className="grid gap-4" aria-label="Estatísticas dos cartões">
-          <div role="group" aria-label="Cartão" className="flex max-w-full gap-1 justify-self-start overflow-x-auto rounded-full bg-[#f5f5f7] p-1 [scrollbar-width:none]">
+          <div role="group" aria-label="Cartão" className="flex max-w-full gap-1 justify-self-start overflow-x-auto rounded-full bg-field p-1 [scrollbar-width:none]">
             {u.cards.map((c) => {
               const on = (cardId ?? u.cards[0].id) === c.id
               return <button key={c.id} type="button" aria-pressed={on} onClick={() => setCardId(c.id)}
                 className={`press shrink-0 rounded-full px-3.5 py-1.5 text-[14px] font-medium ${on ? 'bg-white text-ink shadow-sm' : 'text-muted hover:text-ink'}`}>/{c.slug}</button>
             })}
           </div>
-          <Suspense fallback={<p className="text-sm text-muted">Carregando estatísticas...</p>}>
+          <Suspense fallback={<Loading />}>
             <Stats key={cardId ?? u.cards[0].id} cardId={cardId ?? u.cards[0].id} admin onAuthLost={() => fail(new Error(), setError)} />
           </Suspense>
         </section>
@@ -309,7 +309,7 @@ export function UserDetail({ id, me, fail }: { id: string; me: string; fail: Fai
         {u.notes.length > 0 && (
           <ul className="grid gap-3">
             {u.notes.map((n) => (
-              <li key={n.id} className="grid gap-1 rounded-[12px] bg-[#f5f5f7] p-3.5">
+              <li key={n.id} className="grid gap-1 rounded-[12px] bg-field p-3.5">
                 <p className="text-[14px] whitespace-pre-wrap">{n.text}</p>
                 <span className="flex flex-wrap justify-between gap-2 text-[12px] text-muted">
                   <span>{n.by} · {new Date(n.createAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</span>
