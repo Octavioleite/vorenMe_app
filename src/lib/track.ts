@@ -36,9 +36,11 @@ export function targetOf(href: string): string {
  *  `shown` = ids das ações do Conecta no cartão: base da taxa de clique de cada ação. */
 export function startTracking(slug: string, shown: string[] = []) {
   const source = detectSource(location.search, navigator.userAgent, document.referrer)
+  const q = new URLSearchParams(location.search)
+  const utm = { medium: q.get('utm_medium') || undefined, campaign: q.get('utm_campaign') || undefined, content: q.get('utm_content') || undefined }
   // text/plain: não dispara preflight de CORS; sendBeacon não se perde quando o clique troca de página.
   const send = (body: object) => {
-    const blob = new Blob([JSON.stringify({ ...body, source })], { type: 'text/plain' })
+    const blob = new Blob([JSON.stringify({ ...body, source, ...utm })], { type: 'text/plain' })
     const url = `${import.meta.env.VITE_API_URL ?? ''}/api/v1/public/cards/${encodeURIComponent(slug)}/events`
     if (!navigator.sendBeacon?.(url, blob)) fetch(url, { method: 'POST', body: blob, keepalive: true }).catch(() => {})
   }
