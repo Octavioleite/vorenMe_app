@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 
 import { api, type Session, type Template } from './api'
 import { Errors, errorText, thumb, transition } from './ui'
 import { captureOrigin, inAppBrowser, siteEvent } from '../lib/track'
+import { trackPixel } from '../lib/pixel'
 
 const MODES = { login: 'Entrar', register: 'Criar conta' } as const
 type Mode = keyof typeof MODES
@@ -254,7 +255,9 @@ export function Auth({ onDone }: { onDone: (s: Session) => void }) {
     setError('')
     import('./Cards') // baixa a próxima tela enquanto a API responde
     try {
-      onDone(await api<Session>(`/auth/${mode}`, 'POST', { ...Object.fromEntries(new FormData(e.currentTarget)), ...(!isLogin && { ref: referral(), origin: captureOrigin().origin }) }))
+      const session = await api<Session>(`/auth/${mode}`, 'POST', { ...Object.fromEntries(new FormData(e.currentTarget)), ...(!isLogin && { ref: referral(), origin: captureOrigin().origin }) })
+      if (!isLogin) trackPixel('CompleteRegistration')
+      onDone(session)
     } catch (err) {
       setError(errorText(err))
       setBusy(false)
@@ -268,7 +271,10 @@ export function Auth({ onDone }: { onDone: (s: Session) => void }) {
     setError('')
     import('./Cards')
     try {
-      onDone(await api<Session>('/auth/google', 'POST', { credential, name: name.trim() || undefined, ref: referral(), origin: captureOrigin().origin }))
+      // created: true só para conta nova; quem entra numa conta existente com o Google não cadastrou nada.
+      const session = await api<Session & { created?: boolean }>('/auth/google', 'POST', { credential, name: name.trim() || undefined, ref: referral(), origin: captureOrigin().origin })
+      if (session.created) trackPixel('CompleteRegistration')
+      onDone(session)
     } catch (err) {
       setError(errorText(err))
       setBusy(false)
