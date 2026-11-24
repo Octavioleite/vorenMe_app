@@ -118,3 +118,17 @@ export function trackSite() {
     if ((e.target as Element | null)?.closest('a[href^="/painel?cadastro"]')) send({ kind: 'cta' })
   }, { capture: true })
 }
+
+// Indicação: o selo "Feito com VorenMe" manda ?utm_source=cartao&utm_campaign=<slug> (ou ?ref=<slug>).
+// Guarda no navegador para valer mesmo se a pessoa voltar outro dia para criar a conta.
+const REF_KEY = 'vorenme-ref'
+export const referral = () => {
+  const q = new URLSearchParams(location.search)
+  const fromUrl = q.get('ref') || (q.get('utm_source') === 'cartao' ? q.get('utm_campaign') : null)
+  try {
+    if (fromUrl) localStorage.setItem(REF_KEY, fromUrl)
+    return fromUrl || localStorage.getItem(REF_KEY) || undefined
+  } catch {
+    return fromUrl || undefined
+  }
+}

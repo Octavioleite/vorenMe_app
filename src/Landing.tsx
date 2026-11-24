@@ -1,10 +1,12 @@
 import { ArrowRight, CaretLeft, CaretRight, Check, DeviceMobile, Eye, Lightbulb, Target, List, PaintBrush, Plus, ShareNetwork, UserPlus, WhatsappLogo, X } from '@phosphor-icons/react'
-import { StrictMode, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { StrictMode, useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QrCode } from './components/QrCode'
 import type { ConnectConfig, CreatorConfig } from './config/types'
 import { responsive } from './lib/img'
-import { trackSite } from './lib/track'
+import { captureOrigin, referral, siteEvent, trackSite } from './lib/track'
+import { trackPixel } from './lib/pixel'
+import { api, ApiError, session, type Session } from './painel/api'
 import { useReveal } from './lib/motion'
 import './landing.css'
 
@@ -338,6 +340,57 @@ function ExampleDialog({ templates, index, onIndex, onClose, scroll }: { templat
   )
 }
 
+/** Cadastro em 1 campo, direto na página (padrão Substack/Notion): e-mail, clique, conta criada e painel aberto.
+ *  Sem senha: quem volta entra pelo link no e-mail. E-mail que já tem conta recebe esse link em vez de um erro. */
+function QuickSignup({ big = false }: { big?: boolean }) {
+  const [state, setState] = useState<'idle' | 'busy' | 'sent'>('idle')
+  const [error, setError] = useState('')
+  const seen = useRef(false)
+  // 1º foco = clicou no CTA, abriu e começou o cadastro (as 3 etapas do funil em /admin/site acontecem juntas aqui).
+  const started = () => { if (!seen.current) { seen.current = true; for (const k of ['cta', 'form', 'start'] as const) siteEvent(k) } }
+  const submit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const email = String(new FormData(e.currentTarget).get('email') ?? '').trim()
+    setState('busy')
+    setError('')
+    try {
+      session.set(await api<Session>('/auth/register', 'POST', { email, ref: referral(), origin: captureOrigin().origin }))
+      trackPixel('CompleteRegistration')
+      location.assign('/painel')
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        await api('/auth/forgot-password', 'POST', { email, login: true }).catch(() => {})
+        return setState('sent')
+      }
+      setError(err instanceof ApiError && err.errors[0] ? err.errors[0] : err instanceof ApiError ? err.message : 'Sem conexão. Tente de novo.')
+      setState('idle')
+    }
+  }
+  const align = big ? 'mx-auto' : 'mx-auto lg:mx-0' // hero alinha à esquerda no desktop; o fechamento é centralizado
+  if (state === 'sent') return (
+    <p role="status" className={`${align} max-w-[460px] rounded-[20px] bg-white px-5 py-4 text-left text-[15px] shadow-[0_10px_30px_-18px_rgb(17_17_19/0.35)] `}>
+      Você já tem conta. Mandamos um link de acesso para o seu e-mail (confira também o spam).
+    </p>
+  )
+  const h = big ? 'h-14' : 'h-12'
+  const id = big ? 'signup-end' : 'signup-hero'
+  return (
+    <form onSubmit={submit} onFocus={started} aria-busy={state === 'busy'} className={`${align} grid w-full max-w-[460px] gap-2 text-left`}>
+      <label htmlFor={id} className="text-[14px] font-medium">Comece com seu e-mail</label>
+      <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+        <input id={id} name="email" type="email" required autoComplete="email" inputMode="email" enterKeyHint="go" placeholder="voce@email.com"
+          aria-invalid={!!error || undefined} aria-describedby={error ? `${id}-error` : undefined}
+          className={`${h} w-full min-w-0 rounded-full border border-line-strong bg-white px-5 text-[16px] text-ink outline-none ring-accent/40 placeholder:text-[#6e6e73] focus:ring-2`} />
+        <button disabled={state === 'busy'} className={`cta press inline-flex ${h} items-center justify-center gap-2 rounded-full bg-accent px-6 text-[15px] font-semibold whitespace-nowrap text-accent-fg hover:brightness-110 disabled:opacity-60`}>
+          {state === 'busy' ? 'Criando...' : CTA}
+          {state !== 'busy' && <ArrowRight size={18} weight="bold" className="cta-arrow" aria-hidden="true" />}
+        </button>
+      </div>
+      {error && <p id={`${id}-error`} role="alert" className="text-[14px] text-red-600">{error}</p>}
+    </form>
+  )
+}
+
 function CtaButton({ big = false }: { big?: boolean }) {
   return (
     <a href={SIGNUP} className={`cta press inline-flex items-center justify-center gap-2 rounded-full bg-accent font-semibold whitespace-nowrap text-accent-fg hover:brightness-110 ${big ? 'h-14 px-8 text-base' : 'h-12 px-6 text-[15px]'}`}>
@@ -427,8 +480,8 @@ function Landing() {
               <p className="rise mx-auto mt-6 max-w-[38ch] text-[18px] leading-relaxed text-muted md:text-[20px] lg:mx-0" style={i(4)}>
                 Um cartão bonito que leva o cliente direto ao seu WhatsApp. Teste 30 dias grátis, sem cartão de crédito.
               </p>
-              <div className="rise mt-8 flex flex-wrap justify-center gap-3 lg:justify-start" style={i(5)}>
-                <CtaButton />
+              <div className="rise mt-8 grid justify-items-center gap-3 lg:justify-items-start" style={i(5)}>
+                <QuickSignup />
                 <a href="#modelos" onClick={(e) => { if (templates.length) { e.preventDefault(); setExample(active) } }}
                   className="press inline-flex h-12 items-center gap-2 rounded-full px-6 text-[15px] font-semibold text-accent hover:bg-accent/8">
                   <Eye size={18} weight="bold" aria-hidden="true" /> Ver um exemplo
@@ -756,7 +809,7 @@ function Landing() {
           <div className={WRAP} data-reveal>
             <h2 className="text-[clamp(2.75rem,13vw,6rem)] leading-[0.95] font-semibold tracking-[-0.06em]">Seu mundo.<br /><span className="text-accent">Um link.</span></h2>
             <p className="mx-auto mt-6 max-w-[38ch] text-[18px] text-muted">Crie seu cartão agora e use tudo liberado por 30 dias. Sem cartão de crédito.</p>
-            <div className="mt-9"><CtaButton big /></div>
+            <div className="mt-9"><QuickSignup big /></div>
           </div>
         </section>
       </main>

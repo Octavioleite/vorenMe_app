@@ -1,8 +1,8 @@
 import { ArrowRight, Check, Eye, EyeSlash } from '@phosphor-icons/react'
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
-import { api, type Session, type Template } from './api'
+import { api, ApiError, type Session, type Template } from './api'
 import { Errors, errorText, thumb, transition } from './ui'
-import { captureOrigin, inAppBrowser, siteEvent } from '../lib/track'
+import { captureOrigin, inAppBrowser, referral, siteEvent } from '../lib/track'
 import { trackPixel } from '../lib/pixel'
 
 const MODES = { login: 'Entrar', register: 'Criar conta' } as const
@@ -88,20 +88,6 @@ function Showcase({ name, templates, start }: { name: string; templates: Templat
   )
 }
 
-// Indicação: o selo "Feito com VorenMe" manda ?utm_source=cartao&utm_campaign=<slug> (ou ?ref=<slug>).
-// Guarda no navegador para valer mesmo se a pessoa voltar outro dia para criar a conta.
-const REF_KEY = 'vorenme-ref'
-const referral = () => {
-  const q = new URLSearchParams(location.search)
-  const fromUrl = q.get('ref') || (q.get('utm_source') === 'cartao' ? q.get('utm_campaign') : null)
-  try {
-    if (fromUrl) localStorage.setItem(REF_KEY, fromUrl)
-    return fromUrl || localStorage.getItem(REF_KEY) || undefined
-  } catch {
-    return fromUrl || undefined
-  }
-}
-
 // Modelo escolhido na landing ("Usar este modelo" manda ?modelo=<id>). Fica guardado para o 1º cartão já abrir nele (Cards.tsx).
 export const MODEL_KEY = 'vorenme-modelo'
 const chosenModel = () => {
@@ -174,8 +160,9 @@ function GoogleButton({ signup, onCredential }: { signup: boolean; onCredential:
   )
 }
 
-/** Esqueci a senha (pede o e-mail) e Redefinir (link do e-mail: /painel?redefinir=<token>). */
-function Recover({ token, onDone, onBack }: { token: string | null; onDone: (s: Session) => void; onBack: () => void }) {
+/** Esqueci a senha (pede o e-mail), Redefinir (link do e-mail: /painel?redefinir=<token>) e
+ *  Entrar com link (login: manda /painel?entrar=<token>, para quem se cadastrou sem senha). */
+function Recover({ token, login, onDone, onBack }: { token: string | null; login?: boolean; onDone: (s: Session) => void; onBack: () => void }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [sent, setSent] = useState(false)
@@ -190,7 +177,7 @@ function Recover({ token, onDone, onBack }: { token: string | null; onDone: (s: 
         history.replaceState(null, '', '/painel')
         onDone(s)
       } else {
-        await api('/auth/forgot-password', 'POST', data)
+        await api('/auth/forgot-password', 'POST', { ...data, login })
         setSent(true)
       }
     } catch (err) {
@@ -201,8 +188,8 @@ function Recover({ token, onDone, onBack }: { token: string | null; onDone: (s: 
   }
   return (
     <div className="rise">
-      <h1 className="text-[40px] leading-[1.02] font-semibold tracking-[-0.045em] text-ink">{token ? 'Crie uma nova senha.' : 'Esqueceu a senha?'}</h1>
-      <p className="mt-3 text-[17px] text-muted">{token ? 'Depois disso você já entra direto.' : 'Mandamos um link para o seu e-mail. Ele vale por 1 hora.'}</p>
+      <h1 className="text-[40px] leading-[1.02] font-semibold tracking-[-0.045em] text-ink">{token ? 'Crie uma nova senha.' : login ? 'Entrar com link.' : 'Esqueceu a senha?'}</h1>
+      <p className="mt-3 text-[17px] text-muted">{token ? 'Depois disso você já entra direto.' : login ? 'Sem senha: mandamos um link de acesso para o seu e-mail. Ele vale por 1 hora.' : 'Mandamos um link para o seu e-mail. Ele vale por 1 hora.'}</p>
       {sent ? (
         <p className="mt-8 rounded-[14px] bg-field p-4 text-[15px]">Pronto! Se esse e-mail tiver conta no VorenMe, o link chega em instantes. Confira também o spam.</p>
       ) : (
@@ -225,12 +212,15 @@ function Recover({ token, onDone, onBack }: { token: string | null; onDone: (s: 
   )
 }
 
+let usedLink = false
+
 export function Auth({ onDone }: { onDone: (s: Session) => void }) {
   const resetToken = new URLSearchParams(location.search).get('redefinir')
-  const [recover, setRecover] = useState(!!resetToken)
+  const [recover, setRecover] = useState<false | 'senha' | 'link'>(resetToken ? 'senha' : false)
   // Quem chega pelo botão de teste grátis (?cadastro=1) ainda não tem conta: abre direto em Criar conta.
   const [mode, setMode] = useState<Mode>(() => (new URLSearchParams(location.search).has('cadastro') ? 'register' : 'login'))
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
   const [showPass, setShowPass] = useState(false)
   // "Monte o seu" da landing manda o nome digitado (?nome=): o cartão do topo já nasce com ele.
@@ -247,19 +237,38 @@ export function Auth({ onDone }: { onDone: (s: Session) => void }) {
     if (!isLogin && !recover && !seen.current.form) { seen.current.form = true; siteEvent('form') }
   }, [isLogin, recover])
   const started = () => { if (!isLogin && !seen.current.start) { seen.current.start = true; siteEvent('start') } }
-  const toMode = (m: Mode) => mode !== m && transition(() => { setMode(m); setError('') })
+  const toMode = (m: Mode) => mode !== m && transition(() => { setMode(m); setError(''); setNotice('') })
+
+  // Link de acesso do e-mail (/painel?entrar=<token>): entra direto. O token é de uso único, então só uma tentativa (StrictMode roda o efeito 2x).
+  useEffect(() => {
+    const token = new URLSearchParams(location.search).get('entrar')
+    if (!token || usedLink) return
+    usedLink = true
+    setBusy(true)
+    api<Session>('/auth/reset-password', 'POST', { token }).then((s) => {
+      history.replaceState(null, '', '/painel')
+      onDone(s)
+    }, (err) => { setError(errorText(err)); setBusy(false) })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setBusy(true)
     setError('')
+    setNotice('')
+    const form = e.currentTarget
     import('./Cards') // baixa a próxima tela enquanto a API responde
     try {
-      const session = await api<Session>(`/auth/${mode}`, 'POST', { ...Object.fromEntries(new FormData(e.currentTarget)), ...(!isLogin && { ref: referral(), origin: captureOrigin().origin }) })
+      const session = await api<Session>(`/auth/${mode}`, 'POST', { ...Object.fromEntries(new FormData(form)), ...(!isLogin && { ref: referral(), origin: captureOrigin().origin }) })
       if (!isLogin) trackPixel('CompleteRegistration')
       onDone(session)
     } catch (err) {
-      setError(errorText(err))
+      // E-mail que já tem conta, no cadastro sem senha: em vez de travar a pessoa, manda o link de acesso.
+      if (!isLogin && err instanceof ApiError && err.status === 409) {
+        const email = new FormData(form).get('email')
+        await api('/auth/forgot-password', 'POST', { email, login: true }).catch(() => {})
+        setNotice('Você já tem conta. Mandamos um link de acesso para o seu e-mail (confira também o spam).')
+      } else setError(errorText(err))
       setBusy(false)
     }
   }
@@ -300,7 +309,7 @@ export function Auth({ onDone }: { onDone: (s: Session) => void }) {
         </header>
 
         <div className="mx-auto my-auto w-full max-w-[400px] py-8 lg:py-12">
-          {recover ? <Recover token={resetToken} onDone={onDone} onBack={() => transition(() => { setRecover(false); history.replaceState(null, '', '/painel') })} /> : <>
+          {recover ? <Recover token={recover === 'senha' ? resetToken : null} login={recover === 'link'} onDone={onDone} onBack={() => transition(() => { setRecover(false); history.replaceState(null, '', '/painel') })} /> : <>
           {/* Cadastro: quem veio do "Testar grátis" vê uma decisão só; "Entrar" fica no rodapé do formulário. */}
           {isLogin && (
             <div role="group" aria-label="Acesso" className="rise mb-8 inline-grid grid-cols-2 rounded-full bg-field p-1">
@@ -334,10 +343,11 @@ export function Auth({ onDone }: { onDone: (s: Session) => void }) {
               <input name="name" className={field} autoComplete="name" autoCapitalize="words" value={name} onChange={(e) => setName(e.target.value)} />)}
             {label('E-mail', undefined,
               <input name="email" type="email" required className={field} autoComplete="email" inputMode="email" />)}
-            {label('Senha', isLogin ? undefined : 'No mínimo 8 caracteres.',
+            {/* Cadastro sem senha (como Notion/Slack): quem volta entra pelo link no e-mail. Senha só no login de quem tem. */}
+            {isLogin && label('Senha', undefined,
               <span className="relative">
-                <input name="password" type={showPass ? 'text' : 'password'} required minLength={isLogin ? undefined : 8}
-                  className={`${field} pr-12`} autoComplete={isLogin ? 'current-password' : 'new-password'} />
+                <input name="password" type={showPass ? 'text' : 'password'} required
+                  className={`${field} pr-12`} autoComplete="current-password" />
                 <button type="button" onClick={() => setShowPass(!showPass)}
                   aria-label={showPass ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={showPass}
                   className="absolute inset-y-0 right-0 grid w-12 place-items-center rounded-r-[14px] text-muted hover:text-ink">
@@ -345,11 +355,13 @@ export function Auth({ onDone }: { onDone: (s: Session) => void }) {
                 </button>
               </span>)}
             {isLogin && (
-              <button type="button" onClick={() => transition(() => setRecover(true))} className="-mt-2 justify-self-start text-[13px] font-semibold text-accent hover:underline">
-                Esqueci minha senha
-              </button>
+              <div className="-mt-2 flex flex-wrap justify-between gap-x-4 gap-y-2 text-[13px] font-semibold text-accent">
+                <button type="button" onClick={() => transition(() => setRecover('senha'))} className="hover:underline">Esqueci minha senha</button>
+                <button type="button" onClick={() => transition(() => setRecover('link'))} className="hover:underline">Entrar com link no e-mail</button>
+              </div>
             )}
             <Errors text={error} />
+            {notice && <p role="status" className="rounded-[14px] bg-field p-4 text-[15px] text-ink">{notice}</p>}
             <button disabled={busy}
               className="press group mt-1 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-accent text-[16px] font-semibold text-white hover:brightness-110 disabled:opacity-50">
               {busy ? 'Aguarde...' : isLogin ? 'Entrar' : 'Testar 30 dias grátis'}
